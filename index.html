@@ -581,6 +581,52 @@ body {
   </button>
 </nav>
 
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+// Firebase 설정
+const firebaseConfig = {
+  apiKey: "AIzaSyDnENmqs9vZamZfnWCBOh4Z4rLIgereMDA",
+  authDomain: "cashflow-37c61.firebaseapp.com",
+  projectId: "cashflow-37c61",
+  storageBucket: "cashflow-37c61.firebasestorage.app",
+  messagingSenderId: "166803006858",
+  appId: "1:166803006858:web:0ac904e24edc517a499473"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const DOC_REF = doc(db, "cashflow", "main");
+
+// Firebase 저장
+window.saveToFirebase = async function(data) {
+  try {
+    await setDoc(DOC_REF, data);
+  } catch(e) { console.warn("Firebase 저장 실패, 로컬 저장:", e); }
+};
+
+// Firebase 로드
+window.loadFromFirebase = async function() {
+  try {
+    const snap = await getDoc(DOC_REF);
+    if (snap.exists()) return snap.data();
+  } catch(e) { console.warn("Firebase 로드 실패:", e); }
+  return null;
+};
+
+// 실시간 동기화 (다른 기기에서 변경시 자동 반영)
+window.startSync = function(callback) {
+  onSnapshot(DOC_REF, (snap) => {
+    if (snap.exists()) callback(snap.data());
+  });
+};
+
+window.firebaseReady = true;
+console.log("Firebase 연결 완료!");
+</script>
+
 <script>
 // ════════════════════════════════════════════════════════
 // 상태 & 저장
@@ -599,12 +645,44 @@ let state = {
 
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+  if (window.firebaseReady && window.saveToFirebase) {
+    window.saveToFirebase(JSON.parse(JSON.stringify(state)));
+  }
 }
 function load() {
   try {
     const d = localStorage.getItem(STORAGE_KEY);
     if (d) Object.assign(state, JSON.parse(d));
   } catch(e){}
+}
+async function loadFromCloud() {
+  if (!window.loadFromFirebase) { setTimeout(loadFromCloud, 600); return; }
+  const cloud = await window.loadFromFirebase();
+  if (cloud && (cloud.entries?.length || 0) >= (state.entries?.length || 0)) {
+    Object.assign(state, cloud);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    renderAll();
+    showSyncBadge('☁️ 클라우드 동기화 완료');
+  }
+  if (window.startSync) {
+    window.startSync((cloud) => {
+      Object.assign(state, cloud);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+      showSyncBadge('🔄 다른 기기에서 업데이트됨');
+    });
+  }
+}
+function showSyncBadge(msg) {
+  let b = document.getElementById('sync-badge');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'sync-badge';
+    b.style.cssText = 'position:fixed;top:62px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #3b82f6;color:#60a5fa;padding:6px 16px;border-radius:20px;font-size:11px;z-index:999;transition:opacity 0.5s;pointer-events:none';
+    document.body.appendChild(b);
+  }
+  b.textContent = msg; b.style.opacity = '1';
+  setTimeout(() => { b.style.opacity = '0'; }, 2500);
 }
 
 // ════════════════════════════════════════════════════════
@@ -1222,6 +1300,8 @@ load();
 initDefaultData();
 document.getElementById('setting-danger').value = state.dangerLine;
 renderAll();
+// Firebase 클라우드 동기화 (비동기)
+setTimeout(loadFromCloud, 800);
 </script>
 </body>
 </html>
