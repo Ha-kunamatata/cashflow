@@ -1845,25 +1845,34 @@ body.light-theme .week-btn{
     <div class="settings-col">
       <div class="card">
         <div class="card-title">⚙️ 기본 설정</div>
+
         <div class="setting-row">
           <div>
             <div class="setting-label">위험 기준선</div>
             <div class="setting-sub">이 금액 아래면 빨간색 경고</div>
           </div>
-          <input class="setting-input" type="number" id="setting-danger" value="100000" inputmode="numeric" onchange="saveSetting('dangerLine',this.value)">
+          <input
+            class="setting-input"
+            type="number"
+            id="setting-danger"
+            value="100000"
+            inputmode="numeric"
+            onchange="saveSetting('dangerLine',this.value)"
+          >
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">테마 모드</div>
+            <div class="setting-sub">다크 / 라이트 화면 전환</div>
+          </div>
+          <button class="btn btn-ghost" id="theme-toggle-btn" onclick="toggleTheme()">다크 모드</button>
         </div>
       </div>
 
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">테마 모드</div>
-          <div class="setting-sub">다크 / 라이트 화면 전환</div>
-        </div>
-        <button class="btn btn-ghost" id="theme-toggle-btn" onclick="toggleTheme()">다크 모드</button>
-      </div>
-      
       <div class="card">
         <div class="card-title">☁️ 동기화</div>
+
         <div class="setting-row">
           <div>
             <div class="setting-label">Firebase 실시간 동기화</div>
@@ -1871,6 +1880,7 @@ body.light-theme .week-btn{
           </div>
           <span style="font-size:11px;color:var(--green2)">● 활성</span>
         </div>
+
         <div class="setting-row">
           <div>
             <div class="setting-label">로그인 계정</div>
@@ -1884,14 +1894,29 @@ body.light-theme .week-btn{
       <div class="card">
         <div class="card-title">🗄️ 데이터 관리</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn" onclick="exportData()" style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center">
+          <button
+            class="btn"
+            onclick="exportData()"
+            style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"
+          >
             <div class="ripple-container"></div>📤 데이터 내보내기 (JSON)
           </button>
-          <button class="btn" onclick="importDataClick()" style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center">
+
+          <button
+            class="btn"
+            onclick="importDataClick()"
+            style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"
+          >
             <div class="ripple-container"></div>📥 데이터 가져오기 (JSON)
           </button>
+
           <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-          <button class="btn" onclick="if(confirm('모든 데이터를 초기화할까요?'))resetAll()" style="padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red2);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center">
+
+          <button
+            class="btn"
+            onclick="if(confirm('모든 데이터를 초기화할까요?'))resetAll()"
+            style="padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red2);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"
+          >
             <div class="ripple-container"></div>🗑️ 전체 초기화
           </button>
         </div>
@@ -1902,7 +1927,7 @@ body.light-theme .week-btn{
         <div style="font-size:12px;color:var(--text2);line-height:2.2">
           <div>① <b>매일</b> — 토스로 잔고 확인 후 업데이트</div>
           <div>② <b>카드 명세서</b> — 카드탭에 월별 금액 입력</div>
-          <div>③ <b>체크카드</b> — 카드탭에서 날짜별 소비 입력</div>
+          <div>③ <b>가계부</b> — 가계부탭에서 날짜별 소비 입력</div>
           <div>④ <b>할부 끝나면</b> — 항목에서 종료월 확인/삭제</div>
           <div>⑤ <b>새 지출</b> — 수입지출탭에서 추가</div>
         </div>
@@ -2442,11 +2467,12 @@ function renderHome() {
   const checkEl = document.getElementById('sum-checkcard');
   if (checkEl) {
     checkEl.textContent = fmtShort(currentMonthCheckTotal);
+  }
+
+  const net = mi - me;
 
   const insightEl = document.getElementById('balance-insight');
   if (insightEl) {
-    const net = mi - me;
-
     if (state.balance < state.dangerLine) {
       insightEl.textContent = '주의가 필요해요. 현재 잔고가 위험 기준선 아래로 내려갈 수 있어요.';
     } else if (net > 0) {
@@ -2454,8 +2480,6 @@ function renderHome() {
     } else {
       insightEl.textContent = '고정 지출 비중이 높아요. 지출 구조를 점검해보세요.';
     }
-  }
-    
   }
 
   const netEl = document.getElementById('sum-net');
