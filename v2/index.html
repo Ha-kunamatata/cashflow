@@ -740,11 +740,14 @@ body {
   }
 
   .bottom-nav {
+    position: fixed;
     top: 84px;
-    bottom: 20px;
     left: 16px;
+    bottom: auto;
     right: auto;
     width: 76px;
+    height: calc(100dvh - 104px);
+    max-height: 720px;
     padding: 8px 0;
     border: 1px solid rgba(30,58,95,0.55);
     border-radius: 22px;
@@ -753,6 +756,7 @@ body {
     justify-content: flex-start;
     gap: 6px;
     box-shadow: var(--shadow-sm);
+    z-index: 120;
   }
 
   .nav-btn {
