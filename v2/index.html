@@ -1015,6 +1015,527 @@ body {
     width:100%;
   }
 }
+
+/* =========================================================
+   PREMIUM FINANCE UI UPGRADE
+========================================================= */
+
+:root{
+  --app-max: 1520px;
+  --glass: rgba(255,255,255,0.06);
+  --glass-2: rgba(255,255,255,0.09);
+  --line-soft: rgba(255,255,255,0.08);
+  --line-strong: rgba(96,165,250,0.22);
+  --blue-glow: 0 10px 40px rgba(59,130,246,0.22);
+  --soft-glow: 0 8px 24px rgba(15,23,42,0.22);
+  --premium-grad: linear-gradient(135deg, rgba(37,99,235,0.30), rgba(59,130,246,0.10) 45%, rgba(255,255,255,0.04));
+  --card-grad: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+body{
+  background:
+    radial-gradient(circle at 15% 20%, rgba(59,130,246,0.16), transparent 30%),
+    radial-gradient(circle at 85% 10%, rgba(14,165,233,0.12), transparent 28%),
+    radial-gradient(circle at 50% 120%, rgba(37,99,235,0.18), transparent 35%),
+    linear-gradient(180deg, #050b19 0%, #081224 35%, #07101d 100%);
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(rgba(255,255,255,0.015), rgba(255,255,255,0.015)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.012) 0 1px,
+      transparent 1px 120px
+    );
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 85%);
+  z-index:0;
+}
+
+.topbar,
+.bottom-nav,
+.page,
+.form-overlay,
+.user-menu,
+.sync-badge{
+  position:relative;
+  z-index:1;
+}
+
+.topbar{
+  background: rgba(5,11,25,0.72);
+  border-bottom: 1px solid rgba(96,165,250,0.12);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.16);
+}
+
+.topbar-title{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.6px;
+}
+
+.topbar-sub{
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: rgba(148,163,184,0.72);
+}
+
+.topbar-balance{
+  padding: 6px 10px 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.topbar-balance-amount{
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.user-avatar{
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(96,165,250,0.34);
+  box-shadow: 0 8px 24px rgba(59,130,246,0.20);
+}
+
+.page{
+  max-width: var(--app-max);
+}
+
+.card,
+.chart-container,
+.checkcard-section,
+.balance-card,
+.card-month-item,
+.summary-item{
+  background: var(--card-grad), rgba(15,23,42,0.70);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: var(--soft-glow);
+}
+
+.card:hover,
+.chart-container:hover,
+.summary-item:hover,
+.card-month-item:hover{
+  transform: translateY(-2px);
+  border-color: rgba(96,165,250,0.18);
+  box-shadow: 0 16px 36px rgba(2,8,23,0.30), 0 0 0 1px rgba(96,165,250,0.08) inset;
+}
+
+.balance-card{
+  padding: 28px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(96,165,250,0.18), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(14,165,233,0.10), transparent 32%),
+    linear-gradient(135deg, rgba(30,64,175,0.42), rgba(15,23,42,0.88));
+  border: 1px solid rgba(96,165,250,0.22);
+  box-shadow: 0 18px 48px rgba(2,8,23,0.34), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.balance-card::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.10), transparent 18%, transparent 70%, rgba(255,255,255,0.04));
+}
+
+.balance-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #bfdbfe;
+  margin-bottom: 12px;
+}
+
+.balance-amount{
+  font-size: clamp(42px, 5vw, 64px);
+  font-weight: 900;
+  letter-spacing: -1.8px;
+  line-height: 1;
+  margin-bottom: 14px;
+  text-shadow: 0 8px 20px rgba(15,23,42,0.22);
+}
+
+.balance-edit{
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.balance-input,
+.form-input,
+.form-select,
+.setting-input,
+.card-num-input,
+.field,
+.checkcard-input{
+  background: rgba(5,11,25,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
+  min-height: 48px;
+}
+
+.balance-input:focus,
+.form-input:focus,
+.form-select:focus,
+.setting-input:focus,
+.card-num-input:focus,
+.field:focus,
+.checkcard-input:focus{
+  border-color: rgba(96,165,250,0.46);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+}
+
+.btn-update,
+.btn-save,
+.btn-primary,
+.btn-google-login{
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+  color:#fff;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 14px 30px rgba(37,99,235,0.30);
+}
+
+.btn-update:hover,
+.btn-save:hover,
+.btn-primary:hover,
+.btn-google-login:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(37,99,235,0.34);
+}
+
+.btn-google-login{
+  background: linear-gradient(180deg, #ffffff, #eef4ff);
+  color:#0f172a;
+  box-shadow: 0 12px 26px rgba(255,255,255,0.16);
+}
+
+.btn-ghost{
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  min-height: 46px;
+}
+
+.btn-ghost:hover{
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(96,165,250,0.20);
+}
+
+.summary-grid{
+  gap: 12px;
+}
+
+.summary-item{
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  min-height: 124px;
+  position: relative;
+  overflow:hidden;
+}
+
+.summary-item::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 36%);
+}
+
+.summary-item-label{
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: rgba(148,163,184,0.88);
+  margin-bottom: 14px;
+}
+
+.summary-item-value{
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.8px;
+}
+
+.card-title{
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.event-row{
+  padding: 14px 10px;
+  border-radius: 16px;
+  border-bottom: none;
+  margin-bottom: 6px;
+}
+
+.event-row:hover{
+  background: rgba(255,255,255,0.04);
+}
+
+.event-date{
+  font-size: 14px;
+  font-weight: 700;
+  color: #dbeafe;
+}
+
+.event-day{
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.event-tag{
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.05);
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.event-delta{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.event-bal{
+  font-size: 11px;
+}
+
+.chart-container,
+.card{
+  border-radius: 24px;
+}
+
+.chart-header{
+  margin-bottom: 18px;
+}
+
+.period-btn,
+.filter-tab,
+.week-btn{
+  min-height: 36px;
+  border-radius: 999px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+}
+
+.period-btn.active,
+.filter-tab.active,
+.week-btn.active{
+  background: linear-gradient(135deg, rgba(59,130,246,0.92), rgba(37,99,235,0.92));
+  box-shadow: 0 8px 22px rgba(37,99,235,0.22);
+}
+
+.entry-item{
+  border-radius: 18px;
+  padding: 16px 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02)), rgba(15,23,42,0.72);
+}
+
+.entry-name{
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.entry-meta{
+  font-size: 11px;
+}
+
+.entry-amount{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.icon-btn{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+}
+
+.card-month-item{
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.card-month-label{
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ledger-month-chip{
+  box-shadow: 0 10px 28px rgba(37,99,235,0.18);
+}
+
+.ledger-day{
+  min-height: 104px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+    rgba(15,23,42,0.72);
+}
+
+.ledger-day.today{
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.34) inset, 0 12px 24px rgba(37,99,235,0.14);
+}
+
+.ledger-day.selected{
+  background:
+    linear-gradient(180deg, rgba(59,130,246,0.18), rgba(59,130,246,0.08)),
+    rgba(15,23,42,0.78);
+}
+
+.ledger-day-num{
+  font-size: 15px;
+}
+
+.ledger-day-amount{
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ledger-editor-card{
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.setting-row{
+  padding: 18px 0;
+}
+
+.setting-label{
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.setting-sub{
+  font-size: 11px;
+}
+
+.user-menu{
+  border-radius: 18px;
+  background: rgba(15,23,42,0.86);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.sync-badge{
+  top: 78px;
+  background: rgba(15,23,42,0.88);
+  border: 1px solid rgba(96,165,250,0.28);
+  color: #dbeafe;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 18px 36px rgba(2,8,23,0.32);
+}
+
+/* 페이지 전환 연출 */
+.page.active{
+  animation: premiumPageIn .38s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes premiumPageIn{
+  from{
+    opacity:0;
+    transform:translateY(18px) scale(.992);
+    filter: blur(6px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 숫자 점등 효과 */
+.finance-pop{
+  animation: financePop .42s cubic-bezier(.2,.9,.2,1);
+}
+
+@keyframes financePop{
+  0%{ transform:scale(.96); opacity:.55; filter:blur(3px); }
+  60%{ transform:scale(1.03); opacity:1; filter:blur(0); }
+  100%{ transform:scale(1); opacity:1; }
+}
+
+/* 라이트모드도 고급스럽게 */
+body.light-theme{
+  background:
+    radial-gradient(circle at 10% 10%, rgba(59,130,246,0.10), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(14,165,233,0.08), transparent 26%),
+    linear-gradient(180deg, #eff5fb 0%, #edf3fa 100%);
+}
+
+body.light-theme::before{
+  opacity:.45;
+}
+
+body.light-theme .topbar{
+  background: rgba(255,255,255,0.72);
+}
+
+body.light-theme .card,
+body.light-theme .chart-container,
+body.light-theme .summary-item,
+body.light-theme .balance-card,
+body.light-theme .card-month-item{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82));
+}
+
+body.light-theme .balance-card{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(59,130,246,0.10), transparent 35%),
+    linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.94));
+}
+
+body.light-theme .event-tag,
+body.light-theme .topbar-balance,
+body.light-theme .btn-ghost,
+body.light-theme .period-btn,
+body.light-theme .filter-tab,
+body.light-theme .week-btn{
+  background: rgba(15,23,42,0.04);
+}
+
+/* 모바일 디테일 */
+@media (max-width: 640px){
+  .topbar{
+    padding: 14px 16px;
+  }
+
+  .topbar-title{
+    font-size: 18px;
+  }
+
+  .balance-card{
+    padding: 22px 18px;
+    border-radius: 24px;
+  }
+
+  .summary-item{
+    min-height: 108px;
+  }
+
+  .summary-item-value{
+    font-size: 24px;
+  }
+
+  .event-delta{
+    font-size: 15px;
+  }
+}
   
 </style>
 </head>
@@ -1088,11 +1609,22 @@ body {
   <div class="home-grid">
     <div class="home-main">
       <div class="balance-card">
-        <div class="balance-label">💳 현재 잔고</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px">
+          <div>
+            <div class="balance-label">💳 현재 잔고</div>
+            <div style="font-size:11px;color:var(--text2);letter-spacing:0.2px">
+              오늘 기준 내 현금 흐름 상태
+            </div>
+          </div>
+          <div style="padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:700;color:#dbeafe">
+            LIVE
+          </div>
+        </div>
         <div class="balance-amount" id="balance-display">-</div>
         <div class="balance-warning" id="balance-warning" style="display:none">
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
+        <div id="balance-insight" style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6"></div>
         <div class="balance-edit">
           <input class="balance-input" type="number" id="balance-input" placeholder="잔고 입력" inputmode="numeric">
           <button class="btn btn-update" onclick="updateBalance()">
@@ -1106,7 +1638,10 @@ body {
 
       <div class="summary-grid">
         <div class="summary-item">
-          <div class="summary-item-label">월 수입 (고정)</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="summary-item-label">월 수입 (고정)</div>
+            <div style="font-size:18px">📈</div>
+          </div>
           <div class="summary-item-value green" id="sum-income">-</div>
         </div>
         <div class="summary-item">
@@ -1717,6 +2252,36 @@ function fmtShort(n) {
 }
 function fmtFull(n) { return Math.abs(n).toLocaleString('ko-KR') + '원'; }
 
+function animateNumberText(el, nextValue, formatter = v => v.toLocaleString('ko-KR')) {
+  if (!el) return;
+
+  const raw = Number(nextValue || 0);
+  const startText = el.dataset.value || '0';
+  const startValue = Number(startText);
+
+  const duration = 520;
+  const startTime = performance.now();
+
+  function frame(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(startValue + (raw - startValue) * eased);
+
+    el.textContent = formatter(current);
+
+    if (progress < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      el.dataset.value = String(raw);
+      el.classList.remove('finance-pop');
+      void el.offsetWidth;
+      el.classList.add('finance-pop');
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+  
 function isPastOrToday(dateStr) {
   return dateStr <= dateKey(today());
 }
@@ -1846,11 +2411,11 @@ function buildForecast(days = 365) {
 // ════════════════════════════════════════════════════════
 function renderHome() {
   const balEl = document.getElementById('balance-display');
-  balEl.textContent = fmtFull(state.balance);
+  animateNumberText(balEl, state.balance, v => fmtFull(v));
   balEl.className = 'balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
 
   const tb = document.getElementById('topbar-balance');
-  tb.textContent = fmtShort(state.balance);
+  animateNumberText(tb, state.balance, v => fmtShort(v));
   tb.className = 'topbar-balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
 
   document.getElementById('balance-input').value = state.balance || '';
@@ -1877,9 +2442,22 @@ function renderHome() {
   const checkEl = document.getElementById('sum-checkcard');
   if (checkEl) {
     checkEl.textContent = fmtShort(currentMonthCheckTotal);
+
+  const insightEl = document.getElementById('balance-insight');
+  if (insightEl) {
+    const net = mi - me;
+
+    if (state.balance < state.dangerLine) {
+      insightEl.textContent = '주의가 필요해요. 현재 잔고가 위험 기준선 아래로 내려갈 수 있어요.';
+    } else if (net > 0) {
+      insightEl.textContent = '좋아요. 현재 구조상 월 순현금이 플러스 흐름을 유지하고 있어요.';
+    } else {
+      insightEl.textContent = '고정 지출 비중이 높아요. 지출 구조를 점검해보세요.';
+    }
+  }
+    
   }
 
-  const net = mi - me;
   const netEl = document.getElementById('sum-net');
   netEl.textContent = fmtShort(net);
   netEl.className = 'summary-item-value ' + (net >= 0 ? 'green' : 'red');
@@ -2771,6 +3349,8 @@ function navigate(page, btn) {
   if (page === 'forecast') renderForecast();
   if (page === 'cards') renderCards();
   if (page === 'ledger') renderLedger();
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ════════════════════════════════════════════════════════
