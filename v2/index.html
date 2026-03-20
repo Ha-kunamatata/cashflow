@@ -36,6 +36,29 @@
   --shadow-sm: 0 2px 12px rgba(0,0,0,0.3);
 }
 
+body.light-theme {
+  --bg: #f3f7fb;
+  --bg2: #ffffff;
+  --bg3: #e8eef6;
+  --bg4: #dbe7f3;
+  --border: #d3dfec;
+  --border2: #b8cbe0;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #64748b;
+  --accent: #2563eb;
+  --accent2: #3b82f6;
+  --accent3: #60a5fa;
+  --green: #059669;
+  --green2: #10b981;
+  --red: #dc2626;
+  --red2: #ef4444;
+  --orange: #ea580c;
+  --yellow: #d97706;
+  --shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+  
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
 body {
@@ -1296,6 +1319,14 @@ body {
         </div>
       </div>
 
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">테마 모드</div>
+          <div class="setting-sub">다크 / 라이트 화면 전환</div>
+        </div>
+        <button class="btn btn-ghost" id="theme-toggle-btn" onclick="toggleTheme()">다크 모드</button>
+      </div>
+      
       <div class="card">
         <div class="card-title">☁️ 동기화</div>
         <div class="setting-row">
@@ -1605,6 +1636,7 @@ let state = {
   appliedCheckData: {},// 현재 잔고에 이미 반영된 체크카드 소비
   editId: null,
   formType: 'income',
+  theme: 'dark',
 };
 
 let chartPeriod = 30;
@@ -1653,11 +1685,13 @@ async function initApp() {
   document.getElementById('danger-line-input').value = state.dangerLine;
   document.getElementById('balance-input').value = state.balance || '';
 
+  applyTheme();
   renderAll();
 
   window.startSync && window.startSync((cloudData) => {
     Object.assign(state, cloudData);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    applyTheme();
     renderAll();
     showBadge('🔄 다른 기기에서 업데이트됨');
   });
@@ -2635,6 +2669,23 @@ function saveSetting(key, val) {
   }
 }
 
+function applyTheme() {
+  const mode = state.theme || 'dark';
+  document.body.classList.toggle('light-theme', mode === 'light');
+
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) {
+    btn.textContent = mode === 'light' ? '라이트 모드' : '다크 모드';
+  }
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'light' ? 'dark' : 'light';
+  applyTheme();
+  save();
+  showBadge(state.theme === 'light' ? '☀️ 라이트 모드' : '🌙 다크 모드');
+}
+  
 function exportData() {
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -2669,8 +2720,10 @@ function resetAll() {
   state.entries = [];
   state.cardData = {};
   state.checkData = {};
+  state.appliedCheckData = {};
   state.balance = 0;
   save();
+  applyTheme();
   renderAll();
 }
 
