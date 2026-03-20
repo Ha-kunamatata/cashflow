@@ -1182,7 +1182,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDnENmqs9vZamZfnWCBOh4Z4rLIgereMDA",
@@ -1201,14 +1201,41 @@ const provider = new GoogleAuthProvider();
 let unsubscribe = null;
 let currentUser = null;
 
+function isIOS() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function isSafari() {
+  const ua = navigator.userAgent;
+  return /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|GSA/i.test(ua);
+}
+
+function isInAppBrowser() {
+  const ua = navigator.userAgent;
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv/i.test(ua);
+}
+
 window.signInWithGoogle = async () => {
   try {
+    if (isInAppBrowser()) {
+      alert("앱 내 브라우저에서는 로그인이 잘 되지 않을 수 있어요. Safari에서 다시 열어주세요.");
+      return;
+    }
+
+    if (isIOS() && isSafari()) {
+      // iPhone Safari에서는 redirect 방식이 더 안정적
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
+    // 데스크톱/기타 브라우저는 popup
     await signInWithPopup(auth, provider);
+
   } catch (e) {
     console.error("로그인 실패:", e);
 
     if (e?.code === 'auth/popup-blocked') {
-      alert("브라우저가 로그인 팝업을 차단했습니다. Safari에서 다시 시도해주세요.");
+      alert("브라우저가 로그인 창을 차단했습니다. Safari에서 다시 시도해주세요.");
       return;
     }
 
@@ -1217,7 +1244,12 @@ window.signInWithGoogle = async () => {
       return;
     }
 
-    alert("로그인에 실패했습니다. Safari에서 다시 시도하거나 Firebase 설정을 확인해주세요.");
+    if (e?.code === 'auth/unauthorized-domain') {
+      alert("승인되지 않은 도메인입니다. Firebase Authorized Domains 설정을 확인해주세요.");
+      return;
+    }
+
+    alert("로그인에 실패했습니다. Safari에서 다시 시도해주세요.");
   }
 };
 
