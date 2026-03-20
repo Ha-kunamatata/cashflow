@@ -2116,17 +2116,6 @@ function saveCheckData() {
   showBadge('✅ 저장됨');
 }
 
-  // ✅ Firebase 저장 추가
-  save();
-  renderDayGrid();
-  renderHome();
-  if (document.getElementById('page-forecast').classList.contains('active')) renderForecast();
-
-  document.getElementById('checkcard-input-area').style.display = 'none';
-  selectedCheckDate = null;
-  showBadge('✅ 저장됨');
-}
-
 // ════════════════════════════════════════════════════════
 // 카드관리
 // ════════════════════════════════════════════════════════
