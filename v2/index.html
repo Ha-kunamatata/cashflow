@@ -175,12 +175,17 @@ body {
 
 /* ── 바텀/사이드 네비 ── */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   background: rgba(10,15,30,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(30,58,95,0.5);
-  display: flex; padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .nav-btn {
   flex: 1; padding: 10px 0 8px;
@@ -743,18 +748,19 @@ body {
     position: fixed;
     top: 84px;
     left: 16px;
-    bottom: auto;
     right: auto;
+    bottom: auto;
     width: 76px;
-    height: calc(100dvh - 104px);
+    height: calc(100vh - 104px);
     max-height: 720px;
     padding: 8px 0;
-    border: 1px solid rgba(30,58,95,0.55);
-    border-radius: 22px;
-    background: rgba(10,15,30,0.9);
+    display: flex;
     flex-direction: column;
     justify-content: flex-start;
     gap: 6px;
+    border: 1px solid rgba(30,58,95,0.55);
+    border-radius: 22px;
+    background: rgba(10,15,30,0.9);
     box-shadow: var(--shadow-sm);
     z-index: 120;
   }
@@ -772,6 +778,7 @@ body {
   .nav-indicator {
     top: 50%;
     left: 0;
+    right: auto;
     width: 3px;
     height: 30px;
     border-radius: 0 3px 3px 0;
