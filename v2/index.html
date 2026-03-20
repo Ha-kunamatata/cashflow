@@ -873,6 +873,125 @@ body {
   text-align:right;
   word-break:break-all;
 }
+
+.ledger-toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+.ledger-month-chip{
+  min-width:160px;
+  text-align:center;
+  padding:12px 16px;
+  border-radius:14px;
+  background:linear-gradient(135deg, rgba(59,130,246,0.18), rgba(37,99,235,0.08));
+  border:1px solid rgba(96,165,250,0.28);
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:-0.3px;
+}
+.btn-ghost{
+  background:var(--bg3);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:13px;
+  font-weight:700;
+  font-family:var(--font);
+}
+.btn-ghost:hover{
+  border-color:var(--border2);
+  background:var(--bg4);
+}
+.btn-primary{
+  background:linear-gradient(135deg, var(--accent), #2563eb);
+  color:#fff;
+  border-radius:12px;
+  padding:12px 18px;
+  font-size:13px;
+  font-weight:800;
+  font-family:var(--font);
+  box-shadow:0 8px 24px rgba(59,130,246,0.25);
+}
+.btn-primary:hover{
+  box-shadow:0 10px 28px rgba(59,130,246,0.33);
+}
+.field{
+  width:100%;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:14px;
+  outline:none;
+  transition:border-color .2s, box-shadow .2s, background .2s;
+}
+.field:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(59,130,246,0.12);
+}
+.ledger-editor-actions{
+  display:flex;
+  gap:8px;
+  margin-top:12px;
+}
+.ledger-editor-actions .btn,
+.ledger-editor-actions .btn-ghost,
+.ledger-editor-actions .btn-primary{
+  flex:1;
+}
+.ledger-editor-card{
+  background:linear-gradient(180deg, rgba(30,41,59,0.96), rgba(17,24,39,0.96));
+  border:1px solid rgba(59,130,246,0.18);
+  box-shadow:var(--shadow);
+}
+.ledger-selected-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(59,130,246,0.14);
+  color:var(--accent3);
+  font-size:11px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+.ledger-summary-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:linear-gradient(135deg, rgba(249,115,22,0.10), rgba(59,130,246,0.08));
+  border:1px solid rgba(255,255,255,0.06);
+}
+.ledger-summary-hero strong{
+  font-size:15px;
+  color:var(--text);
+}
+.ledger-summary-hero span{
+  font-size:12px;
+  color:var(--text2);
+}
+@media (max-width: 640px){
+  .ledger-toolbar{
+    flex-wrap:wrap;
+  }
+  .ledger-toolbar .btn-ghost{
+    flex:1;
+  }
+  .ledger-month-chip{
+    order:-1;
+    width:100%;
+  }
+}
   
 </style>
 </head>
@@ -1102,10 +1221,16 @@ body {
       </div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px">
-      <button class="btn btn-ghost" onclick="changeLedgerMonth(-1)">← 이전달</button>
-      <div id="ledger-month-label" style="font-size:18px;font-weight:800"></div>
-      <button class="btn btn-ghost" onclick="changeLedgerMonth(1)">다음달 →</button>
+    <div class="ledger-toolbar">
+      <button class="btn btn-ghost" onclick="changeLedgerMonth(-1)">
+        <div class="ripple-container"></div>
+        ← 이전달
+      </button>
+      <div id="ledger-month-label" class="ledger-month-chip"></div>
+      <button class="btn btn-ghost" onclick="changeLedgerMonth(1)">
+        <div class="ripple-container"></div>
+        다음달 →
+      </button>
     </div>
 
     <div class="card" style="background:var(--bg3);margin-bottom:14px">
@@ -1122,27 +1247,36 @@ body {
     <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
   </div>
 
-  <div class="card" id="ledger-editor-card" style="display:none">
-    <div class="card-title">🧾 날짜별 소비 입력</div>
+  <div class="card ledger-editor-card" id="ledger-editor-card" style="display:none">
+  <div class="card-title">🧾 날짜별 소비 입력</div>
 
-    <div style="font-size:14px;font-weight:700;margin-bottom:10px" id="ledger-selected-date">-</div>
+  <div class="ledger-selected-badge">선택한 날짜</div>
+  <div style="font-size:18px;font-weight:800;margin-bottom:12px" id="ledger-selected-date">-</div>
 
-    <div style="display:flex;gap:8px;align-items:center">
-      <input
-        class="field"
-        type="number"
-        id="ledger-amount-input"
-        placeholder="소비 금액 입력"
-        inputmode="numeric"
-        style="text-align:right;font-family:var(--mono)"
-      >
-      <button class="btn btn-primary" onclick="saveLedgerExpense()">저장</button>
-    </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input
+      class="field"
+      type="number"
+      id="ledger-amount-input"
+      placeholder="소비 금액 입력"
+      inputmode="numeric"
+      style="text-align:right;font-family:var(--mono)"
+    >
+    <button class="btn btn-primary" onclick="saveLedgerExpense()">
+      <div class="ripple-container"></div>
+      저장
+    </button>
+  </div>
 
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn btn-ghost" onclick="clearLedgerExpense()">삭제</button>
-      <button class="btn btn-ghost" onclick="closeLedgerEditor()">닫기</button>
-    </div>
+  <div class="ledger-editor-actions">
+    <button class="btn btn-ghost" onclick="clearLedgerExpense()">
+      <div class="ripple-container"></div>
+      삭제
+    </button>
+    <button class="btn btn-ghost" onclick="closeLedgerEditor()">
+      <div class="ripple-container"></div>
+      닫기
+    </button>
   </div>
 </div>
 
@@ -2140,7 +2274,17 @@ function renderLedger() {
     .filter(([date]) => date.startsWith(monthPrefix))
     .reduce((sum, [, amount]) => sum + amount, 0);
 
-  summary.textContent = `이번 달 기록된 체크카드 소비 합계: ${fmtShort(monthTotal)}`;
+  summary.innerHTML = `
+    <div class="ledger-summary-hero">
+      <div>
+        <strong>${currentLedgerMonth + 1}월 소비 요약</strong>
+        <span>날짜를 눌러 금액을 입력하거나 수정할 수 있어요</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:16px;color:var(--orange);font-weight:800">
+        ${fmtShort(monthTotal)}
+      </div>
+    </div>
+  `;
 
   const monthEntries = Object.entries(state.checkData || {})
     .filter(([date]) => date.startsWith(monthPrefix));
