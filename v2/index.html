@@ -912,6 +912,10 @@ body {
           <div class="summary-item-label">월 순현금</div>
           <div class="summary-item-value" id="sum-net">-</div>
         </div>
+        <div class="summary-item">
+          <div class="summary-item-label">이번 달 체크카드</div>
+          <div class="summary-item-value orange" id="sum-checkcard">-</div>
+        </div>
       </div>
     </div>
 
@@ -1022,6 +1026,70 @@ body {
         </p>
         <div id="card-months-list"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 가계부 -->
+<div class="page" id="page-ledger">
+  <div class="card">
+    <div class="card-title">📅 월간 가계부</div>
+
+    <div class="summary-grid" style="margin-bottom:14px">
+      <div class="summary-item">
+        <div class="summary-item-label">이번 달 총 소비</div>
+        <div class="summary-item-value red" id="ledger-total-spend">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-label">하루 평균 소비</div>
+        <div class="summary-item-value orange" id="ledger-avg-spend">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-label">최대 소비일</div>
+        <div class="summary-item-value blue" id="ledger-max-day">-</div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px">
+      <button class="btn btn-ghost" onclick="changeLedgerMonth(-1)">← 이전달</button>
+      <div id="ledger-month-label" style="font-size:18px;font-weight:800"></div>
+      <button class="btn btn-ghost" onclick="changeLedgerMonth(1)">다음달 →</button>
+    </div>
+
+    <div class="card" style="background:var(--bg3);margin-bottom:14px">
+      <div class="card-title">📊 날짜별 소비 흐름</div>
+      <div id="ledger-bar-chart"></div>
+    </div>
+
+    <div id="ledger-month-summary" style="margin-bottom:14px;font-size:12px;color:var(--text2)"></div>
+
+    <div class="ledger-weekdays">
+      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+    </div>
+
+    <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
+  </div>
+
+  <div class="card" id="ledger-editor-card" style="display:none">
+    <div class="card-title">🧾 날짜별 소비 입력</div>
+
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px" id="ledger-selected-date">-</div>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <input
+        class="field"
+        type="number"
+        id="ledger-amount-input"
+        placeholder="소비 금액 입력"
+        inputmode="numeric"
+        style="text-align:right;font-family:var(--mono)"
+      >
+      <button class="btn btn-primary" onclick="saveLedgerExpense()">저장</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" onclick="clearLedgerExpense()">삭제</button>
+      <button class="btn btn-ghost" onclick="closeLedgerEditor()">닫기</button>
     </div>
   </div>
 </div>
@@ -1342,6 +1410,9 @@ let state = {
 };
 
 let chartPeriod = 30;
+let currentLedgerMonth = today().getMonth();
+let currentLedgerYear = today().getFullYear();
+let selectedLedgerDate = null;
 let forecastFilter = 'all';
 let entryFilter = '전체';
 let selectedCheckDate = null;
@@ -1530,6 +1601,16 @@ function renderHome() {
   document.getElementById('sum-income').textContent = fmtShort(mi);
   document.getElementById('sum-expense').textContent = fmtShort(me);
   document.getElementById('sum-halbu').textContent = fmtShort(mh);
+
+  const monthPrefix = `${today().getFullYear()}-${p2(today().getMonth() + 1)}`;
+  const currentMonthCheckTotal = Object.entries(state.checkData || {})
+    .filter(([date]) => date.startsWith(monthPrefix))
+    .reduce((sum, [, amount]) => sum + amount, 0);
+
+  const checkEl = document.getElementById('sum-checkcard');
+  if (checkEl) {
+    checkEl.textContent = fmtShort(currentMonthCheckTotal);
+  }
 
   const net = mi - me;
   const netEl = document.getElementById('sum-net');
@@ -1948,6 +2029,188 @@ function renderCards() {
   renderCardMonths();
 }
 
+function renderLedger() {
+  const monthLabel = document.getElementById('ledger-month-label');
+  const summary = document.getElementById('ledger-month-summary');
+  const grid = document.getElementById('ledger-calendar-grid');
+
+  const firstDay = new Date(currentLedgerYear, currentLedgerMonth, 1);
+  const lastDay = new Date(currentLedgerYear, currentLedgerMonth + 1, 0);
+  const startWeekday = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+
+  monthLabel.textContent = `${currentLedgerYear}년 ${currentLedgerMonth + 1}월`;
+
+  const monthPrefix = `${currentLedgerYear}-${p2(currentLedgerMonth + 1)}`;
+  const monthTotal = Object.entries(state.checkData || {})
+    .filter(([date]) => date.startsWith(monthPrefix))
+    .reduce((sum, [, amount]) => sum + amount, 0);
+
+  summary.textContent = `이번 달 기록된 체크카드 소비 합계: ${fmtShort(monthTotal)}`;
+
+  const monthEntries = Object.entries(state.checkData || {})
+    .filter(([date]) => date.startsWith(monthPrefix));
+
+  const spendDays = monthEntries.length;
+  const avgSpend = spendDays > 0 ? Math.round(monthTotal / spendDays) : 0;
+
+  let maxDayText = '-';
+  if (monthEntries.length > 0) {
+    const [maxDate, maxAmount] = monthEntries.reduce((max, current) => {
+      return current[1] > max[1] ? current : max;
+    });
+    const md = new Date(maxDate);
+    maxDayText = `${md.getDate()}일 · ${fmtShort(maxAmount)}`;
+  }
+
+  const totalEl = document.getElementById('ledger-total-spend');
+  const avgEl = document.getElementById('ledger-avg-spend');
+  const maxEl = document.getElementById('ledger-max-day');
+
+  if (totalEl) totalEl.textContent = fmtShort(monthTotal);
+  if (avgEl) avgEl.textContent = spendDays > 0 ? fmtShort(avgSpend) : '-';
+  if (maxEl) maxEl.textContent = maxDayText;
+
+  const chartEl = document.getElementById('ledger-bar-chart');
+  if (chartEl) {
+    if (!monthEntries.length) {
+      chartEl.innerHTML = `<div class="empty-state" style="padding:20px 0">이번 달 소비 기록이 없습니다</div>`;
+    } else {
+      const maxAmount = Math.max(...monthEntries.map(([, amount]) => amount), 1);
+
+      chartEl.innerHTML = `
+        <div class="monthly-chart-bar">
+          ${monthEntries
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([date, amount]) => {
+              const d = new Date(date);
+              return `
+                <div class="bar-row">
+                  <span class="bar-label">${d.getDate()}일</span>
+                  <div class="bar-track">
+                    <div class="bar-fill expense" style="width:${(amount / maxAmount * 100).toFixed(1)}%"></div>
+                  </div>
+                  <span class="bar-value" style="color:var(--red2)">${fmtShort(amount)}</span>
+                </div>
+              `;
+            }).join('')}
+        </div>
+      `;
+    }
+  }
+
+  let html = '';
+
+  for (let i = 0; i < startWeekday; i++) {
+    html += `<div class="ledger-day empty"></div>`;
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    const d = new Date(currentLedgerYear, currentLedgerMonth, day);
+    const dk = dateKey(d);
+    const dow = d.getDay();
+    const isToday = dk === dateKey(today());
+    const isSelected = dk === selectedLedgerDate;
+    const amt = (state.checkData && state.checkData[dk]) ? state.checkData[dk] : 0;
+
+    let numClass = 'ledger-day-num';
+    if (dow === 0) numClass += ' sun';
+    if (dow === 6) numClass += ' sat';
+
+    html += `
+      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="openLedgerEditor('${dk}')">
+        <div class="ledger-day-top">
+          <div class="${numClass}">${day}</div>
+        </div>
+        <div class="ledger-day-amount">${amt > 0 ? '-' + fmtShort(amt) : ''}</div>
+      </div>
+    `;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeLedgerMonth(diff) {
+  currentLedgerMonth += diff;
+
+  if (currentLedgerMonth < 0) {
+    currentLedgerMonth = 11;
+    currentLedgerYear -= 1;
+  }
+
+  if (currentLedgerMonth > 11) {
+    currentLedgerMonth = 0;
+    currentLedgerYear += 1;
+  }
+
+  selectedLedgerDate = null;
+  closeLedgerEditor();
+  renderLedger();
+}
+
+function openLedgerEditor(dateStr) {
+  selectedLedgerDate = dateStr;
+  renderLedger();
+
+  const card = document.getElementById('ledger-editor-card');
+  const label = document.getElementById('ledger-selected-date');
+  const input = document.getElementById('ledger-amount-input');
+
+  const d = new Date(dateStr);
+  const existing = (state.checkData && state.checkData[dateStr]) ? state.checkData[dateStr] : '';
+
+  label.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 소비 입력`;
+  input.value = existing;
+  card.style.display = 'block';
+
+  setTimeout(() => input.focus(), 80);
+}
+
+function closeLedgerEditor() {
+  document.getElementById('ledger-editor-card').style.display = 'none';
+}
+
+function saveLedgerExpense() {
+  if (!selectedLedgerDate) return;
+
+  const amt = parseFloat(document.getElementById('ledger-amount-input').value) || 0;
+  if (!state.checkData) state.checkData = {};
+
+  if (amt > 0) state.checkData[selectedLedgerDate] = amt;
+  else delete state.checkData[selectedLedgerDate];
+
+  save();
+  renderLedger();
+  renderHome();
+
+  if (document.getElementById('page-forecast').classList.contains('active')) {
+    renderForecast();
+  }
+
+  showBadge('✅ 가계부 저장됨');
+}
+
+function clearLedgerExpense() {
+  if (!selectedLedgerDate) return;
+
+  if (state.checkData && state.checkData[selectedLedgerDate]) {
+    delete state.checkData[selectedLedgerDate];
+  }
+
+  save();
+  const input = document.getElementById('ledger-amount-input');
+  if (input) input.value = '';
+
+  renderLedger();
+  renderHome();
+
+  if (document.getElementById('page-forecast').classList.contains('active')) {
+    renderForecast();
+  }
+
+  showBadge('🗑️ 가계부 삭제됨');
+}
+
 function renderCardMonths() {
   const container = document.getElementById('card-months-list');
   const t = today();
@@ -2211,6 +2474,7 @@ function navigate(page, btn) {
 
   if (page === 'forecast') renderForecast();
   if (page === 'cards') renderCards();
+  if (page === 'ledger') renderLedger();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2299,6 +2563,7 @@ function renderAll() {
   const ap = document.querySelector('.page.active');
   if (ap?.id === 'page-forecast') renderForecast();
   if (ap?.id === 'page-cards') renderCards();
+  if (ap?.id === 'page-ledger') renderLedger();
 }
 </script>
 </body>
