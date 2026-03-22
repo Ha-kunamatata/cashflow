@@ -2088,84 +2088,6 @@ body.light-theme .week-btn{
 <!-- 싱크 배지 -->
 <div class="sync-badge" id="sync-badge"></div>
 
-<!-- 로딩 오버레이 -->
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-box">
-    <div class="loading-spinner"></div>
-    <div class="loading-text" id="loading-text">처리 중...</div>
-  </div>
-</div>
-
-<!-- 프로필 바텀시트 -->
-<div class="sheet-overlay" id="profile-sheet" onclick="closeSheetOutside(event,'profile-sheet')">
-  <div class="sheet-panel">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">내 계정</div>
-    <div class="sheet-sub">로그인 정보와 동기화 상태를 확인할 수 있어요.</div>
-
-    <div class="sheet-section">
-      <div class="sheet-profile">
-        <div class="sheet-avatar" id="profile-sheet-avatar">?</div>
-        <div>
-          <div class="sheet-name" id="profile-sheet-name">-</div>
-          <div class="sheet-email" id="profile-sheet-email">-</div>
-          <div class="sheet-status">● Firebase 동기화 활성</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sheet-section">
-      <button class="sheet-btn ghost" onclick="toggleTheme(); closeSheet('profile-sheet')">테마 변경</button>
-    </div>
-
-    <div class="sheet-actions">
-      <button class="sheet-btn ghost" onclick="closeSheet('profile-sheet')">닫기</button>
-      <button class="sheet-btn danger" onclick="confirmSignOut()">로그아웃</button>
-    </div>
-  </div>
-</div>
-
-<!-- 잔고 수정 바텀시트 -->
-<div class="sheet-overlay" id="balance-sheet" onclick="closeSheetOutside(event,'balance-sheet')">
-  <div class="sheet-panel">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">현재 잔고 수정</div>
-    <div class="sheet-sub">정확한 금액을 입력하면 예측과 경고가 즉시 다시 계산돼요.</div>
-
-    <div class="sheet-section">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">현재 잔고</div>
-      <div id="balance-sheet-current" class="money-strong" style="font-size:26px;font-weight:900;margin-bottom:14px">0원</div>
-      <input
-        class="field money-strong"
-        type="number"
-        id="balance-sheet-input"
-        inputmode="numeric"
-        placeholder="예: 923057"
-        style="text-align:right;font-size:18px;font-weight:800"
-      >
-    </div>
-
-    <div class="sheet-actions">
-      <button class="sheet-btn ghost" onclick="closeSheet('balance-sheet')">취소</button>
-      <button class="sheet-btn primary" onclick="submitBalanceSheet()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- 로그아웃 확인 바텀시트 -->
-<div class="sheet-overlay" id="signout-sheet" onclick="closeSheetOutside(event,'signout-sheet')">
-  <div class="sheet-panel">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">로그아웃할까요?</div>
-    <div class="sheet-sub">현재 기기에서는 로그아웃되지만, Firebase에 저장된 데이터는 유지됩니다.</div>
-
-    <div class="sheet-actions">
-      <button class="sheet-btn ghost" onclick="closeSheet('signout-sheet')">취소</button>
-      <button class="sheet-btn danger" onclick="proceedSignOut()">로그아웃</button>
-    </div>
-  </div>
-</div>
-
 <!-- 유저 메뉴 -->
 <div class="user-menu" id="user-menu" style="display:none">
   <div class="user-menu-item" onclick="closeUserMenu()">
@@ -2890,6 +2812,18 @@ function fmtShort(n) {
   return sign + abs.toLocaleString('ko-KR') + '원';
 }
 
+function fmtShort(n) {
+  const value = Number(n || 0);
+  if (value === 0) return '0원';
+
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  if (abs >= 100000000) return sign + (abs / 100000000).toFixed(1) + '억';
+  if (abs >= 10000) return sign + (abs / 10000).toFixed(1) + '만';
+  return sign + abs.toLocaleString('ko-KR') + '원';
+}
+
 function fmtFull(n) {
   return Number(n || 0).toLocaleString('ko-KR') + '원';
 }
@@ -2900,7 +2834,6 @@ function fmtSigned(n) {
   const sign = value > 0 ? '+' : '-';
   return sign + Math.abs(value).toLocaleString('ko-KR') + '원';
 }
-function fmtFull(n) { return Math.abs(n).toLocaleString('ko-KR') + '원'; }
 
 function animateNumberText(el, nextValue, formatter = v => v.toLocaleString('ko-KR')) {
   if (!el) return;
