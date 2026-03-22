@@ -1550,6 +1550,279 @@ body.light-theme .week-btn{
     font-size: 15px;
   }
 }
+
+/* =========================================================
+   UX PATCH v1
+========================================================= */
+
+/* 정확 금액 표시용 숫자 */
+.money-strong{
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.4px;
+}
+
+/* 공용 로딩 오버레이 */
+.loading-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,8,23,0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.loading-overlay.show{
+  display: flex;
+  animation: fadeIn .2s ease;
+}
+
+.loading-box{
+  min-width: 180px;
+  padding: 22px 20px;
+  border-radius: 22px;
+  background: rgba(15,23,42,0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 40px rgba(2,8,23,0.34);
+  text-align: center;
+}
+
+.loading-spinner{
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.12);
+  border-top-color: var(--accent2);
+  animation: spin 0.85s linear infinite;
+}
+
+.loading-text{
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+@keyframes spin{
+  to { transform: rotate(360deg); }
+}
+
+/* 공용 바텀시트 */
+.sheet-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: none;
+  align-items: flex-end;
+  background: rgba(2,8,23,0.50);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.sheet-overlay.show{
+  display: flex;
+  animation: fadeIn .2s ease;
+}
+
+.sheet-panel{
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, rgba(17,24,39,0.98), rgba(15,23,42,0.98));
+  border-radius: 28px 28px 0 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(2,8,23,0.35);
+  animation: slideUp .25s ease;
+}
+
+.sheet-handle{
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148,163,184,0.35);
+  margin: 0 auto 14px;
+}
+
+.sheet-title{
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  margin-bottom: 6px;
+}
+
+.sheet-sub{
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.sheet-section{
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sheet-section:last-child{
+  border-bottom: none;
+}
+
+.sheet-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sheet-profile{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sheet-avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(96,165,250,0.25);
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+}
+
+.sheet-avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sheet-name{
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sheet-email{
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+.sheet-status{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.12);
+  color: var(--green2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sheet-btn{
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 16px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, opacity .2s;
+}
+
+.sheet-btn:active{
+  transform: scale(.98);
+}
+
+.sheet-btn.primary{
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(37,99,235,0.28);
+}
+
+.sheet-btn.ghost{
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.sheet-btn.danger{
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.20);
+}
+
+.sheet-actions{
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.sheet-actions .sheet-btn{
+  flex: 1;
+}
+
+/* 잔고 카드 클릭 가능 표시 */
+.balance-card{
+  cursor: pointer;
+}
+
+.balance-card-edit-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  color: #dbeafe;
+  font-weight: 700;
+}
+
+/* 로그인 버튼 상태 */
+.btn-google-login.is-loading{
+  pointer-events: none;
+  opacity: .85;
+}
+
+.btn-google-login .btn-login-text{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-inline-spinner{
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(15,23,42,0.18);
+  border-top-color: #2563eb;
+  animation: spin .7s linear infinite;
+}
+
+/* 프로필 드롭다운 완전 비활성 */
+.user-menu{
+  display: none !important;
+}
+
+@media (max-width: 640px){
+  .sheet-panel{
+    max-width: 100%;
+  }
+}
   
 </style>
 </head>
@@ -1582,13 +1855,91 @@ body.light-theme .week-btn{
       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
-    Google로 시작하기
+    <span class="btn-login-text" id="google-login-text">Google로 시작하기</span>
   </button>
   <div class="login-note">로그인한 계정 기준으로 Firebase에 동기화됩니다</div>
 </div>
 
 <!-- 싱크 배지 -->
 <div class="sync-badge" id="sync-badge"></div>
+
+<!-- 로딩 오버레이 -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">처리 중...</div>
+  </div>
+</div>
+
+<!-- 프로필 바텀시트 -->
+<div class="sheet-overlay" id="profile-sheet" onclick="closeSheetOutside(event,'profile-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">내 계정</div>
+    <div class="sheet-sub">로그인 정보와 동기화 상태를 확인할 수 있어요.</div>
+
+    <div class="sheet-section">
+      <div class="sheet-profile">
+        <div class="sheet-avatar" id="profile-sheet-avatar">?</div>
+        <div>
+          <div class="sheet-name" id="profile-sheet-name">-</div>
+          <div class="sheet-email" id="profile-sheet-email">-</div>
+          <div class="sheet-status">● Firebase 동기화 활성</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet-section">
+      <button class="sheet-btn ghost" onclick="toggleTheme(); closeSheet('profile-sheet')">테마 변경</button>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="sheet-btn ghost" onclick="closeSheet('profile-sheet')">닫기</button>
+      <button class="sheet-btn danger" onclick="confirmSignOut()">로그아웃</button>
+    </div>
+  </div>
+</div>
+
+<!-- 잔고 수정 바텀시트 -->
+<div class="sheet-overlay" id="balance-sheet" onclick="closeSheetOutside(event,'balance-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">현재 잔고 수정</div>
+    <div class="sheet-sub">정확한 금액을 입력하면 예측과 경고가 즉시 다시 계산돼요.</div>
+
+    <div class="sheet-section">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">현재 잔고</div>
+      <div id="balance-sheet-current" class="money-strong" style="font-size:26px;font-weight:900;margin-bottom:14px">0원</div>
+      <input
+        class="field money-strong"
+        type="number"
+        id="balance-sheet-input"
+        inputmode="numeric"
+        placeholder="예: 923057"
+        style="text-align:right;font-size:18px;font-weight:800"
+      >
+    </div>
+
+    <div class="sheet-actions">
+      <button class="sheet-btn ghost" onclick="closeSheet('balance-sheet')">취소</button>
+      <button class="sheet-btn primary" onclick="submitBalanceSheet()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 로그아웃 확인 바텀시트 -->
+<div class="sheet-overlay" id="signout-sheet" onclick="closeSheetOutside(event,'signout-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">로그아웃할까요?</div>
+    <div class="sheet-sub">현재 기기에서는 로그아웃되지만, Firebase에 저장된 데이터는 유지됩니다.</div>
+
+    <div class="sheet-actions">
+      <button class="sheet-btn ghost" onclick="closeSheet('signout-sheet')">취소</button>
+      <button class="sheet-btn danger" onclick="proceedSignOut()">로그아웃</button>
+    </div>
+  </div>
+</div>
 
 <!-- 유저 메뉴 -->
 <div class="user-menu" id="user-menu" style="display:none">
@@ -1611,7 +1962,7 @@ body.light-theme .week-btn{
       <div class="topbar-balance-label">현재 잔고</div>
       <div class="topbar-balance-amount" id="topbar-balance">-</div>
     </div>
-    <div class="user-avatar" onclick="toggleUserMenu()">
+    <div class="user-avatar" onclick="openProfileSheet()">
       <div class="user-avatar-placeholder" id="user-avatar-text">?</div>
       <img id="user-avatar-img" src="" style="display:none" referrerpolicy="no-referrer">
     </div>
@@ -1622,7 +1973,7 @@ body.light-theme .week-btn{
 <div class="page active" id="page-home">
   <div class="home-grid">
     <div class="home-main">
-      <div class="balance-card">
+      <div class="balance-card" onclick="openBalanceSheet()">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px">
           <div>
             <div class="balance-label">💳 현재 잔고</div>
@@ -1639,6 +1990,7 @@ body.light-theme .week-btn{
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
         <div id="balance-insight" style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6"></div>
+        <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
         <div class="balance-edit">
           <input class="balance-input" type="number" id="balance-input" placeholder="잔고 입력" inputmode="numeric">
           <button class="btn btn-update" onclick="updateBalance()">
@@ -2086,47 +2438,49 @@ function isInAppBrowser() {
 }
 
 window.signInWithGoogle = async () => {
+  const btn = document.querySelector('.btn-google-login');
+  const txt = document.getElementById('google-login-text');
+
   try {
     if (isInAppBrowser()) {
-      alert("앱 내 브라우저에서는 로그인이 잘 되지 않을 수 있어요. Safari에서 다시 열어주세요.");
+      alert("앱 내 브라우저에서는 로그인이 잘 되지 않을 수 있어요. Safari나 기본 브라우저에서 다시 열어주세요.");
       return;
     }
 
+    btn?.classList.add('is-loading');
+    if (txt) {
+      txt.innerHTML = `<span class="btn-inline-spinner"></span>로그인 중...`;
+    }
+    window.showLoading && window.showLoading('Google 로그인 중...');
+
     if (isIOS() && isSafari()) {
-      // iPhone Safari에서는 redirect 방식이 더 안정적
       await signInWithRedirect(auth, provider);
       return;
     }
 
-    // 데스크톱/기타 브라우저는 popup
     await signInWithPopup(auth, provider);
 
   } catch (e) {
     console.error("로그인 실패:", e);
 
     if (e?.code === 'auth/popup-blocked') {
-      alert("브라우저가 로그인 창을 차단했습니다. Safari에서 다시 시도해주세요.");
-      return;
-    }
-
-    if (e?.code === 'auth/popup-closed-by-user') {
+      alert("브라우저가 로그인 창을 차단했습니다. 다시 시도해주세요.");
+    } else if (e?.code === 'auth/popup-closed-by-user') {
       alert("로그인 창이 닫혔습니다. 다시 시도해주세요.");
-      return;
-    }
-
-    if (e?.code === 'auth/unauthorized-domain') {
+    } else if (e?.code === 'auth/unauthorized-domain') {
       alert("승인되지 않은 도메인입니다. Firebase Authorized Domains 설정을 확인해주세요.");
-      return;
+    } else {
+      alert("로그인에 실패했습니다. 다시 시도해주세요.");
     }
-
-    alert("로그인에 실패했습니다. Safari에서 다시 시도해주세요.");
+  } finally {
+    btn?.classList.remove('is-loading');
+    if (txt) txt.textContent = 'Google로 시작하기';
+    window.hideLoading && window.hideLoading();
   }
 };
 
 window.signOutUser = async () => {
-  if (unsubscribe) unsubscribe();
-  await signOut(auth);
-  closeUserMenu();
+  confirmSignOut();
 };
 
 window.saveToFirebase = async (data) => {
@@ -2185,6 +2539,21 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('user-menu-name').textContent = user.displayName || user.email;
     document.getElementById('setting-account').textContent = user.email;
 
+    const profileName = document.getElementById('profile-sheet-name');
+const profileEmail = document.getElementById('profile-sheet-email');
+const profileAvatar = document.getElementById('profile-sheet-avatar');
+
+if (profileName) profileName.textContent = user.displayName || '사용자';
+if (profileEmail) profileEmail.textContent = user.email || '-';
+
+if (profileAvatar) {
+  if (user.photoURL) {
+    profileAvatar.innerHTML = `<img src="${user.photoURL}" referrerpolicy="no-referrer" alt="profile">`;
+  } else {
+    profileAvatar.textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+  }
+}
+
     window.firebaseReady = true;
     window.initApp();
   } else {
@@ -2192,6 +2561,10 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
     window.firebaseReady = false;
+    hideLoading && hideLoading();
+    closeSheet && closeSheet('profile-sheet');
+    closeSheet && closeSheet('signout-sheet');
+    closeSheet && closeSheet('balance-sheet');
   }
 });
 </script>
@@ -2282,12 +2655,26 @@ function p2(n) { return String(n).padStart(2, '0'); }
 function dateKey(d) { return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; }
 function yyyymm(d) { return d.getFullYear() * 100 + (d.getMonth() + 1); }
 function fmtShort(n) {
-  if (n === 0) return '-';
-  const abs = Math.abs(n);
-  const sign = n < 0 ? '-' : '';
+  const value = Number(n || 0);
+  if (value === 0) return '0원';
+
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
   if (abs >= 100000000) return sign + (abs / 100000000).toFixed(1) + '억';
-  if (abs >= 10000) return sign + Math.round(abs / 10000) + '만';
+  if (abs >= 10000) return sign + (abs / 10000).toFixed(1) + '만';
   return sign + abs.toLocaleString('ko-KR') + '원';
+}
+
+function fmtFull(n) {
+  return Number(n || 0).toLocaleString('ko-KR') + '원';
+}
+
+function fmtSigned(n) {
+  const value = Number(n || 0);
+  if (value === 0) return '0원';
+  const sign = value > 0 ? '+' : '-';
+  return sign + Math.abs(value).toLocaleString('ko-KR') + '원';
 }
 function fmtFull(n) { return Math.abs(n).toLocaleString('ko-KR') + '원'; }
 
@@ -2368,6 +2755,12 @@ const CAT_COLORS = {
 };
 const INCOME_CATS = ['월급','수당','기타수입'];
 const EXPENSE_CATS = ['카드','할부','공과금','보험','기타지출'];
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.balance-input') || e.target.closest('.btn-update')) {
+    e.stopPropagation();
+  }
+}, true);  
 
 // ════════════════════════════════════════════════════════
 // 예측 계산
@@ -2469,9 +2862,9 @@ function renderHome() {
     (!e.endMonth || parseInt(e.endMonth) >= todayYm)
   ).reduce((s,e) => s + e.amount, 0);
 
-  document.getElementById('sum-income').textContent = fmtShort(mi);
-  document.getElementById('sum-expense').textContent = fmtShort(me);
-  document.getElementById('sum-halbu').textContent = fmtShort(mh);
+  document.getElementById('sum-income').textContent = fmtFull(mi);
+  document.getElementById('sum-expense').textContent = fmtFull(me);
+  document.getElementById('sum-halbu').textContent = fmtFull(mh);
 
   const monthPrefix = `${today().getFullYear()}-${p2(today().getMonth() + 1)}`;
   const currentMonthCheckTotal = Object.entries(state.checkData || {})
@@ -2480,7 +2873,7 @@ function renderHome() {
 
   const checkEl = document.getElementById('sum-checkcard');
   if (checkEl) {
-    checkEl.textContent = fmtShort(currentMonthCheckTotal);
+    checkEl.textContent = fmtFull(currentMonthCheckTotal);
   }
 
   const net = mi - me;
@@ -2497,7 +2890,7 @@ function renderHome() {
   }
 
   const netEl = document.getElementById('sum-net');
-  netEl.textContent = fmtShort(net);
+  netEl.textContent = fmtSigned(net);
   netEl.className = 'summary-item-value ' + (net >= 0 ? 'green' : 'red');
 
   const fc = buildForecast(365);
@@ -2544,8 +2937,8 @@ function renderHome() {
         </div>
       </div>
       <div class="event-right">
-        ${f.income > 0 ? `<div class="event-delta" style="color:var(--green2)">+${fmtShort(f.income)}</div>` : ''}
-        ${f.expense > 0 ? `<div class="event-delta" style="color:var(--red2)">-${fmtShort(f.expense)}</div>` : ''}
+        ${f.income > 0 ? `<div class="event-delta money-strong" style="color:var(--green2)">${fmtSigned(f.income)}</div>` : ''}
+        ${f.expense > 0 ? `<div class="event-delta money-strong" style="color:var(--red2)">${fmtSigned(-f.expense)}</div>` : ''}
         <div class="event-bal" style="color:${isDanger ? 'var(--orange)' : 'var(--text3)'}">→ ${fmtShort(f.balance)}</div>
       </div>
     </div>`;
@@ -3390,6 +3783,98 @@ function navigate(page, btn) {
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+function showLoading(text = '처리 중...') {
+  const overlay = document.getElementById('loading-overlay');
+  const label = document.getElementById('loading-text');
+  if (label) label.textContent = text;
+  overlay?.classList.add('show');
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay')?.classList.remove('show');
+}
+
+function openSheet(id) {
+  document.getElementById(id)?.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSheet(id) {
+  document.getElementById(id)?.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function closeSheetOutside(e, id) {
+  if (e.target.id === id) closeSheet(id);
+}
+
+function openProfileSheet() {
+  const user = window.currentUser;
+  const avatar = document.getElementById('profile-sheet-avatar');
+  const name = document.getElementById('profile-sheet-name');
+  const email = document.getElementById('profile-sheet-email');
+
+  if (name) name.textContent = user?.displayName || '사용자';
+  if (email) email.textContent = user?.email || '-';
+
+  if (avatar) {
+    if (user?.photoURL) {
+      avatar.innerHTML = `<img src="${user.photoURL}" referrerpolicy="no-referrer" alt="profile">`;
+    } else {
+      avatar.textContent = (user?.displayName || user?.email || '?')[0].toUpperCase();
+    }
+  }
+
+  openSheet('profile-sheet');
+}
+
+function openBalanceSheet() {
+  const current = document.getElementById('balance-sheet-current');
+  const input = document.getElementById('balance-sheet-input');
+
+  if (current) current.textContent = fmtFull(state.balance);
+  if (input) input.value = state.balance || '';
+
+  openSheet('balance-sheet');
+  setTimeout(() => input?.focus(), 80);
+}
+
+function submitBalanceSheet() {
+  const input = document.getElementById('balance-sheet-input');
+  const value = parseFloat(input?.value) || 0;
+
+  state.balance = value;
+  save();
+  renderHome();
+
+  if (document.getElementById('page-forecast').classList.contains('active')) {
+    renderForecast();
+  }
+
+  closeSheet('balance-sheet');
+  showBadge('✅ 잔고가 수정됐어요');
+}
+
+function confirmSignOut() {
+  closeSheet('profile-sheet');
+  openSheet('signout-sheet');
+}
+
+async function proceedSignOut() {
+  closeSheet('signout-sheet');
+  showLoading('로그아웃 중...');
+  try {
+    if (unsubscribe) unsubscribe();
+    await signOut(auth);
+    showBadge('👋 로그아웃되었습니다');
+  } catch (e) {
+    console.error(e);
+    alert('로그아웃 중 오류가 발생했어요.');
+  } finally {
+    hideLoading();
+  }
+}  
 
 // ════════════════════════════════════════════════════════
 // 배지/토스트
