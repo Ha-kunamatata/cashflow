@@ -1823,6 +1823,231 @@ body.light-theme .week-btn{
     max-width: 100%;
   }
 }
+
+.app-loading-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(2,6,23,.55);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:5000;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease;
+}
+.app-loading-overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+.app-loading-box{
+  min-width:160px;
+  padding:22px 20px;
+  border-radius:24px;
+  background:rgba(15,23,42,.92);
+  border:1px solid rgba(255,255,255,.08);
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  box-shadow:0 20px 50px rgba(0,0,0,.35);
+}
+.app-loading-spinner{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);
+  border-top-color:#60a5fa;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{
+  to { transform:rotate(360deg); }
+}
+
+.sheet-overlay{
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .24s ease;
+}
+.sheet-overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+.sheet-panel{
+  width:min(100%, 560px);
+  background:linear-gradient(180deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:28px 28px 0 0;
+  padding:18px 18px calc(20px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 40px rgba(0,0,0,.25);
+  transform:translateY(28px);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1);
+}
+.sheet-overlay.show .sheet-panel{
+  transform:translateY(0);
+}
+.sheet-handle{
+  width:42px;
+  height:5px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  margin:0 auto 16px;
+}
+.sheet-title{
+  font-size:20px;
+  font-weight:900;
+  color:var(--text);
+  margin-bottom:6px;
+}
+.sheet-sub{
+  font-size:13px;
+  color:var(--text2);
+  margin-bottom:18px;
+  line-height:1.5;
+}
+.sheet-input{
+  width:100%;
+  min-height:52px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  padding:0 16px;
+  font-size:16px;
+  font-family:var(--mono);
+  outline:none;
+  margin-bottom:16px;
+}
+.sheet-input:focus{
+  border-color:rgba(96,165,250,.45);
+  box-shadow:0 0 0 4px rgba(59,130,246,.12);
+}
+.sheet-current-balance{
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+  color:var(--text2);
+  margin-bottom:14px;
+  font-size:14px;
+}
+.sheet-current-balance strong{
+  color:var(--text);
+  font-family:var(--mono);
+}
+.sheet-actions{
+  display:flex;
+  gap:10px;
+}
+.sheet-primary-btn,
+.sheet-secondary-btn,
+.sheet-danger-btn,
+.sheet-close-btn,
+.sheet-menu-btn{
+  border:none;
+  font-family:var(--font);
+  cursor:pointer;
+}
+.sheet-primary-btn,
+.sheet-secondary-btn,
+.sheet-danger-btn{
+  flex:1;
+  min-height:50px;
+  border-radius:16px;
+  font-size:15px;
+  font-weight:800;
+}
+.sheet-primary-btn{
+  background:linear-gradient(135deg, #3b82f6, #2563eb);
+  color:#fff;
+}
+.sheet-secondary-btn{
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.07);
+}
+.sheet-danger-btn{
+  background:rgba(239,68,68,.14);
+  color:#fca5a5;
+  border:1px solid rgba(239,68,68,.18);
+}
+.sheet-close-btn{
+  width:100%;
+  min-height:48px;
+  border-radius:16px;
+  margin-top:14px;
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.07);
+}
+.sheet-profile-top{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:18px;
+}
+.sheet-profile-avatar{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  background:linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  font-size:20px;
+  overflow:hidden;
+}
+.sheet-profile-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.sheet-profile-name{
+  font-size:18px;
+  font-weight:900;
+  color:var(--text);
+}
+.sheet-profile-email{
+  font-size:13px;
+  color:var(--text2);
+  margin-top:4px;
+}
+.sheet-menu-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.sheet-menu-btn{
+  width:100%;
+  min-height:52px;
+  border-radius:16px;
+  padding:0 16px;
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.07);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:14px;
+  font-weight:700;
+}
+.sheet-menu-btn.danger{
+  color:#fca5a5;
+}
   
 </style>
 </head>
@@ -1992,10 +2217,9 @@ body.light-theme .week-btn{
         <div id="balance-insight" style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6"></div>
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
         <div class="balance-edit">
-          <input class="balance-input" type="number" id="balance-input" placeholder="잔고 입력" inputmode="numeric">
-          <button class="btn btn-update" onclick="updateBalance()">
+          <button class="btn btn-update" onclick="openBalanceSheet()" style="width:100%">
             <div class="ripple-container"></div>
-            업데이트
+            잔고 수정하기
           </button>
         </div>
       </div>
@@ -2849,8 +3073,6 @@ function renderHome() {
   const tb = document.getElementById('topbar-balance');
   animateNumberText(tb, state.balance, v => fmtShort(v));
   tb.className = 'topbar-balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
-
-  document.getElementById('balance-input').value = state.balance || '';
 
   const todayYm = yyyymm(today());
   const mi = state.entries.filter(e => e.type === 'income' && e.repeat === '매월').reduce((s,e) => s + e.amount, 0);
@@ -3965,5 +4187,81 @@ function renderAll() {
   if (ap?.id === 'page-ledger') renderLedger();
 }
 </script>
+
+<!-- 로딩 오버레이 -->
+<div id="loading-overlay" class="app-loading-overlay">
+  <div class="app-loading-box">
+    <div class="app-loading-spinner"></div>
+    <div id="loading-text">처리 중...</div>
+  </div>
+</div>
+
+<!-- 프로필 시트 -->
+<div class="sheet-overlay" id="profile-sheet" onclick="closeSheetOutside(event, 'profile-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-profile-top">
+      <div class="sheet-profile-avatar" id="profile-sheet-avatar">?</div>
+      <div>
+        <div class="sheet-profile-name" id="profile-sheet-name">사용자</div>
+        <div class="sheet-profile-email" id="profile-sheet-email">-</div>
+      </div>
+    </div>
+
+    <div class="sheet-menu-list">
+      <button class="sheet-menu-btn" onclick="closeSheet('profile-sheet'); navigate('settings')">
+        <span>⚙️ 설정으로 가기</span>
+        <span>›</span>
+      </button>
+      <button class="sheet-menu-btn danger" onclick="confirmSignOut()">
+        <span>🚪 로그아웃</span>
+        <span>›</span>
+      </button>
+    </div>
+
+    <button class="sheet-close-btn" onclick="closeSheet('profile-sheet')">닫기</button>
+  </div>
+</div>
+
+<!-- 잔고 수정 시트 -->
+<div class="sheet-overlay" id="balance-sheet" onclick="closeSheetOutside(event, 'balance-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">잔고 수정</div>
+    <div class="sheet-sub">현재 잔고를 바로 수정할 수 있어요</div>
+
+    <div class="sheet-current-balance">
+      현재 잔고: <strong id="balance-sheet-current">0원</strong>
+    </div>
+
+    <input
+      type="number"
+      id="balance-sheet-input"
+      class="sheet-input"
+      placeholder="수정할 잔고 입력"
+      inputmode="numeric"
+    >
+
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" onclick="closeSheet('balance-sheet')">취소</button>
+      <button class="sheet-primary-btn" onclick="submitBalanceSheet()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 로그아웃 확인 시트 -->
+<div class="sheet-overlay" id="signout-sheet" onclick="closeSheetOutside(event, 'signout-sheet')">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">로그아웃할까요?</div>
+    <div class="sheet-sub">현재 계정에서 로그아웃됩니다.</div>
+
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" onclick="closeSheet('signout-sheet')">취소</button>
+      <button class="sheet-danger-btn" onclick="proceedSignOut()">로그아웃</button>
+    </div>
+  </div>
+</div>
+  
 </body>
 </html>
