@@ -44,11 +44,60 @@ export function setSelectedLedgerDate(dk) {
 export function renderAll() {
   renderHome();
   renderEntries();
+  renderSettingsStats();
 
   const activePage = document.querySelector('.page.active');
   if (activePage?.id === 'page-forecast') renderForecast();
   if (activePage?.id === 'page-cards') renderCards();
   if (activePage?.id === 'page-ledger') renderLedger();
+}
+
+export function renderSettingsStats() {
+  const el = document.getElementById('settings-stats');
+  if (!el) return;
+
+  const totalEntries = state.entries.length;
+  const mIncome = state.entries
+    .filter((e) => e.type === 'income' && e.repeat === '매월')
+    .reduce((s, e) => s + e.amount, 0);
+  const mExpense = state.entries
+    .filter((e) => e.type === 'expense' && e.repeat === '매월')
+    .reduce((s, e) => s + e.amount, 0);
+  const activeHalbu = state.entries.filter(
+    (e) =>
+      e.type === 'expense' &&
+      e.category === '할부' &&
+      e.repeat === '매월' &&
+      (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(today())),
+  ).length;
+  const checkDaysTotal = Object.keys(state.checkData || {}).length;
+
+  el.innerHTML = `
+    <div class="stat-item">
+      <div class="stat-label">등록 항목</div>
+      <div class="stat-value">${totalEntries}<span style="font-size:11px;color:var(--text3)">개</span></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">월 수입</div>
+      <div class="stat-value" style="color:var(--green2)">${fmtShort(mIncome)}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">월 지출</div>
+      <div class="stat-value" style="color:var(--red2)">${fmtShort(mExpense)}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">활성 할부</div>
+      <div class="stat-value">${activeHalbu}<span style="font-size:11px;color:var(--text3)">건</span></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">가계부 기록</div>
+      <div class="stat-value">${checkDaysTotal}<span style="font-size:11px;color:var(--text3)">일</span></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">순현금흐름</div>
+      <div class="stat-value" style="color:${mIncome >= mExpense ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(mIncome - mExpense)}</div>
+    </div>
+  `;
 }
 
 // ════════════════════════════════════════════════════════
@@ -119,6 +168,73 @@ export function renderHome() {
         : net > 0
           ? '좋아요. 월 순현금이 플러스 흐름을 유지하고 있어요.'
           : '고정 지출 비중이 높아요. 지출 구조를 점검해보세요.';
+  }
+
+  // ── 정보 칩 (월급 D-Day, 할부 종료 임박, 예산 여유) ──────
+  const chipsEl = document.getElementById('home-chips');
+  if (chipsEl) {
+    const salaryEntry = state.entries.find(
+      (e) => e.type === 'income' && e.category === '월급' && e.repeat === '매월' && e.day,
+    );
+    let chips = '';
+    if (salaryEntry) {
+      const t = today();
+      let next = new Date(t.getFullYear(), t.getMonth(), salaryEntry.day);
+      if (next <= t) next = new Date(t.getFullYear(), t.getMonth() + 1, salaryEntry.day);
+      const diff = Math.round((next - t) / 86400000);
+      chips += `<span class="info-chip ${diff === 0 ? 'success' : ''}">💰 ${diff === 0 ? '오늘 월급날!' : `월급까지 D-${diff}`}</span>`;
+    }
+    const nextYm = yyyymm(new Date(today().getFullYear(), today().getMonth() + 1, 1));
+    const endingHalbu = state.entries.filter(
+      (e) =>
+        e.type === 'expense' &&
+        e.category === '할부' &&
+        e.endMonth &&
+        (parseInt(e.endMonth, 10) === todayYm || parseInt(e.endMonth, 10) === nextYm),
+    );
+    if (endingHalbu.length > 0) {
+      chips += `<span class="info-chip success">✅ 할부 ${endingHalbu.length}건 종료 임박</span>`;
+    }
+    if (monthlyIncome > 0) {
+      const remaining = monthlyIncome - monthlyExpense - checkTotal;
+      chips += `<span class="info-chip ${remaining < 0 ? 'warning' : ''}">📊 여유 ${remaining >= 0 ? fmtShort(remaining) : '-' + fmtShort(-remaining)}</span>`;
+    }
+    chipsEl.innerHTML = chips;
+    chipsEl.style.display = chips ? 'flex' : 'none';
+  }
+
+  // ── 요약카드 서브라벨 ──────────────────────────────────
+  const incomeCount = state.entries.filter((e) => e.type === 'income' && e.repeat === '매월').length;
+  const siSub = document.getElementById('sum-income-sub');
+  if (siSub) siSub.textContent = `${incomeCount}개 항목`;
+
+  const expPct = monthlyIncome > 0 ? Math.round((monthlyExpense / monthlyIncome) * 100) : 0;
+  const seSub = document.getElementById('sum-expense-sub');
+  if (seSub) seSub.textContent = `수입의 ${expPct}%`;
+
+  const halbuCount = state.entries.filter(
+    (e) =>
+      e.type === 'expense' &&
+      e.category === '할부' &&
+      e.repeat === '매월' &&
+      (!e.endMonth || parseInt(e.endMonth, 10) >= todayYm),
+  ).length;
+  const shSub = document.getElementById('sum-halbu-sub');
+  if (shSub) shSub.textContent = `${halbuCount}건 진행중`;
+
+  const netSub = document.getElementById('sum-net-sub');
+  if (netSub) netSub.textContent = net >= 0 ? '✓ 흑자 유지' : '⚠ 지출 초과';
+
+  const checkDays = Object.keys(state.checkData || {}).filter((d) => d.startsWith(monthPrefix)).length;
+  const scSub = document.getElementById('sum-checkcard-sub');
+  if (scSub) scSub.textContent = `${checkDays}일 기록`;
+
+  const fillEl = document.getElementById('checkcard-budget-fill');
+  if (fillEl && monthlyIncome > 0) {
+    const spendable = Math.max(monthlyIncome - monthlyExpense, 1);
+    const pct = Math.min(100, Math.round((checkTotal / spendable) * 100));
+    fillEl.style.width = `${pct}%`;
+    fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
 
   const fc = buildForecast(365);
@@ -216,9 +332,62 @@ export function setForecastFilter(filter, btn) {
 }
 
 export function renderForecast() {
+  renderForecastInsights();
   renderForecastChart();
   renderMonthlyChart();
   renderForecastTable();
+}
+
+function renderForecastInsights() {
+  const card = document.getElementById('forecast-insights-card');
+  const contentEl = document.getElementById('forecast-insights-content');
+  if (!card || !contentEl) return;
+
+  const fc = buildForecast(365);
+  const dangerDays = fc.filter((f) => f.balance < state.dangerLine && (f.income > 0 || f.expense > 0));
+  const topExpense = fc.filter((f) => f.expense > 0).sort((a, b) => b.expense - a.expense)[0];
+
+  if (dangerDays.length === 0 && !topExpense) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  let html = '';
+
+  if (dangerDays.length > 0) {
+    html += `<div style="margin-bottom:${topExpense ? '12px' : '0'}">
+      <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.8px;margin-bottom:6px">⚠️ 위험 예상일 (${dangerDays.length}건)</div>`;
+    html += dangerDays
+      .slice(0, 5)
+      .map(
+        (f) =>
+          `<div class="danger-day-row">
+            <span class="danger-day-date">${f.date.getMonth() + 1}/${f.date.getDate()}</span>
+            <span class="danger-day-balance">${fmtShort(f.balance)}</span>
+          </div>`,
+      )
+      .join('');
+    if (dangerDays.length > 5)
+      html += `<div style="font-size:11px;color:var(--text3);padding-top:5px">외 ${dangerDays.length - 5}건 더</div>`;
+    html += '</div>';
+  }
+
+  if (topExpense) {
+    const names = topExpense.events
+      .slice(0, 2)
+      .map((e) => escapeHtml(e.name))
+      .join(', ');
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border)">
+      <div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.8px">💸 최대 지출일</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">${topExpense.date.getMonth() + 1}/${topExpense.date.getDate()} · ${names}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--red2)">-${fmtShort(topExpense.expense)}</span>
+    </div>`;
+  }
+
+  contentEl.innerHTML = html;
 }
 
 export function renderForecastChart() {
@@ -415,6 +584,37 @@ export function renderEntries() {
   const container = document.getElementById('entries-list');
   if (!container) return;
 
+  // ── 수입지출 요약 헤더 ─────────────────────────────────
+  const summaryBar = document.getElementById('entries-summary-bar');
+  if (summaryBar) {
+    const mIncome = state.entries
+      .filter((e) => e.type === 'income' && e.repeat === '매월')
+      .reduce((s, e) => s + e.amount, 0);
+    const mExpense = state.entries
+      .filter((e) => e.type === 'expense' && e.repeat === '매월')
+      .reduce((s, e) => s + e.amount, 0);
+    const netFlow = mIncome - mExpense;
+    summaryBar.innerHTML = `
+      <div class="entries-summary-item">
+        <div class="entries-summary-label">총 항목</div>
+        <div class="entries-summary-value">${state.entries.length}<span style="font-size:10px;color:var(--text3)">개</span></div>
+      </div>
+      <div class="entries-summary-item">
+        <div class="entries-summary-label">월 수입</div>
+        <div class="entries-summary-value" style="color:var(--green2)">${fmtShort(mIncome)}</div>
+      </div>
+      <div class="entries-summary-item">
+        <div class="entries-summary-label">월 지출</div>
+        <div class="entries-summary-value" style="color:var(--red2)">${fmtShort(mExpense)}</div>
+      </div>
+      <div class="entries-summary-item">
+        <div class="entries-summary-label">순현금흐름</div>
+        <div class="entries-summary-value" style="color:${netFlow >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(netFlow)}</div>
+      </div>
+    `;
+    summaryBar.style.display = 'flex';
+  }
+
   let entries = [...state.entries];
 
   if (_entryFilter === '수입') {
@@ -589,6 +789,25 @@ export function renderLedger() {
 
   const me = document.getElementById('ledger-max-day');
   if (me) me.textContent = maxDayText;
+
+  // ── 주간 소비 요약 ─────────────────────────────────────
+  const weeklyEl = document.getElementById('ledger-weekly-summary');
+  if (weeklyEl) {
+    const weeklySums = [];
+    monthEntries.forEach(([date, amt]) => {
+      const day = parseInt(date.split('-')[2], 10);
+      const weekIdx = Math.floor((day - 1 + startWd) / 7);
+      weeklySums[weekIdx] = (weeklySums[weekIdx] || 0) + amt;
+    });
+    const totalWeeks = Math.ceil((totalDays + startWd) / 7);
+    weeklyEl.innerHTML = Array.from({ length: totalWeeks }, (_, i) => {
+      const sum = weeklySums[i] || 0;
+      return `<div class="week-chip">
+        <div class="week-chip-label">${i + 1}주차</div>
+        <div class="week-chip-value ${sum === 0 ? 'zero' : ''}">${sum > 0 ? fmtShort(sum) : '-'}</div>
+      </div>`;
+    }).join('');
+  }
 
   const ms = document.getElementById('ledger-month-summary');
   if (ms) {
