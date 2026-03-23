@@ -18,13 +18,12 @@ export const state = {
 export function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.error('local save error:', e);
-  }
+  } catch (e) {}
 
   if (window.firebaseReady && window.saveToFirebase) {
     window.saveToFirebase(JSON.parse(JSON.stringify(state)));
   }
+}
 
 // ── 로드 ──────────────────────────────────────────────
 export function load() {
