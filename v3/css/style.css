@@ -372,6 +372,17 @@ body::before {
 .setting-input { background:rgba(5,11,25,0.55); border:1px solid rgba(255,255,255,0.08); color:var(--text); border-radius:10px; padding:8px 12px; font-size:13px; font-family:var(--mono); text-align:right; outline:none; width:130px; min-height:44px; }
 .setting-input:focus { border-color:rgba(96,165,250,0.45); }
 
+/* ── 설정 프로필 카드 ── */
+.settings-profile-card { margin-bottom:16px; }
+.settings-profile-row { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+.settings-profile-avatar { width:62px; height:62px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px; overflow:hidden; flex-shrink:0; }
+.settings-profile-avatar img { width:100%; height:100%; object-fit:cover; }
+.settings-profile-name { font-size:17px; font-weight:900; color:var(--text); }
+.settings-profile-email { font-size:12px; color:var(--text2); margin-top:4px; word-break:break-all; }
+.settings-profile-provider { display:inline-flex; align-items:center; gap:5px; margin-top:8px; font-size:10px; font-weight:700; color:var(--text3); background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); padding:3px 10px; border-radius:999px; }
+.settings-signout-btn { width:100%; min-height:48px; border-radius:14px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.18); color:#fca5a5; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; }
+.settings-signout-btn:active { background:rgba(239,68,68,.2); }
+
 /* ── 토스트 ── */
 .sync-badge { position:fixed; top:78px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.88); border:1px solid rgba(96,165,250,0.28); color:#dbeafe; padding:10px 18px; border-radius:999px; font-size:11px; z-index:999; pointer-events:none; opacity:0; transition:opacity 0.4s; white-space:nowrap; box-shadow:0 18px 36px rgba(2,8,23,0.32); }
 .sync-badge.visible { opacity:1; }

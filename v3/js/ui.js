@@ -65,7 +65,7 @@ export function openBalanceSheet() {
 }
 
 export function submitBalanceSheet() {
-  state.balance = parseFloat(document.getElementById('balance-sheet-input')?.value) || 0;
+  state.balance = Number(document.getElementById('balance-sheet-input')?.value) || 0;
 
   save();
   renderModule.renderHome();
@@ -104,7 +104,7 @@ export function confirmSignOut() {
 
 // ── 위험선 ─────────────────────────────────────────────
 export function onDangerLineChange() {
-  state.dangerLine = parseFloat(document.getElementById('danger-line-input')?.value) || 0;
+  state.dangerLine = Number(document.getElementById('danger-line-input')?.value) || 0;
 
   const settingDanger = document.getElementById('setting-danger');
   if (settingDanger) settingDanger.value = state.dangerLine;
@@ -119,7 +119,7 @@ export function onDangerLineChange() {
 
 export function saveSetting(key, val) {
   if (key === 'dangerLine') {
-    state.dangerLine = parseFloat(val) || 0;
+    state.dangerLine = Number(val) || 0;
 
     const dangerInput = document.getElementById('danger-line-input');
     if (dangerInput) dangerInput.value = state.dangerLine;
@@ -194,7 +194,7 @@ export function onRepeatChange() {
 
 export function saveEntry() {
   const name = document.getElementById('f-name').value.trim();
-  const amount = parseFloat(document.getElementById('f-amount').value);
+  const amount = Number(document.getElementById('f-amount').value);
 
   if (!name || !amount) {
     alert('항목명과 금액을 입력해주세요');
@@ -242,7 +242,7 @@ export function deleteEntry(id) {
 // ── 카드 데이터 ────────────────────────────────────────
 export function updateCardData(ym, card, val) {
   if (!state.cardData[ym]) state.cardData[ym] = {};
-  state.cardData[ym][card] = parseFloat(val) || 0;
+  state.cardData[ym][card] = Number(val) || 0;
 
   save();
   renderModule.renderHome();
@@ -266,6 +266,8 @@ export function openLedgerEditor(dateStr) {
   const input = document.getElementById('ledger-amount-input');
   const d = new Date(dateStr);
 
+  if (isNaN(d.getTime())) return;
+
   label.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 소비 입력`;
   input.value = state.checkData?.[dateStr] || '';
   card.style.display = 'block';
@@ -280,7 +282,7 @@ export function closeLedgerEditor() {
 export function saveLedgerExpense() {
   if (!selectedLedgerDate) return;
 
-  const amt = parseFloat(document.getElementById('ledger-amount-input').value) || 0;
+  const amt = Number(document.getElementById('ledger-amount-input').value) || 0;
 
   if (!state.checkData) state.checkData = {};
 
@@ -341,7 +343,15 @@ export function importData(e) {
 
   reader.onload = (ev) => {
     try {
-      Object.assign(state, JSON.parse(ev.target.result));
+      const imported = JSON.parse(ev.target.result);
+      if (typeof imported !== 'object' || imported === null || Array.isArray(imported)) {
+        throw new Error('invalid');
+      }
+      if (!Array.isArray(imported.entries)) imported.entries = [];
+      if (typeof imported.cardData !== 'object' || imported.cardData === null) imported.cardData = {};
+      if (typeof imported.checkData !== 'object' || imported.checkData === null) imported.checkData = {};
+      if (typeof imported.balance !== 'number') delete imported.balance;
+      Object.assign(state, imported);
       save();
       renderModule.renderAll();
       showBadge('✅ 가져오기 완료');

@@ -67,9 +67,6 @@ import {
   hideLoading
 } from './utils.js';
 
-// ── 전역 노출 (인라인 onclick 대응) ───────────────────
-window._ui = { editEntry, deleteEntry, updateCardData, openLedgerEditor };
-
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
@@ -96,7 +93,18 @@ initAuth(
     }
 
     document.getElementById('user-menu-name').textContent = user.displayName || user.email;
-    document.getElementById('setting-account').textContent = user.email;
+
+    // 설정 프로필 카드 업데이트
+    const settingsAvatar = document.getElementById('settings-profile-avatar');
+    const settingsName = document.getElementById('settings-profile-name');
+    const settingsEmail = document.getElementById('settings-profile-email');
+    if (settingsName) settingsName.textContent = user.displayName || '사용자';
+    if (settingsEmail) settingsEmail.textContent = user.email || '-';
+    if (settingsAvatar) {
+      settingsAvatar.innerHTML = user.photoURL
+        ? `<img src="${user.photoURL}" referrerpolicy="no-referrer">`
+        : (user.displayName || user.email || '?')[0].toUpperCase();
+    }
 
     // 데이터 로드
     load();
@@ -119,7 +127,9 @@ initAuth(
 
     // 실시간 동기화
     startSync((cloudData) => {
+      const localTheme = state.theme; // 테마는 기기별 설정 유지
       Object.assign(state, cloudData);
+      state.theme = localTheme;
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
       applyTheme();
       renderAll();
@@ -180,6 +190,26 @@ document.getElementById('form-save-btn')?.addEventListener('click', saveEntry);
 document.getElementById('form-cancel-btn')?.addEventListener('click', hideForm);
 document.getElementById('form-overlay')?.addEventListener('click', closeFormIfOutside);
 
+// 수입/지출 목록 이벤트 위임
+document.getElementById('entries-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.icon-btn.edit');
+  const delBtn = e.target.closest('.icon-btn.del');
+  if (editBtn?.dataset.id) editEntry(editBtn.dataset.id);
+  if (delBtn?.dataset.id) deleteEntry(delBtn.dataset.id);
+});
+
+// 카드 데이터 이벤트 위임
+document.getElementById('card-months-list')?.addEventListener('input', (e) => {
+  const input = e.target.closest('.card-num-input[data-ym]');
+  if (input) updateCardData(input.dataset.ym, input.dataset.card, input.value);
+});
+
+// 가계부 달력 이벤트 위임
+document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
+  const day = e.target.closest('.ledger-day:not(.empty)');
+  if (day?.dataset.dk) openLedgerEditor(day.dataset.dk);
+});
+
 // 가계부 탭
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
 document.getElementById('btn-ledger-next')?.addEventListener('click', () => changeLedgerMonth(1));
@@ -188,6 +218,7 @@ document.getElementById('btn-ledger-clear')?.addEventListener('click', clearLedg
 document.getElementById('btn-ledger-close')?.addEventListener('click', closeLedgerEditor);
 
 // 설정 탭
+document.getElementById('btn-settings-signout')?.addEventListener('click', () => openSheet('signout-sheet'));
 document.getElementById('setting-danger')?.addEventListener('change', (e) => saveSetting('dangerLine', e.target.value));
 document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
 document.getElementById('btn-export')?.addEventListener('click', exportData);

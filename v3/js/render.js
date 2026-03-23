@@ -11,6 +11,7 @@ import {
   fmtShort,
   fmtSigned,
   animateNumber,
+  escapeHtml,
 } from './utils.js';
 import { state } from './state.js';
 import { buildForecast } from './forecast.js';
@@ -21,6 +22,15 @@ let _entryFilter = '전체';
 
 export let currentLedgerYear = today().getFullYear();
 export let currentLedgerMonth = today().getMonth();
+
+// 마지막으로 보던 가계부 월 복원
+try {
+  const saved = JSON.parse(localStorage.getItem('cashflow_ledger_ym') || 'null');
+  if (saved && typeof saved.y === 'number' && typeof saved.m === 'number') {
+    currentLedgerYear = saved.y;
+    currentLedgerMonth = saved.m;
+  }
+} catch (_) {}
 
 let _selectedLedgerDate = null;
 
@@ -170,7 +180,7 @@ export function renderHome() {
             <div class="event-tags">
               ${f.events
                 .slice(0, 2)
-                .map((ev) => `<span class="event-tag">${ev.name}</span>`)
+                .map((ev) => `<span class="event-tag">${escapeHtml(ev.name)}</span>`)
                 .join('')}
               ${f.events.length > 2 ? `<span class="event-tag">+${f.events.length - 2}</span>` : ''}
             </div>
@@ -354,15 +364,18 @@ export function renderForecastTable() {
   const fc = buildForecast(365);
   let html = '';
   let lastMonth = -1;
+  let lastYear = -1;
 
   for (const f of fc) {
     if (_forecastFilter === 'event' && f.income === 0 && f.expense === 0) continue;
     if (_forecastFilter === 'danger' && f.balance >= state.dangerLine) continue;
 
     const m = f.date.getMonth() + 1;
-    if (m !== lastMonth) {
-      html += `<tr class="month-header"><td colspan="6">${f.date.getFullYear()}년 ${m}월</td></tr>`;
+    const y = f.date.getFullYear();
+    if (m !== lastMonth || y !== lastYear) {
+      html += `<tr class="month-header"><td colspan="6">${y}년 ${m}월</td></tr>`;
       lastMonth = m;
+      lastYear = y;
     }
 
     const isDanger = f.balance < state.dangerLine;
@@ -454,30 +467,34 @@ export function renderEntries() {
           ? '<span class="badge kookmin">국민</span>'
           : '';
 
+    const endMonthStr = String(e.endMonth || '');
+    const endMonthLabel = endMonthStr.length === 6
+      ? `~${endMonthStr.slice(0, 4)}/${endMonthStr.slice(4)}`
+      : `~${endMonthStr}`;
     const endBadge = e.endMonth
-      ? `<span class="badge ${isEnded ? 'ended' : 'halbu'}">${isEnded ? '종료' : '~' + String(e.endMonth).slice(0, 4) + '/' + String(e.endMonth).slice(4)}</span>`
+      ? `<span class="badge ${isEnded ? 'ended' : 'halbu'}">${isEnded ? '종료' : endMonthLabel}</span>`
       : '';
 
-    const repeatInfo = e.repeat === '매월' ? `매월 ${e.day}일` : e.repeat === '1회성' ? e.date : '격주';
+    const repeatInfo = e.repeat === '매월' ? `매월 ${e.day}일` : e.repeat === '1회성' ? escapeHtml(e.date) : '격주';
 
     html += `
       <div class="entry-item" style="${isEnded ? 'opacity:0.45' : ''}">
         <div class="entry-left">
           <div class="entry-dot" style="background:${CAT_COLORS[e.category] || '#64748b'};color:${CAT_COLORS[e.category] || '#64748b'}"></div>
           <div class="entry-info">
-            <div class="entry-name">${e.name}</div>
-            <div class="entry-meta">${e.category} · ${repeatInfo} ${cardBadge} ${endBadge}</div>
+            <div class="entry-name">${escapeHtml(e.name)}</div>
+            <div class="entry-meta">${escapeHtml(e.category)} · ${repeatInfo} ${cardBadge} ${endBadge}</div>
           </div>
         </div>
         <div class="entry-right">
           <span class="entry-amount ${amtClass}">${e.type === 'income' ? '+' : '-'}${fmtShort(e.amount)}</span>
-          <button class="icon-btn edit" onclick="window._ui.editEntry('${e.id}')">
+          <button class="icon-btn edit" data-id="${e.id}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/>
             </svg>
           </button>
-          <button class="icon-btn del" onclick="window._ui.deleteEntry('${e.id}')">
+          <button class="icon-btn del" data-id="${e.id}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -520,11 +537,11 @@ export function renderCardMonths() {
         <div class="card-inputs">
           <div>
             <div class="card-input-label hyundai">🔵 현대카드 (1일)</div>
-            <input class="card-num-input" type="number" value="${h || ''}" placeholder="0" inputmode="numeric" oninput="window._ui.updateCardData('${ym}','hyundai',this.value)" style="border-color:var(--accent)">
+            <input class="card-num-input" type="number" value="${h || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="hyundai" style="border-color:var(--accent)">
           </div>
           <div>
             <div class="card-input-label kookmin">🟠 국민카드 (3일)</div>
-            <input class="card-num-input" type="number" value="${k || ''}" placeholder="0" inputmode="numeric" oninput="window._ui.updateCardData('${ym}','kookmin',this.value)" style="border-color:var(--orange)">
+            <input class="card-num-input" type="number" value="${k || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="kookmin" style="border-color:var(--orange)">
           </div>
         </div>
       </div>
@@ -629,7 +646,7 @@ export function renderLedger() {
     const numClass = 'ledger-day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
 
     html += `
-      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="window._ui.openLedgerEditor('${dk}')">
+      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
           <div class="${numClass}">${day}</div>
         </div>
@@ -655,6 +672,7 @@ export function changeLedgerMonth(diff) {
     currentLedgerYear++;
   }
 
+  localStorage.setItem('cashflow_ledger_ym', JSON.stringify({ y: currentLedgerYear, m: currentLedgerMonth }));
   _selectedLedgerDate = null;
 
   const ec = document.getElementById('ledger-editor-card');
