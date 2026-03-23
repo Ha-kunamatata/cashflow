@@ -86,18 +86,45 @@
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
       </div>
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
+  <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
 
   <div class="summary-grid">
     <div class="summary-item">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div class="summary-item-label">월 수입 (고정)</div><div style="font-size:18px">📈</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 수입</div><div style="font-size:15px">📈</div>
       </div>
       <div class="summary-item-value green" id="sum-income">-</div>
+      <div class="summary-item-sub" id="sum-income-sub"></div>
     </div>
-    <div class="summary-item"><div class="summary-item-label">월 지출 (고정)</div><div class="summary-item-value red" id="sum-expense">-</div></div>
-    <div class="summary-item"><div class="summary-item-label">이번달 할부</div><div class="summary-item-value blue" id="sum-halbu">-</div></div>
-    <div class="summary-item"><div class="summary-item-label">월 순현금</div><div class="summary-item-value" id="sum-net">-</div></div>
-    <div class="summary-item"><div class="summary-item-label">이번 달 체크카드</div><div class="summary-item-value orange" id="sum-checkcard">-</div></div>
+    <div class="summary-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 지출</div><div style="font-size:15px">📉</div>
+      </div>
+      <div class="summary-item-value red" id="sum-expense">-</div>
+      <div class="summary-item-sub" id="sum-expense-sub"></div>
+    </div>
+    <div class="summary-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">이번달 할부</div><div style="font-size:15px">💳</div>
+      </div>
+      <div class="summary-item-value blue" id="sum-halbu">-</div>
+      <div class="summary-item-sub" id="sum-halbu-sub"></div>
+    </div>
+    <div class="summary-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 순현금</div><div style="font-size:15px">💹</div>
+      </div>
+      <div class="summary-item-value" id="sum-net">-</div>
+      <div class="summary-item-sub" id="sum-net-sub"></div>
+    </div>
+    <div class="summary-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">체크카드 소비</div><div style="font-size:15px">🧾</div>
+      </div>
+      <div class="summary-item-value orange" id="sum-checkcard">-</div>
+      <div class="summary-item-sub" id="sum-checkcard-sub"></div>
+      <div class="budget-bar"><div class="budget-bar-fill" id="checkcard-budget-fill" style="width:0%;background:var(--green2)"></div></div>
+    </div>
   </div>
 </div>
 
@@ -136,6 +163,10 @@
           </div>
         </div>
       </div>
+      <div class="card" id="forecast-insights-card" style="display:none;margin-bottom:12px">
+        <div class="card-title">📊 예측 인사이트</div>
+        <div id="forecast-insights-content"></div>
+      </div>
       <div class="card">
         <div class="card-title">
           365일 상세
@@ -170,6 +201,7 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     수입 / 지출 추가
   </button>
+  <div class="entries-summary" id="entries-summary-bar" style="display:none"></div>
   <div class="filter-tabs">
     <button class="filter-tab active" data-entry-filter="전체">전체</button>
     <button class="filter-tab" data-entry-filter="수입">수입</button>
@@ -199,6 +231,7 @@
       <div class="summary-item"><div class="summary-item-label">하루 평균 소비</div><div class="summary-item-value orange" id="ledger-avg-spend">-</div></div>
       <div class="summary-item"><div class="summary-item-label">최대 소비일</div><div class="summary-item-value blue" id="ledger-max-day">-</div></div>
     </div>
+    <div class="weekly-summary" id="ledger-weekly-summary"></div>
     <div class="ledger-toolbar">
       <button class="btn btn-ghost" id="btn-ledger-prev"><div class="ripple-container"></div>← 이전달</button>
       <div id="ledger-month-label" class="ledger-month-chip"></div>
@@ -249,6 +282,11 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       로그아웃
     </button>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📊 앱 사용 현황</div>
+    <div class="stats-grid" id="settings-stats"></div>
   </div>
 
   <div class="settings-grid">
