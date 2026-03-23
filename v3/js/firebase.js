@@ -1,20 +1,9 @@
+// ════════════════════════════════════════════════════════
+// firebase.js — Firebase 인증 & Firestore (순환참조 없음)
+// ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  onSnapshot,
-} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-  onAuthStateChanged,
-} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
 import { FIREBASE_CONFIG } from './config.js';
 
 const app = initializeApp(FIREBASE_CONFIG);
@@ -36,24 +25,21 @@ function isInAppBrowser() {
   return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv/i.test(navigator.userAgent);
 }
 
-function getUserDocRef() {
-  const user = auth.currentUser;
-  if (!user) return null;
-  return doc(db, 'users', user.uid, 'data', 'main');
-}
-
 export async function signInWithGoogle() {
   const btn = document.querySelector('.btn-google-login');
   const txt = document.getElementById('google-login-text');
 
   try {
     if (isInAppBrowser()) {
-      alert('앱 내 브라우저에서는 로그인이 잘 되지 않아요.\n기본 브라우저에서 열어주세요.');
+      alert('앱 내 브라우저에서는 로그인이 잘 되지 않아요.\nSafari나 기본 브라우저에서 열어주세요.');
       return;
     }
 
     btn?.classList.add('is-loading');
-    if (txt) txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
+
+    if (txt) {
+      txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
+    }
 
     if (isIOS() && isSafari()) {
       await signInWithRedirect(auth, provider);
@@ -62,17 +48,20 @@ export async function signInWithGoogle() {
 
     await signInWithPopup(auth, provider);
   } catch (e) {
-    const msgMap = {
+    const msgs = {
       'auth/popup-blocked': '브라우저가 팝업을 차단했습니다.',
       'auth/popup-closed-by-user': '로그인 창이 닫혔습니다.',
       'auth/unauthorized-domain': '승인되지 않은 도메인입니다.',
     };
 
-    alert(msgMap[e?.code] || '로그인에 실패했습니다.');
-    console.error('signInWithGoogle error:', e);
+    alert(msgs[e?.code] || '로그인에 실패했습니다.');
+    console.error('Google login error:', e);
   } finally {
     btn?.classList.remove('is-loading');
-    if (txt) txt.textContent = 'Google로 시작하기';
+
+    if (txt) {
+      txt.textContent = 'Google로 시작하기';
+    }
   }
 }
 
@@ -81,35 +70,41 @@ export async function signOutUser() {
     unsubscribeSnapshot();
     unsubscribeSnapshot = null;
   }
+
   await signOut(auth);
 }
 
+function getRef() {
+  const user = auth.currentUser;
+  return user ? doc(db, 'users', user.uid, 'data', 'main') : null;
+}
+
+export async function saveToFirebase(data) {
+  const ref = getRef();
+  if (!ref) return;
+
+  try {
+    await setDoc(ref, data);
+  } catch (e) {
+    console.warn('저장 실패:', e);
+  }
+}
+
 export async function loadFromFirebase() {
-  const ref = getUserDocRef();
+  const ref = getRef();
   if (!ref) return null;
 
   try {
     const snap = await getDoc(ref);
     return snap.exists() ? snap.data() : null;
   } catch (e) {
-    console.error('loadFromFirebase error:', e);
+    console.warn('불러오기 실패:', e);
     return null;
   }
 }
 
-export async function saveToFirebase(data) {
-  const ref = getUserDocRef();
-  if (!ref) return;
-
-  try {
-    await setDoc(ref, data);
-  } catch (e) {
-    console.error('saveToFirebase error:', e);
-  }
-}
-
 export function startSync(callback) {
-  const ref = getUserDocRef();
+  const ref = getRef();
   if (!ref) return;
 
   if (unsubscribeSnapshot) {
@@ -123,6 +118,7 @@ export function startSync(callback) {
   });
 }
 
+// onAuthStateChanged → app.js에서 등록한 콜백 호출
 export function initAuth(onLogin, onLogout) {
   onAuthStateChanged(auth, (user) => {
     window.currentUser = user;
