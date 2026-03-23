@@ -11,6 +11,7 @@ import {
   fmtShort,
   fmtSigned,
   animateNumber,
+  escapeHtml,
 } from './utils.js';
 import { state } from './state.js';
 import { buildForecast } from './forecast.js';
@@ -170,7 +171,7 @@ export function renderHome() {
             <div class="event-tags">
               ${f.events
                 .slice(0, 2)
-                .map((ev) => `<span class="event-tag">${ev.name}</span>`)
+                .map((ev) => `<span class="event-tag">${escapeHtml(ev.name)}</span>`)
                 .join('')}
               ${f.events.length > 2 ? `<span class="event-tag">+${f.events.length - 2}</span>` : ''}
             </div>
@@ -354,15 +355,18 @@ export function renderForecastTable() {
   const fc = buildForecast(365);
   let html = '';
   let lastMonth = -1;
+  let lastYear = -1;
 
   for (const f of fc) {
     if (_forecastFilter === 'event' && f.income === 0 && f.expense === 0) continue;
     if (_forecastFilter === 'danger' && f.balance >= state.dangerLine) continue;
 
     const m = f.date.getMonth() + 1;
-    if (m !== lastMonth) {
-      html += `<tr class="month-header"><td colspan="6">${f.date.getFullYear()}년 ${m}월</td></tr>`;
+    const y = f.date.getFullYear();
+    if (m !== lastMonth || y !== lastYear) {
+      html += `<tr class="month-header"><td colspan="6">${y}년 ${m}월</td></tr>`;
       lastMonth = m;
+      lastYear = y;
     }
 
     const isDanger = f.balance < state.dangerLine;
@@ -454,19 +458,23 @@ export function renderEntries() {
           ? '<span class="badge kookmin">국민</span>'
           : '';
 
+    const endMonthStr = String(e.endMonth || '');
+    const endMonthLabel = endMonthStr.length === 6
+      ? `~${endMonthStr.slice(0, 4)}/${endMonthStr.slice(4)}`
+      : `~${endMonthStr}`;
     const endBadge = e.endMonth
-      ? `<span class="badge ${isEnded ? 'ended' : 'halbu'}">${isEnded ? '종료' : '~' + String(e.endMonth).slice(0, 4) + '/' + String(e.endMonth).slice(4)}</span>`
+      ? `<span class="badge ${isEnded ? 'ended' : 'halbu'}">${isEnded ? '종료' : endMonthLabel}</span>`
       : '';
 
-    const repeatInfo = e.repeat === '매월' ? `매월 ${e.day}일` : e.repeat === '1회성' ? e.date : '격주';
+    const repeatInfo = e.repeat === '매월' ? `매월 ${e.day}일` : e.repeat === '1회성' ? escapeHtml(e.date) : '격주';
 
     html += `
       <div class="entry-item" style="${isEnded ? 'opacity:0.45' : ''}">
         <div class="entry-left">
           <div class="entry-dot" style="background:${CAT_COLORS[e.category] || '#64748b'};color:${CAT_COLORS[e.category] || '#64748b'}"></div>
           <div class="entry-info">
-            <div class="entry-name">${e.name}</div>
-            <div class="entry-meta">${e.category} · ${repeatInfo} ${cardBadge} ${endBadge}</div>
+            <div class="entry-name">${escapeHtml(e.name)}</div>
+            <div class="entry-meta">${escapeHtml(e.category)} · ${repeatInfo} ${cardBadge} ${endBadge}</div>
           </div>
         </div>
         <div class="entry-right">

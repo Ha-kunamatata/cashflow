@@ -2,6 +2,16 @@
 // utils.js — 공통 유틸 함수
 // ════════════════════════════════════════════════════════
 
+// ── HTML 이스케이프 ────────────────────────────────────
+export function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── 기본 날짜/문자열 유틸 ──────────────────────────────
 export function uid() {
   return Math.random().toString(36).slice(2, 10);

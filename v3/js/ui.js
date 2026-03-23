@@ -266,6 +266,8 @@ export function openLedgerEditor(dateStr) {
   const input = document.getElementById('ledger-amount-input');
   const d = new Date(dateStr);
 
+  if (isNaN(d.getTime())) return;
+
   label.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 소비 입력`;
   input.value = state.checkData?.[dateStr] || '';
   card.style.display = 'block';
@@ -341,7 +343,15 @@ export function importData(e) {
 
   reader.onload = (ev) => {
     try {
-      Object.assign(state, JSON.parse(ev.target.result));
+      const imported = JSON.parse(ev.target.result);
+      if (typeof imported !== 'object' || imported === null || Array.isArray(imported)) {
+        throw new Error('invalid');
+      }
+      if (!Array.isArray(imported.entries)) imported.entries = [];
+      if (typeof imported.cardData !== 'object' || imported.cardData === null) imported.cardData = {};
+      if (typeof imported.checkData !== 'object' || imported.checkData === null) imported.checkData = {};
+      if (typeof imported.balance !== 'number') delete imported.balance;
+      Object.assign(state, imported);
       save();
       renderModule.renderAll();
       showBadge('✅ 가져오기 완료');
