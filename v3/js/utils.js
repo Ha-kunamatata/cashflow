@@ -141,17 +141,18 @@ export function showBadge(text) {
 export function openSheet(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.display = 'block';
+  el.classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
 export function closeSheet(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.display = 'none';
+  el.classList.remove('show');
 
-  const stillOpen = [...document.querySelectorAll('.sheet-overlay, .form-overlay')]
-    .some((node) => node.style.display !== 'none');
+  const stillOpen = [...document.querySelectorAll('.sheet-overlay')]
+    .some((node) => node.classList.contains('show'))
+    || document.getElementById('form-overlay')?.style.display === 'flex';
 
   if (!stillOpen) {
     document.body.style.overflow = '';
