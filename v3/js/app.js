@@ -92,8 +92,6 @@ initAuth(
       txt.style.display = 'flex';
     }
 
-    document.getElementById('user-menu-name').textContent = user.displayName || user.email;
-
     // 설정 프로필 카드 업데이트
     const settingsAvatar = document.getElementById('settings-profile-avatar');
     const settingsName = document.getElementById('settings-profile-name');
