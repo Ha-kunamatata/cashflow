@@ -496,6 +496,29 @@ body.light-theme .info-chip.warning { background:rgba(249,115,22,0.1); border-co
 body.light-theme .info-chip.success { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25); }
 body.light-theme .week-chip, body.light-theme .stat-item, body.light-theme .entries-summary-item { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.07); }
 
+/* ── 라이트모드 추가 픽스2 ── */
+body.light-theme::before { opacity:0; }
+body.light-theme .card-num-input { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.1); color:var(--text); }
+body.light-theme .card-num-input:focus { border-color:var(--accent); background:#fff; }
+body.light-theme .ledger-day { background:rgba(255,255,255,0.85); border-color:rgba(0,0,0,0.08); }
+body.light-theme .ledger-day:hover { border-color:rgba(37,99,235,0.25); }
+body.light-theme .ledger-day.today { border-color:var(--accent); box-shadow:0 0 0 1px rgba(37,99,235,0.3) inset; }
+body.light-theme .ledger-day.selected { background:rgba(37,99,235,0.07); border-color:var(--accent); }
+body.light-theme .ledger-editor-card { background:linear-gradient(180deg,#ffffff,#f5f8ff); border-color:rgba(37,99,235,0.15); }
+body.light-theme .field, body.light-theme .form-input, body.light-theme .form-select, body.light-theme .setting-input { background:rgba(255,255,255,0.9); border-color:rgba(0,0,0,0.12); color:var(--text); }
+body.light-theme .field:focus, body.light-theme .form-input:focus, body.light-theme .form-select:focus { border-color:var(--accent); background:#fff; }
+body.light-theme .sheet-input { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.12); color:var(--text); }
+body.light-theme .sheet-input:focus { border-color:var(--accent); background:#fff; }
+body.light-theme .btn-ghost { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.1); color:var(--text); }
+body.light-theme .btn-ghost:hover { background:rgba(0,0,0,0.08); }
+body.light-theme .filter-tab { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
+body.light-theme .period-btn { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
+body.light-theme .ledger-month-chip { background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.05)); border-color:rgba(37,99,235,0.2); }
+body.light-theme .goal-card { background:rgba(255,255,255,0.9); border-color:rgba(0,0,0,0.08); }
+body.light-theme .goal-monthly-req { background:rgba(37,99,235,0.06); border-color:rgba(37,99,235,0.12); }
+body.light-theme .report-mom-item { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.07); }
+body.light-theme .balance-card { background:linear-gradient(135deg, rgba(37,99,235,0.15), rgba(219,234,254,0.9)); }
+
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -536,3 +559,24 @@ body.light-theme .week-chip, body.light-theme .stat-item, body.light-theme .entr
 .stat-item { padding:12px; background:var(--bg3); border-radius:12px; border:1px solid var(--border); }
 .stat-label { font-size:9px; color:var(--text3); font-weight:700; margin-bottom:5px; letter-spacing:0.5px; text-transform:uppercase; }
 .stat-value { font-size:18px; font-family:var(--mono); font-weight:900; color:var(--text); white-space:nowrap; overflow:hidden; }
+
+/* ── 목표 카드 ── */
+.goal-card { background:var(--card-grad),rgba(15,23,42,0.70); border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:18px; margin-bottom:10px; transition:border-color 0.2s, transform 0.2s; animation:fadeIn 0.3s ease; }
+.goal-card:hover { transform:translateY(-2px); border-color:rgba(96,165,250,0.18); }
+.goal-card-top { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.goal-emoji { font-size:28px; flex-shrink:0; }
+.goal-info { flex:1; min-width:0; }
+.goal-name { font-size:16px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.goal-date { font-size:11px; color:var(--text3); margin-top:3px; }
+.goal-amounts { display:flex; align-items:baseline; gap:2px; margin-bottom:8px; }
+.goal-progress-track { height:6px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; margin-bottom:8px; }
+.goal-progress-fill { height:100%; border-radius:3px; transition:width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.goal-monthly-req { font-size:11px; color:var(--text3); padding:6px 10px; border-radius:8px; background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.12); }
+.goal-monthly-req strong { color:var(--accent2); }
+
+/* ── 리포트 탭 ── */
+.report-cat-legend-row { display:flex; align-items:center; gap:7px; padding:3px 0; }
+.report-mom-item { padding:12px; border-radius:14px; background:var(--bg3); border:1px solid var(--border); }
+.report-mom-label { font-size:10px; color:var(--text3); font-weight:700; margin-bottom:4px; letter-spacing:0.4px; }
+.report-mom-value { font-size:20px; font-family:var(--mono); font-weight:900; }
+.report-mom-delta { font-size:11px; color:var(--text3); margin-top:3px; font-family:var(--mono); }

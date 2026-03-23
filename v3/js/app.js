@@ -22,6 +22,8 @@ import {
   renderForecast,
   renderCards,
   renderLedger,
+  renderReport,
+  renderGoals,
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
@@ -54,7 +56,10 @@ import {
   exportData,
   importDataClick,
   importData,
-  resetAll
+  resetAll,
+  openGoalForm,
+  saveGoal,
+  deleteGoal
 } from './ui.js';
 
 import {
@@ -253,3 +258,16 @@ document.getElementById('btn-signout-confirm')?.addEventListener('click', async 
   showBadge('👋 로그아웃되었습니다');
 });
 document.getElementById('signout-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'signout-sheet'));
+
+// 목표 탭
+document.getElementById('btn-add-goal')?.addEventListener('click', () => openGoalForm(null));
+document.getElementById('btn-goal-save')?.addEventListener('click', saveGoal);
+document.getElementById('btn-goal-cancel')?.addEventListener('click', () => closeSheet('goal-sheet'));
+document.getElementById('goal-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'goal-sheet'));
+
+document.getElementById('goals-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.goal-edit-btn');
+  const delBtn = e.target.closest('.goal-del-btn');
+  if (editBtn?.dataset.id) openGoalForm(editBtn.dataset.id);
+  if (delBtn?.dataset.id) deleteGoal(delBtn.dataset.id);
+});
