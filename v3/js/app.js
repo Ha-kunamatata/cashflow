@@ -6,26 +6,22 @@ import {
   signInWithGoogle,
   signOutUser,
   loadFromFirebase,
-  startSync
+  startSync,
 } from './firebase.js';
 
 import {
   state,
   load,
-  save,
   syncCheckDataToBalance,
-  initDefaultData
+  initDefaultData,
 } from './state.js';
 
 import {
   renderAll,
-  renderForecast,
-  renderCards,
-  renderLedger,
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
-  changeLedgerMonth
+  changeLedgerMonth,
 } from './render.js';
 
 import {
@@ -54,34 +50,28 @@ import {
   exportData,
   importDataClick,
   importData,
-  resetAll
+  resetAll,
 } from './ui.js';
 
 import {
   initRipple,
   showBadge,
-  openSheet,
   closeSheet,
   closeSheetOutside,
   showLoading,
-  hideLoading
+  hideLoading,
 } from './utils.js';
 
-// ── 전역 노출 (인라인 onclick 대응) ───────────────────
 window._ui = { editEntry, deleteEntry, updateCardData, openLedgerEditor };
 
-// ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
-// ── Firebase 인증 상태 감지 ────────────────────────────
 initAuth(
   async (user) => {
-    // 로그인 성공
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('topbar').style.display = 'flex';
     document.getElementById('bottom-nav').style.display = 'flex';
 
-    // 아바타
     const img = document.getElementById('user-avatar-img');
     const txt = document.getElementById('user-avatar-text');
 
@@ -98,17 +88,21 @@ initAuth(
     document.getElementById('user-menu-name').textContent = user.displayName || user.email;
     document.getElementById('setting-account').textContent = user.email;
 
-    // 데이터 로드
+    // 1) 우선 로컬 불러오기
     load();
-    const cloud = await loadFromFirebase();
 
+    // 2) Firebase 데이터 있으면 그것으로 덮기
+    const cloud = await loadFromFirebase();
     if (cloud) {
       Object.assign(state, cloud);
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
       showBadge('☁️ 동기화됨');
     }
 
+    // 3) 데이터가 하나도 없으면 기본 데이터 세팅
     initDefaultData();
+
+    // 4) 체크카드 반영 정합성 맞추기
     syncCheckDataToBalance();
 
     document.getElementById('setting-danger').value = state.dangerLine;
@@ -117,7 +111,7 @@ initAuth(
     applyTheme();
     renderAll();
 
-    // 실시간 동기화
+    // 5) 다른 기기 변경 실시간 반영
     startSync((cloudData) => {
       Object.assign(state, cloudData);
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
@@ -127,16 +121,19 @@ initAuth(
     });
   },
   () => {
-    // 로그아웃
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
+
     hideLoading();
     closeSheet('profile-sheet');
     closeSheet('signout-sheet');
     closeSheet('balance-sheet');
   }
 );
+
+// 로그인
+document.getElementById('btn-google-login')?.addEventListener('click', signInWithGoogle);
 
 // ══════════════════════════════════════════════════════
 // 이벤트 바인딩
