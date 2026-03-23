@@ -58,7 +58,7 @@ export function renderHome() {
   const balEl = document.getElementById('balance-display');
   if (!balEl) return;
 
-  animateNumber(balEl, state.balance, (v) => fmtFull(v));
+  animateNumber(balEl, state.balance, (v) => Math.abs(v) >= 10_000_000 ? fmtShort(v) : fmtFull(v));
   balEl.className = 'balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
 
   const tb = document.getElementById('topbar-balance');
@@ -88,13 +88,13 @@ export function renderHome() {
     .reduce((sum, e) => sum + e.amount, 0);
 
   const si = document.getElementById('sum-income');
-  if (si) si.textContent = fmtFull(monthlyIncome);
+  if (si) si.textContent = fmtShort(monthlyIncome);
 
   const se = document.getElementById('sum-expense');
-  if (se) se.textContent = fmtFull(monthlyExpense);
+  if (se) se.textContent = fmtShort(monthlyExpense);
 
   const sh = document.getElementById('sum-halbu');
-  if (sh) sh.textContent = fmtFull(monthlyHalbu);
+  if (sh) sh.textContent = fmtShort(monthlyHalbu);
 
   const monthPrefix = `${today().getFullYear()}-${p2(today().getMonth() + 1)}`;
   const checkTotal = Object.entries(state.checkData || {})
@@ -102,7 +102,7 @@ export function renderHome() {
     .reduce((sum, [, v]) => sum + v, 0);
 
   const sc = document.getElementById('sum-checkcard');
-  if (sc) sc.textContent = fmtFull(checkTotal);
+  if (sc) sc.textContent = fmtShort(checkTotal);
 
   const net = monthlyIncome - monthlyExpense;
   const netEl = document.getElementById('sum-net');

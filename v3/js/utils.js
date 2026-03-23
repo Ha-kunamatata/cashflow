@@ -52,15 +52,29 @@ export function fmtFull(v) {
   return `${num.toLocaleString('ko-KR')}원`;
 }
 
+// 만/억 단위로 줄여서 표기 (공간이 좁은 곳에 사용)
+function _compact(abs) {
+  if (abs >= 100_000_000) {
+    const v = abs / 100_000_000;
+    return `${parseFloat(v.toFixed(1)).toLocaleString('ko-KR')}억`;
+  }
+  if (abs >= 10_000) {
+    const v = abs / 10_000;
+    return `${parseFloat(v.toFixed(1)).toLocaleString('ko-KR')}만`;
+  }
+  return abs.toLocaleString('ko-KR');
+}
+
 export function fmtShort(v) {
   const num = Number(v || 0);
-  return `${num.toLocaleString('ko-KR')}원`;
+  const sign = num < 0 ? '-' : '';
+  return `${sign}${_compact(Math.abs(num))}원`;
 }
 
 export function fmtSigned(v) {
   const num = Number(v || 0);
   const sign = num >= 0 ? '+' : '-';
-  return `${sign}${Math.abs(num).toLocaleString('ko-KR')}원`;
+  return `${sign}${_compact(Math.abs(num))}원`;
 }
 
 export function fmtDate(date) {
