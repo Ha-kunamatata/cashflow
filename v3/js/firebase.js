@@ -45,11 +45,14 @@ export async function signInWithGoogle() {
       txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
     }
 
-    if (isIOS() && (isSafari() || isStandalone())) {
+    // 일반 iOS Safari(비-standalone)만 redirect 사용
+    // Standalone PWA에서 redirect하면 Safari로 튕겨나가서 결과를 못 받음
+    if (isIOS() && isSafari() && !isStandalone()) {
       await signInWithRedirect(auth, provider);
       return;
     }
 
+    // iOS PWA(16.4+) 및 기타 환경: popup 사용
     await signInWithPopup(auth, provider);
   } catch (e) {
     const msgs = {
