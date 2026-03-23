@@ -2811,6 +2811,18 @@ function fmtShort(n) {
   return sign + abs.toLocaleString('ko-KR') + '원';
 }
 
+function fmtFull(n) {
+  const value = Number(n || 0);
+  return Math.abs(value).toLocaleString('ko-KR') + '원';
+}
+
+function fmtSigned(n) {
+  const value = Number(n || 0);
+  if (value === 0) return '0원';
+  const sign = value > 0 ? '+' : '-';
+  return sign + Math.abs(value).toLocaleString('ko-KR') + '원';
+}
+
 function animateNumberText(el, nextValue, formatter = v => v.toLocaleString('ko-KR')) {
   if (!el) return;
 
