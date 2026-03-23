@@ -191,7 +191,7 @@ body::before {
 }
 .balance-card::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:linear-gradient(135deg, rgba(255,255,255,0.10), transparent 18%, transparent 70%, rgba(255,255,255,0.04)); }
 .balance-label { font-size:12px; font-weight:800; color:#bfdbfe; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
-.balance-amount { font-family:var(--mono); font-size:clamp(36px,8vw,54px); font-weight:900; letter-spacing:-1.5px; line-height:1; margin-bottom:14px; transition:color 0.3s; text-shadow:0 8px 20px rgba(15,23,42,0.22); white-space:nowrap; overflow:hidden; }
+.balance-amount { font-family:var(--mono); font-size:clamp(36px,8vw,54px); font-weight:900; letter-spacing:-1.5px; line-height:1; margin-bottom:14px; transition:color 0.3s; color:#e0f2fe; text-shadow:0 4px 24px rgba(96,165,250,0.45), 0 1px 0 rgba(255,255,255,0.10); white-space:nowrap; overflow:hidden; }
 .balance-amount.danger { color:var(--red2); }
 .balance-warning { font-size:12px; color:var(--orange); margin-top:6px; display:flex; align-items:center; gap:4px; }
 .balance-edit { display:flex; gap:8px; margin-top:20px; }
@@ -484,8 +484,11 @@ body.light-theme .forecast-table tr:hover td { background:rgba(226,232,240,0.35)
 body.light-theme .forecast-table tr.danger td { background:rgba(254,226,226,0.5); }
 body.light-theme .forecast-table tr.income-row td { background:rgba(220,252,231,0.4); }
 body.light-theme .balance-label { color:#1e40af; }
+body.light-theme .balance-amount { color:#1e3a8a; text-shadow:0 2px 12px rgba(37,99,235,0.18); }
+body.light-theme .balance-amount.danger { color:var(--red); text-shadow:0 2px 12px rgba(220,38,38,0.18); }
 body.light-theme .balance-card-edit-chip { color:#1d4ed8; background:rgba(37,99,235,0.08); border-color:rgba(37,99,235,0.15); }
 body.light-theme .topbar-balance { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.1); }
+body.light-theme .event-date { color:var(--text); }
 body.light-theme .event-tag { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
 body.light-theme .event-row:hover { background:rgba(226,232,240,0.4); }
 body.light-theme .card-title { color:var(--text2); }
