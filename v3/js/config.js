@@ -27,3 +27,13 @@ export const CAT_COLORS = {
 export const INCOME_CATS = ['월급', '수당', '기타수입'];
 export const EXPENSE_CATS = ['카드', '할부', '공과금', '보험', '기타지출'];
 export const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];
+
+export const LEDGER_CATS = ['식비', '교통', '쇼핑', '의료', '문화', '기타'];
+export const LEDGER_CAT_COLORS = {
+  '식비': '#f87171',
+  '교통': '#60a5fa',
+  '쇼핑': '#fb923c',
+  '의료': '#c084fc',
+  '문화': '#34d399',
+  '기타': '#94a3b8',
+};

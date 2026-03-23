@@ -10,7 +10,9 @@ export const state = {
   entries: [],
   cardData: {},         // { YYYYMM: { hyundai, kookmin } }
   checkData: {},        // { YYYY-MM-DD: amount }
+  checkMeta: {},        // { YYYY-MM-DD: { category, memo } }
   appliedCheckData: {}, // 잔고에 이미 반영된 체크카드
+  goals: [],            // [{ id, name, emoji, targetAmount, targetDate, savedAmount }]
   theme: 'dark',
 };
 
@@ -57,9 +59,14 @@ export function syncCheckDataToBalance() {
 
 // ── 기본 데이터 (첫 실행 시) ──────────────────────────
 export function initDefaultData() {
+  if (!state.goals) state.goals = [];
+  if (!state.checkMeta) state.checkMeta = {};
   if (state.entries.length > 0) return;
 
   state.balance = 923057;
+  state.goals = [
+    { id: uid(), name: '신혼여행 목돈', emoji: '✈️', targetAmount: 5000000, targetDate: '202601', savedAmount: 800000 },
+  ];
   state.entries = [
     { id: uid(), type: 'income',  name: '월급',             amount: 2200000, category: '월급',     repeat: '매월', day: 25, card: '',         endMonth: null,     date: null },
     { id: uid(), type: 'income',  name: '수당',             amount: 200000,  category: '수당',     repeat: '매월', day: 10, card: '',         endMonth: null,     date: null },

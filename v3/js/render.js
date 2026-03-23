@@ -50,6 +50,8 @@ export function renderAll() {
   if (activePage?.id === 'page-forecast') renderForecast();
   if (activePage?.id === 'page-cards') renderCards();
   if (activePage?.id === 'page-ledger') renderLedger();
+  if (activePage?.id === 'page-report') renderReport();
+  if (activePage?.id === 'page-goals') renderGoals();
 }
 
 export function renderSettingsStats() {
@@ -898,4 +900,198 @@ export function changeLedgerMonth(diff) {
   if (ec) ec.style.display = 'none';
 
   renderLedger();
+}
+
+// ════════════════════════════════════════════════════════
+// 리포트 탭
+// ════════════════════════════════════════════════════════
+export function renderReport() {
+  const now = today();
+
+  // ── 월별 순현금 흐름 차트 ─────────────────────────────
+  const netEl = document.getElementById('report-net-chart');
+  if (netEl) {
+    const months = [];
+    for (let i = -5; i <= 0; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const ym = yyyymm(d);
+      const ymStr = String(ym);
+      const income = state.entries
+        .filter((e) => e.type === 'income' && e.repeat === '매월')
+        .reduce((s, e) => s + e.amount, 0);
+      const fixedExp = state.entries
+        .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
+        .reduce((s, e) => s + e.amount, 0);
+      const cd = state.cardData[ymStr] || {};
+      const checkTotal = Object.entries(state.checkData || {})
+        .filter(([dk]) => dk.startsWith(`${d.getFullYear()}-${p2(d.getMonth() + 1)}`))
+        .reduce((s, [, v]) => s + v, 0);
+      const expense = fixedExp + (cd.hyundai || 0) + (cd.kookmin || 0) + checkTotal;
+      months.push({ label: `${d.getMonth() + 1}월`, net: income - expense, income, expense });
+    }
+    const maxAbs = Math.max(...months.map((m) => Math.abs(m.net)), 1);
+    netEl.innerHTML = `
+      <div class="monthly-chart-bar">
+        ${months.map((m) => {
+          const pct = Math.round((Math.abs(m.net) / maxAbs) * 100);
+          const isPos = m.net >= 0;
+          return `
+            <div class="bar-row">
+              <span class="bar-label">${m.label}</span>
+              <div class="bar-track">
+                <div class="bar-fill ${isPos ? 'income' : 'expense'}" style="width:${pct}%"></div>
+              </div>
+              <span class="bar-value" style="color:${isPos ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(m.net)}</span>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  // ── 카테고리별 지출 도넛 ──────────────────────────────
+  const donutEl = document.getElementById('report-cat-donut');
+  if (donutEl) {
+    const catTotals = {};
+    state.entries
+      .filter((e) => e.type === 'expense' && e.repeat === '매월')
+      .forEach((e) => {
+        catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+      });
+    const total = Object.values(catTotals).reduce((s, v) => s + v, 0);
+    if (total === 0) {
+      donutEl.innerHTML = '<div class="empty-state" style="padding:16px 0">지출 항목 없음</div>';
+    } else {
+      const cats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+      const colors = { '카드': '#f87171', '할부': '#fb923c', '공과금': '#facc15', '보험': '#c084fc', '기타지출': '#94a3b8' };
+      // SVG donut
+      const R = 44; const CX = 52; const CY = 52;
+      let svgPaths = '';
+      let startAngle = -Math.PI / 2;
+      cats.forEach(([cat, amt]) => {
+        const pct = amt / total;
+        const angle = pct * 2 * Math.PI;
+        const endAngle = startAngle + angle;
+        const x1 = CX + R * Math.cos(startAngle);
+        const y1 = CY + R * Math.sin(startAngle);
+        const x2 = CX + R * Math.cos(endAngle);
+        const y2 = CY + R * Math.sin(endAngle);
+        const large = angle > Math.PI ? 1 : 0;
+        const col = colors[cat] || '#64748b';
+        svgPaths += `<path d="M${CX},${CY} L${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${col}" opacity="0.85"/>`;
+        startAngle = endAngle;
+      });
+      svgPaths += `<circle cx="${CX}" cy="${CY}" r="24" fill="var(--bg2)"/>`;
+
+      const legend = cats.slice(0, 5).map(([cat, amt]) => {
+        const col = colors[cat] || '#64748b';
+        return `<div class="report-cat-legend-row">
+          <span style="width:10px;height:10px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0"></span>
+          <span style="font-size:11px;color:var(--text2)">${cat}</span>
+          <span style="font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text);margin-left:auto">${Math.round((amt / total) * 100)}%</span>
+        </div>`;
+      }).join('');
+
+      donutEl.innerHTML = `
+        <svg width="104" height="104" viewBox="0 0 104 104" style="flex-shrink:0">${svgPaths}</svg>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">${legend}</div>`;
+    }
+  }
+
+  // ── 전월 비교 ────────────────────────────────────────
+  const momEl = document.getElementById('report-mom-compare');
+  if (momEl) {
+    const thisMonthD = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const calcMonth = (d) => {
+      const ym = yyyymm(d);
+      const ymStr = String(ym);
+      const income = state.entries
+        .filter((e) => e.type === 'income' && e.repeat === '매월')
+        .reduce((s, e) => s + e.amount, 0);
+      const expense = state.entries
+        .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
+        .reduce((s, e) => s + e.amount, 0);
+      const cd = state.cardData[ymStr] || {};
+      return { income, expense: expense + (cd.hyundai || 0) + (cd.kookmin || 0) };
+    };
+    const cur = calcMonth(thisMonthD);
+    const prv = calcMonth(lastMonthD);
+    const expDelta = cur.expense - prv.expense;
+    const inDelta = cur.income - prv.income;
+    momEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="report-mom-item">
+          <div class="report-mom-label">이번달 수입</div>
+          <div class="report-mom-value" style="color:var(--green2)">${fmtShort(cur.income)}</div>
+          <div class="report-mom-delta" style="color:${inDelta >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(inDelta)} 전월비</div>
+        </div>
+        <div class="report-mom-item">
+          <div class="report-mom-label">이번달 지출</div>
+          <div class="report-mom-value" style="color:var(--red2)">${fmtShort(cur.expense)}</div>
+          <div class="report-mom-delta" style="color:${expDelta <= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(expDelta)} 전월비</div>
+        </div>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// 목표 탭
+// ════════════════════════════════════════════════════════
+export function renderGoals() {
+  const container = document.getElementById('goals-list');
+  if (!container) return;
+
+  const goals = state.goals || [];
+  if (!goals.length) {
+    container.innerHTML = '<div class="empty-state">목표가 없습니다<br>위 버튼으로 추가하세요!</div>';
+    return;
+  }
+
+  const now = today();
+  const nowYm = yyyymm(now);
+
+  container.innerHTML = goals.map((g) => {
+    const saved = g.savedAmount || 0;
+    const target = g.targetAmount || 1;
+    const pct = Math.min(100, Math.round((saved / target) * 100));
+
+    let monthsLeft = 0;
+    let monthlyRequired = 0;
+    if (g.targetDate) {
+      const ty = parseInt(g.targetDate.slice(0, 4), 10);
+      const tm = parseInt(g.targetDate.slice(4), 10) - 1;
+      const targetDateObj = new Date(ty, tm, 1);
+      monthsLeft = Math.max(0, (ty - now.getFullYear()) * 12 + (tm - now.getMonth()));
+      const remaining = Math.max(0, target - saved);
+      monthlyRequired = monthsLeft > 0 ? Math.ceil(remaining / monthsLeft) : remaining;
+    }
+    const barColor = pct >= 100 ? 'var(--green2)' : pct >= 60 ? 'var(--accent2)' : 'var(--orange)';
+
+    return `
+      <div class="goal-card">
+        <div class="goal-card-top">
+          <div class="goal-emoji">${g.emoji || '🎯'}</div>
+          <div class="goal-info">
+            <div class="goal-name">${escapeHtml(g.name)}</div>
+            ${g.targetDate ? `<div class="goal-date">${g.targetDate.slice(0, 4)}년 ${parseInt(g.targetDate.slice(4), 10)}월 목표 · ${monthsLeft}개월 남음</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;margin-left:auto">
+            <button class="icon-btn edit goal-edit-btn" data-id="${g.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn del goal-del-btn" data-id="${g.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="goal-amounts">
+          <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--accent2)">${fmtShort(saved)}</span>
+          <span style="font-size:12px;color:var(--text3)"> / ${fmtShort(target)}</span>
+          <span style="font-size:12px;font-weight:700;color:${barColor};margin-left:auto">${pct}%</span>
+        </div>
+        <div class="goal-progress-track">
+          <div class="goal-progress-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        ${monthlyRequired > 0 && pct < 100 ? `<div class="goal-monthly-req">월 <strong>${fmtShort(monthlyRequired)}</strong> 씩 모으면 목표 달성 가능해요</div>` : pct >= 100 ? '<div class="goal-monthly-req" style="color:var(--green2)">🎉 목표 달성!</div>' : ''}
+      </div>`;
+  }).join('');
 }

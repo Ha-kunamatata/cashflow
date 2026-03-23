@@ -6,6 +6,58 @@ import { uid, today, dateKey, fmtFull, showBadge, openSheet, closeSheet } from '
 import { state, save, syncCheckDataToBalance } from './state.js';
 import * as renderModule from './render.js';
 
+// ── 목표 관련 ────────────────────────────────────────────
+let _editGoalId = null;
+
+export function openGoalForm(id) {
+  _editGoalId = id || null;
+  const g = id ? (state.goals || []).find((x) => x.id === id) : null;
+
+  document.getElementById('goal-sheet-title').textContent = g ? '목표 수정' : '목표 추가';
+  document.getElementById('goal-emoji').value = g?.emoji || '';
+  document.getElementById('goal-name').value = g?.name || '';
+  document.getElementById('goal-target').value = g?.targetAmount || '';
+  document.getElementById('goal-date').value = g?.targetDate || '';
+  document.getElementById('goal-saved').value = g?.savedAmount || '';
+
+  openSheet('goal-sheet');
+  setTimeout(() => document.getElementById('goal-name')?.focus(), 80);
+}
+
+export function saveGoal() {
+  const emoji = document.getElementById('goal-emoji').value.trim() || '🎯';
+  const name = document.getElementById('goal-name').value.trim();
+  const targetAmount = Number(document.getElementById('goal-target').value) || 0;
+  const targetDate = document.getElementById('goal-date').value.trim();
+  const savedAmount = Number(document.getElementById('goal-saved').value) || 0;
+
+  if (!name) { alert('목표명을 입력하세요'); return; }
+  if (!targetAmount) { alert('목표 금액을 입력하세요'); return; }
+
+  if (!state.goals) state.goals = [];
+
+  const goal = { id: _editGoalId || uid(), emoji, name, targetAmount, targetDate, savedAmount };
+
+  if (_editGoalId) {
+    state.goals = state.goals.map((g) => (g.id === _editGoalId ? goal : g));
+  } else {
+    state.goals.push(goal);
+  }
+
+  save();
+  closeSheet('goal-sheet');
+  renderModule.renderGoals();
+  showBadge('✅ 목표 저장됨');
+}
+
+export function deleteGoal(id) {
+  if (!confirm('목표를 삭제할까요?')) return;
+  state.goals = (state.goals || []).filter((g) => g.id !== id);
+  save();
+  renderModule.renderGoals();
+  showBadge('🗑️ 목표 삭제됨');
+}
+
 // ── 네비게이션 ─────────────────────────────────────────
 const PAGE_MAP = {
   home: 'page-home',
@@ -13,6 +65,8 @@ const PAGE_MAP = {
   entries: 'page-entries',
   cards: 'page-cards',
   ledger: 'page-ledger',
+  report: 'page-report',
+  goals: 'page-goals',
   settings: 'page-settings',
 };
 
@@ -31,6 +85,8 @@ export function navigate(page, btn) {
   if (page === 'forecast') renderModule.renderForecast();
   if (page === 'cards') renderModule.renderCards();
   if (page === 'ledger') renderModule.renderLedger();
+  if (page === 'report') renderModule.renderReport();
+  if (page === 'goals') renderModule.renderGoals();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
