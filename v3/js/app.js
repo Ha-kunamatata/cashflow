@@ -93,7 +93,18 @@ initAuth(
     }
 
     document.getElementById('user-menu-name').textContent = user.displayName || user.email;
-    document.getElementById('setting-account').textContent = user.email;
+
+    // 설정 프로필 카드 업데이트
+    const settingsAvatar = document.getElementById('settings-profile-avatar');
+    const settingsName = document.getElementById('settings-profile-name');
+    const settingsEmail = document.getElementById('settings-profile-email');
+    if (settingsName) settingsName.textContent = user.displayName || '사용자';
+    if (settingsEmail) settingsEmail.textContent = user.email || '-';
+    if (settingsAvatar) {
+      settingsAvatar.innerHTML = user.photoURL
+        ? `<img src="${user.photoURL}" referrerpolicy="no-referrer">`
+        : (user.displayName || user.email || '?')[0].toUpperCase();
+    }
 
     // 데이터 로드
     load();
@@ -207,6 +218,7 @@ document.getElementById('btn-ledger-clear')?.addEventListener('click', clearLedg
 document.getElementById('btn-ledger-close')?.addEventListener('click', closeLedgerEditor);
 
 // 설정 탭
+document.getElementById('btn-settings-signout')?.addEventListener('click', () => openSheet('signout-sheet'));
 document.getElementById('setting-danger')?.addEventListener('change', (e) => saveSetting('dangerLine', e.target.value));
 document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
 document.getElementById('btn-export')?.addEventListener('click', exportData);
