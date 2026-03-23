@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
 import { FIREBASE_CONFIG } from './config.js';
 
 const app = initializeApp(FIREBASE_CONFIG);
@@ -123,7 +123,17 @@ export function startSync(callback) {
 }
 
 // onAuthStateChanged → app.js에서 등록한 콜백 호출
-export function initAuth(onLogin, onLogout) {
+export async function initAuth(onLogin, onLogout) {
+  // 리다이렉트 로그인 결과 처리 (iOS Standalone 모드용)
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      console.log('redirect 로그인 성공:', result.user.email);
+    }
+  } catch (e) {
+    console.error('redirect 결과 처리 실패:', e);
+  }
+
   onAuthStateChanged(auth, (user) => {
     window.currentUser = user;
     window.firebaseReady = !!user;
