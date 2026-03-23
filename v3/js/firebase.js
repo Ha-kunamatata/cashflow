@@ -40,35 +40,33 @@ export async function signInWithGoogle() {
     }
 
     btn?.classList.add('is-loading');
+    if (txt) txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
 
-    if (txt) {
-      txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
+    // 팝업 먼저 시도 (iOS 16+ Safari·PWA·Chrome 모두 직접 탭 액션이면 허용)
+    // 팝업이 차단된 경우에만 redirect 폴백
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (popupErr) {
+      const blocked =
+        popupErr?.code === 'auth/popup-blocked' ||
+        popupErr?.code === 'auth/operation-not-supported-in-this-environment';
+      if (blocked) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      throw popupErr;
     }
-
-    // 일반 iOS Safari(비-standalone)만 redirect 사용
-    // Standalone PWA에서 redirect하면 Safari로 튕겨나가서 결과를 못 받음
-    if (isIOS() && isSafari() && !isStandalone()) {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
-
-    // iOS PWA(16.4+) 및 기타 환경: popup 사용
-    await signInWithPopup(auth, provider);
   } catch (e) {
     const msgs = {
-      'auth/popup-blocked': '브라우저가 팝업을 차단했습니다.',
       'auth/popup-closed-by-user': '로그인 창이 닫혔습니다.',
+      'auth/cancelled-popup-request': '로그인이 취소됐습니다.',
       'auth/unauthorized-domain': '승인되지 않은 도메인입니다.',
     };
-
-    alert(msgs[e?.code] || '로그인에 실패했습니다.');
+    alert(msgs[e?.code] || `로그인 실패: ${e?.code || e?.message || '알 수 없는 오류'}`);
     console.error('Google login error:', e);
   } finally {
     btn?.classList.remove('is-loading');
-
-    if (txt) {
-      txt.textContent = 'Google로 시작하기';
-    }
+    if (txt) txt.textContent = 'Google로 시작하기';
   }
 }
 
