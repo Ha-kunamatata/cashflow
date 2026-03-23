@@ -25,6 +25,10 @@ function isInAppBrowser() {
   return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv/i.test(navigator.userAgent);
 }
 
+function isStandalone() {
+  return window.navigator.standalone === true;
+}
+
 export async function signInWithGoogle() {
   const btn = document.querySelector('.btn-google-login');
   const txt = document.getElementById('google-login-text');
@@ -41,7 +45,7 @@ export async function signInWithGoogle() {
       txt.innerHTML = '<span class="btn-inline-spinner"></span>로그인 중...';
     }
 
-    if (isIOS() && isSafari()) {
+    if (isIOS() && (isSafari() || isStandalone())) {
       await signInWithRedirect(auth, provider);
       return;
     }
