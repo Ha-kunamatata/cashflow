@@ -518,6 +518,7 @@ body.light-theme .goal-card { background:rgba(255,255,255,0.9); border-color:rgb
 body.light-theme .goal-monthly-req { background:rgba(37,99,235,0.06); border-color:rgba(37,99,235,0.12); }
 body.light-theme .report-mom-item { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.07); }
 body.light-theme .balance-card { background:linear-gradient(135deg, rgba(37,99,235,0.15), rgba(219,234,254,0.9)); }
+body.light-theme .bottom-nav { background:rgba(255,255,255,0.92); border-top-color:rgba(0,0,0,0.10); border-color:rgba(0,0,0,0.10); }
 
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar { width:4px; height:4px; }
