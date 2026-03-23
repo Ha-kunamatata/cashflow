@@ -23,6 +23,15 @@ let _entryFilter = '전체';
 export let currentLedgerYear = today().getFullYear();
 export let currentLedgerMonth = today().getMonth();
 
+// 마지막으로 보던 가계부 월 복원
+try {
+  const saved = JSON.parse(localStorage.getItem('cashflow_ledger_ym') || 'null');
+  if (saved && typeof saved.y === 'number' && typeof saved.m === 'number') {
+    currentLedgerYear = saved.y;
+    currentLedgerMonth = saved.m;
+  }
+} catch (_) {}
+
 let _selectedLedgerDate = null;
 
 export function setSelectedLedgerDate(dk) {
@@ -479,13 +488,13 @@ export function renderEntries() {
         </div>
         <div class="entry-right">
           <span class="entry-amount ${amtClass}">${e.type === 'income' ? '+' : '-'}${fmtShort(e.amount)}</span>
-          <button class="icon-btn edit" onclick="window._ui.editEntry('${e.id}')">
+          <button class="icon-btn edit" data-id="${e.id}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/>
             </svg>
           </button>
-          <button class="icon-btn del" onclick="window._ui.deleteEntry('${e.id}')">
+          <button class="icon-btn del" data-id="${e.id}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -528,11 +537,11 @@ export function renderCardMonths() {
         <div class="card-inputs">
           <div>
             <div class="card-input-label hyundai">🔵 현대카드 (1일)</div>
-            <input class="card-num-input" type="number" value="${h || ''}" placeholder="0" inputmode="numeric" oninput="window._ui.updateCardData('${ym}','hyundai',this.value)" style="border-color:var(--accent)">
+            <input class="card-num-input" type="number" value="${h || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="hyundai" style="border-color:var(--accent)">
           </div>
           <div>
             <div class="card-input-label kookmin">🟠 국민카드 (3일)</div>
-            <input class="card-num-input" type="number" value="${k || ''}" placeholder="0" inputmode="numeric" oninput="window._ui.updateCardData('${ym}','kookmin',this.value)" style="border-color:var(--orange)">
+            <input class="card-num-input" type="number" value="${k || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="kookmin" style="border-color:var(--orange)">
           </div>
         </div>
       </div>
@@ -637,7 +646,7 @@ export function renderLedger() {
     const numClass = 'ledger-day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
 
     html += `
-      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="window._ui.openLedgerEditor('${dk}')">
+      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
           <div class="${numClass}">${day}</div>
         </div>
@@ -663,6 +672,7 @@ export function changeLedgerMonth(diff) {
     currentLedgerYear++;
   }
 
+  localStorage.setItem('cashflow_ledger_ym', JSON.stringify({ y: currentLedgerYear, m: currentLedgerMonth }));
   _selectedLedgerDate = null;
 
   const ec = document.getElementById('ledger-editor-card');

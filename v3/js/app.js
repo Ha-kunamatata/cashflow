@@ -67,9 +67,6 @@ import {
   hideLoading
 } from './utils.js';
 
-// ── 전역 노출 (인라인 onclick 대응) ───────────────────
-window._ui = { editEntry, deleteEntry, updateCardData, openLedgerEditor };
-
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
@@ -119,7 +116,9 @@ initAuth(
 
     // 실시간 동기화
     startSync((cloudData) => {
+      const localTheme = state.theme; // 테마는 기기별 설정 유지
       Object.assign(state, cloudData);
+      state.theme = localTheme;
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
       applyTheme();
       renderAll();
@@ -179,6 +178,26 @@ document.getElementById('f-repeat')?.addEventListener('change', onRepeatChange);
 document.getElementById('form-save-btn')?.addEventListener('click', saveEntry);
 document.getElementById('form-cancel-btn')?.addEventListener('click', hideForm);
 document.getElementById('form-overlay')?.addEventListener('click', closeFormIfOutside);
+
+// 수입/지출 목록 이벤트 위임
+document.getElementById('entries-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.icon-btn.edit');
+  const delBtn = e.target.closest('.icon-btn.del');
+  if (editBtn?.dataset.id) editEntry(editBtn.dataset.id);
+  if (delBtn?.dataset.id) deleteEntry(delBtn.dataset.id);
+});
+
+// 카드 데이터 이벤트 위임
+document.getElementById('card-months-list')?.addEventListener('input', (e) => {
+  const input = e.target.closest('.card-num-input[data-ym]');
+  if (input) updateCardData(input.dataset.ym, input.dataset.card, input.value);
+});
+
+// 가계부 달력 이벤트 위임
+document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
+  const day = e.target.closest('.ledger-day:not(.empty)');
+  if (day?.dataset.dk) openLedgerEditor(day.dataset.dk);
+});
 
 // 가계부 탭
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
