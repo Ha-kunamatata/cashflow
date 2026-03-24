@@ -66,10 +66,8 @@ export function deleteGoal(id) {
 const PAGE_MAP = {
   home: 'page-home',
   assets: 'page-assets',
-  budget: 'page-budget',
   forecast: 'page-forecast',
   entries: 'page-entries',
-  cards: 'page-cards',
   ledger: 'page-ledger',
   report: 'page-report',
   goals: 'page-goals',
@@ -89,12 +87,10 @@ export function navigate(page, btn) {
   }
 
   if (page === 'forecast') renderModule.renderForecast();
-  if (page === 'cards') renderModule.renderCards();
   if (page === 'ledger') renderModule.renderLedger();
   if (page === 'report') renderModule.renderReport();
   if (page === 'goals') renderModule.renderGoals();
   if (page === 'assets') renderModule.renderAssets();
-  if (page === 'budget') renderModule.renderBudget();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
