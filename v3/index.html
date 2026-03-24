@@ -120,7 +120,7 @@
     </div>
     <div class="summary-item">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">체크카드 소비</div><div style="font-size:15px">🧾</div>
+        <div class="summary-item-label">이번달 가계부</div><div style="font-size:15px">📒</div>
       </div>
       <div class="summary-item-value orange" id="sum-checkcard">-</div>
       <div class="summary-item-sub" id="sum-checkcard-sub"></div>
@@ -225,39 +225,47 @@
 <!-- ⑤ 가계부 -->
 
 <div class="page" id="page-ledger">
-  <div class="card">
-    <div class="card-title">📅 월간 가계부</div>
-    <div class="summary-grid" style="margin-bottom:14px">
-      <div class="summary-item"><div class="summary-item-label">이번 달 총 소비</div><div class="summary-item-value red" id="ledger-total-spend">-</div></div>
-      <div class="summary-item"><div class="summary-item-label">하루 평균 소비</div><div class="summary-item-value orange" id="ledger-avg-spend">-</div></div>
-      <div class="summary-item"><div class="summary-item-label">최대 소비일</div><div class="summary-item-value blue" id="ledger-max-day">-</div></div>
-    </div>
-    <div class="weekly-summary" id="ledger-weekly-summary"></div>
-    <div class="ledger-toolbar">
-      <button class="btn btn-ghost" id="btn-ledger-prev"><div class="ripple-container"></div>← 이전달</button>
-      <div id="ledger-month-label" class="ledger-month-chip"></div>
-      <button class="btn btn-ghost" id="btn-ledger-next"><div class="ripple-container"></div>다음달 →</button>
-    </div>
-    <div class="card" style="background:var(--bg3);margin-bottom:14px">
-      <div class="card-title">📊 날짜별 소비 흐름</div>
-      <div id="ledger-bar-chart"></div>
-    </div>
-    <div id="ledger-month-summary" style="margin-bottom:14px;font-size:12px;color:var(--text2)"></div>
-    <div class="ledger-weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
-    <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
+  <!-- 서브탭 -->
+  <div class="ledger-sub-tabs">
+    <button class="ledger-sub-tab active" data-tab="calendar">📅 달력</button>
+    <button class="ledger-sub-tab" data-tab="stats">📊 통계</button>
   </div>
-  <div class="card ledger-editor-card" id="ledger-editor-card" style="display:none">
-    <div class="card-title">🧾 날짜별 소비 입력</div>
-    <div class="ledger-selected-badge">선택한 날짜</div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:12px" id="ledger-selected-date">-</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input class="field" type="number" id="ledger-amount-input" placeholder="소비 금액 입력" inputmode="numeric" style="text-align:right;font-family:var(--mono)">
-      <button class="btn btn-primary" id="btn-ledger-save"><div class="ripple-container"></div>저장</button>
+
+  <!-- ── 달력 뷰 ── -->
+  <div id="ledger-view-calendar">
+    <div class="card">
+      <div class="ledger-toolbar">
+        <button class="btn btn-ghost" id="btn-ledger-prev"><div class="ripple-container"></div>← 이전</button>
+        <div id="ledger-month-label" class="ledger-month-chip"></div>
+        <button class="btn btn-ghost" id="btn-ledger-next"><div class="ripple-container"></div>다음 →</button>
+      </div>
+      <div class="ledger-cal-summary">
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">지출</span><span class="ledger-cal-sum-val red" id="ledger-total-spend">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">수입</span><span class="ledger-cal-sum-val green" id="ledger-total-income">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">순액</span><span class="ledger-cal-sum-val" id="ledger-total-net">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">일평균</span><span class="ledger-cal-sum-val orange" id="ledger-avg-spend">-</span></div>
+      </div>
+      <div class="ledger-weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+      <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
     </div>
-    <div class="ledger-editor-actions">
-      <button class="btn btn-ghost" id="btn-ledger-clear"><div class="ripple-container"></div>삭제</button>
-      <button class="btn btn-ghost" id="btn-ledger-close"><div class="ripple-container"></div>닫기</button>
+  </div>
+
+  <!-- ── 통계 뷰 ── -->
+  <div id="ledger-view-stats" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div class="ledger-toolbar" style="margin:0;flex:1">
+          <button class="btn btn-ghost" id="btn-ledger-stats-prev"><div class="ripple-container"></div>←</button>
+          <div id="ledger-month-label-stats" class="ledger-month-chip" style="min-width:120px;font-size:15px"></div>
+          <button class="btn btn-ghost" id="btn-ledger-stats-next"><div class="ripple-container"></div>→</button>
+        </div>
+        <div class="filter-tabs" style="margin:0">
+          <button class="ledger-stats-tab filter-tab active" data-tab="monthly">이번달</button>
+          <button class="ledger-stats-tab filter-tab" data-tab="annual">올해</button>
+        </div>
+      </div>
     </div>
+    <div id="ledger-stats-content"></div>
   </div>
 </div>
 
@@ -486,6 +494,56 @@
     <div class="sheet-actions">
       <button class="sheet-secondary-btn" id="btn-goal-cancel">취소</button>
       <button class="sheet-primary-btn" id="btn-goal-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 가계부 날짜 시트 ── -->
+<div class="sheet-overlay" id="ledger-day-sheet">
+  <div class="sheet-panel sheet-panel-tall">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="sheet-title" style="margin:0" id="ledger-day-sheet-date">-</div>
+      <button class="sheet-close-btn" id="btn-ledger-day-close" style="width:auto;margin:0;padding:8px 14px;font-size:12px">닫기</button>
+    </div>
+    <div class="lday-summary" id="ledger-day-sheet-summary"></div>
+    <div id="ledger-day-items-list" style="margin:12px 0;flex:1;overflow-y:auto"></div>
+    <button class="btn btn-add-entry" id="btn-ledger-add-item">
+      <div class="ripple-container"></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      항목 추가
+    </button>
+  </div>
+</div>
+
+<!-- ── 가계부 항목 폼 시트 ── -->
+<div class="sheet-overlay sheet-overlay-top" id="ledger-item-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="ledger-item-sheet-title">항목 추가</div>
+    <div class="type-toggle" style="margin-bottom:14px">
+      <button class="type-btn expense-active" id="ledger-type-expense">▼ 지출</button>
+      <button class="type-btn inactive" id="ledger-type-income">▲ 수입</button>
+    </div>
+    <div id="ledger-cat-group-wrap">
+      <div class="form-label" style="margin-bottom:6px">카테고리 그룹</div>
+      <div id="ledger-cat-groups" class="ledger-cat-groups"></div>
+    </div>
+    <div class="form-label" style="margin:10px 0 6px">카테고리</div>
+    <div id="ledger-cat-chips" class="ledger-cat-chips"></div>
+    <div class="form-row" style="margin-top:14px">
+      <div>
+        <div class="form-label">금액 (원)</div>
+        <input class="form-input" id="ledger-item-amount" type="number" placeholder="0" inputmode="numeric" style="text-align:right;font-family:var(--mono)">
+      </div>
+      <div>
+        <div class="form-label">메모 (선택)</div>
+        <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모">
+      </div>
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="sheet-secondary-btn" id="btn-ledger-item-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-ledger-item-save">저장</button>
     </div>
   </div>
 </div>

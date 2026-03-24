@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════════
 // ui.js — 폼 / 시트 / 네비게이션 / 인터랙션
 // ════════════════════════════════════════════════════════
-import { INCOME_CATS, EXPENSE_CATS } from './config.js';
-import { uid, today, dateKey, fmtFull, showBadge, openSheet, closeSheet } from './utils.js';
-import { state, save, syncCheckDataToBalance } from './state.js';
+import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config.js';
+import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
+import { state, save, syncLedgerToBalance } from './state.js';
 import * as renderModule from './render.js';
 
 // ── 목표 관련 ────────────────────────────────────────────
@@ -309,73 +309,245 @@ export function updateCardData(ym, card, val) {
 }
 
 // ── 가계부 ─────────────────────────────────────────────
-let selectedLedgerDate = null;
+let _ledgerDayDate   = null; // 현재 열려있는 날짜 시트의 날짜
+let _ledgerItemDate  = null; // 항목 폼의 대상 날짜
+let _ledgerItemId    = null; // 수정 중인 항목 id (null이면 신규)
+let _ledgerItemType  = 'expense';
+let _ledgerCatGroup  = Object.keys(LEDGER_CATEGORIES)[0];
+let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
 
-export function openLedgerEditor(dateStr) {
-  selectedLedgerDate = dateStr;
-
+// 날짜 셀 클릭 → 날짜 시트 열기
+export function openLedgerDaySheet(dateStr) {
+  _ledgerDayDate = dateStr;
   renderModule.setSelectedLedgerDate(dateStr);
   renderModule.renderLedger();
+  _renderDaySheet();
+  openSheet('ledger-day-sheet');
+}
 
-  const card = document.getElementById('ledger-editor-card');
-  const label = document.getElementById('ledger-selected-date');
-  const input = document.getElementById('ledger-amount-input');
+export function closeLedgerDaySheet() {
+  _ledgerDayDate = null;
+  renderModule.setSelectedLedgerDate(null);
+  renderModule.renderLedger();
+  closeSheet('ledger-day-sheet');
+}
+
+function _renderDaySheet() {
+  const dateStr = _ledgerDayDate;
+  if (!dateStr) return;
+
   const d = new Date(dateStr);
+  const items   = state.ledgerData?.[dateStr] || [];
+  const expense = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+  const income  = items.filter(i => i.type === 'income' ).reduce((s, i) => s + i.amount, 0);
+  const net     = income - expense;
 
-  if (isNaN(d.getTime())) return;
+  const title = document.getElementById('ledger-day-sheet-date');
+  if (title) title.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 
-  label.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 소비 입력`;
-  input.value = state.checkData?.[dateStr] || '';
-  card.style.display = 'block';
-
-  setTimeout(() => input.focus(), 80);
-}
-
-export function closeLedgerEditor() {
-  document.getElementById('ledger-editor-card').style.display = 'none';
-}
-
-export function saveLedgerExpense() {
-  if (!selectedLedgerDate) return;
-
-  const amt = Number(document.getElementById('ledger-amount-input').value) || 0;
-
-  if (!state.checkData) state.checkData = {};
-
-  if (amt > 0) {
-    state.checkData[selectedLedgerDate] = amt;
-  } else {
-    delete state.checkData[selectedLedgerDate];
+  const summary = document.getElementById('ledger-day-sheet-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <div class="lday-summary-item"><span class="lday-lbl">지출</span><span class="lday-val red">${fmtShort(expense)}</span></div>
+      <div class="lday-summary-item"><span class="lday-lbl">수입</span><span class="lday-val green">${fmtShort(income)}</span></div>
+      <div class="lday-summary-item"><span class="lday-lbl">순액</span><span class="lday-val" style="color:${net>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(net)}</span></div>
+    `;
   }
 
-  syncCheckDataToBalance();
+  const list = document.getElementById('ledger-day-items-list');
+  if (!list) return;
+
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:28px 0;font-size:13px">기록 없음. + 추가 버튼으로 입력하세요</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
+    const sign = item.type === 'expense' ? '-' : '+';
+    const cls  = item.type === 'expense' ? 'red' : 'green';
+    return `
+      <div class="lday-item" data-id="${item.id}">
+        <span class="lday-item-dot" style="background:${col}"></span>
+        <div class="lday-item-info">
+          <span class="lday-item-cat">${escapeHtml(item.category)}</span>
+          ${item.memo ? `<span class="lday-item-memo">${escapeHtml(item.memo)}</span>` : ''}
+        </div>
+        <span class="lday-item-amt ${cls}">${sign}${fmtShort(item.amount)}</span>
+        <button class="icon-btn edit lday-edit-btn" data-id="${item.id}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+        </button>
+        <button class="icon-btn del lday-del-btn" data-id="${item.id}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      </div>`;
+  }).join('');
+}
+
+// 항목 추가/수정 폼 열기
+export function openLedgerItemForm(dateStr, itemId) {
+  _ledgerItemDate = dateStr || _ledgerDayDate;
+  _ledgerItemId   = itemId || null;
+
+  const existing = itemId
+    ? (state.ledgerData?.[_ledgerItemDate] || []).find(i => i.id === itemId)
+    : null;
+
+  // 기존 값 복원 또는 기본값
+  _ledgerItemType  = existing?.type     || 'expense';
+  _ledgerCategory  = existing?.category || LEDGER_CATEGORIES[_ledgerCatGroup]?.[0] || '기타';
+  // 카테고리 그룹 찾기
+  for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
+    if (cats.includes(_ledgerCategory)) { _ledgerCatGroup = grp; break; }
+  }
+
+  const titleEl = document.getElementById('ledger-item-sheet-title');
+  if (titleEl) {
+    const d = new Date(_ledgerItemDate);
+    titleEl.textContent = `${d.getMonth() + 1}/${d.getDate()} ${existing ? '항목 수정' : '항목 추가'}`;
+  }
+
+  const amtEl  = document.getElementById('ledger-item-amount');
+  const memoEl = document.getElementById('ledger-item-memo');
+  if (amtEl)  amtEl.value  = existing?.amount || '';
+  if (memoEl) memoEl.value = existing?.memo   || '';
+
+  _renderItemFormType();
+  openSheet('ledger-item-sheet');
+  setTimeout(() => amtEl?.focus(), 120);
+}
+
+export function closeLedgerItemForm() {
+  closeSheet('ledger-item-sheet');
+}
+
+export function setLedgerItemType(type) {
+  _ledgerItemType = type;
+  if (type === 'expense') {
+    const cats = LEDGER_CATEGORIES[_ledgerCatGroup];
+    _ledgerCategory = cats?.includes(_ledgerCategory) ? _ledgerCategory : cats?.[0] || '기타';
+  } else {
+    _ledgerCategory = LEDGER_INCOME_CATEGORIES.includes(_ledgerCategory) ? _ledgerCategory : LEDGER_INCOME_CATEGORIES[0];
+  }
+  _renderItemFormType();
+}
+
+export function selectLedgerCatGroup(groupName) {
+  _ledgerCatGroup = groupName;
+  _ledgerCategory = LEDGER_CATEGORIES[groupName]?.[0] || '기타';
+  _renderCatChips();
+  _renderCatGroupTabs();
+}
+
+export function selectLedgerCat(catName) {
+  _ledgerCategory = catName;
+  _renderCatChips();
+}
+
+function _renderItemFormType() {
+  const expBtn = document.getElementById('ledger-type-expense');
+  const incBtn = document.getElementById('ledger-type-income');
+  if (expBtn) expBtn.className = `type-btn ${_ledgerItemType === 'expense' ? 'expense-active' : 'inactive'}`;
+  if (incBtn) incBtn.className = `type-btn ${_ledgerItemType === 'income'  ? 'income-active'  : 'inactive'}`;
+
+  const groupWrap = document.getElementById('ledger-cat-group-wrap');
+  if (groupWrap) groupWrap.style.display = _ledgerItemType === 'expense' ? '' : 'none';
+
+  _renderCatGroupTabs();
+  _renderCatChips();
+}
+
+function _renderCatGroupTabs() {
+  const el = document.getElementById('ledger-cat-groups');
+  if (!el) return;
+  if (_ledgerItemType === 'income') { el.innerHTML = ''; return; }
+  el.innerHTML = Object.keys(LEDGER_CATEGORIES).map(grp => `
+    <button class="ledger-cat-group-btn ${grp === _ledgerCatGroup ? 'active' : ''}" data-group="${escapeHtml(grp)}">${grp}</button>
+  `).join('');
+}
+
+function _renderCatChips() {
+  const el = document.getElementById('ledger-cat-chips');
+  if (!el) return;
+  const cats = _ledgerItemType === 'income'
+    ? LEDGER_INCOME_CATEGORIES
+    : (LEDGER_CATEGORIES[_ledgerCatGroup] || []);
+
+  el.innerHTML = cats.map(cat => {
+    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    const sel = cat === _ledgerCategory;
+    return `
+      <button class="ledger-cat-chip ${sel ? 'active' : ''}" data-cat="${escapeHtml(cat)}"
+        style="${sel ? `background:${col}22;border-color:${col};color:${col}` : ''}">
+        ${cat}
+      </button>`;
+  }).join('');
+}
+
+export function saveLedgerItem() {
+  const amt  = Number(document.getElementById('ledger-item-amount')?.value) || 0;
+  const memo = document.getElementById('ledger-item-memo')?.value.trim() || '';
+
+  if (!amt) { alert('금액을 입력해주세요'); return; }
+  if (!_ledgerItemDate) return;
+
+  if (!state.ledgerData) state.ledgerData = {};
+  if (!state.ledgerData[_ledgerItemDate]) state.ledgerData[_ledgerItemDate] = [];
+
+  const item = {
+    id:       _ledgerItemId || uid(),
+    type:     _ledgerItemType,
+    category: _ledgerCategory,
+    amount:   amt,
+    memo,
+  };
+
+  if (_ledgerItemId) {
+    state.ledgerData[_ledgerItemDate] = state.ledgerData[_ledgerItemDate].map(i =>
+      i.id === _ledgerItemId ? item : i
+    );
+  } else {
+    state.ledgerData[_ledgerItemDate].push(item);
+  }
+
+  syncLedgerToBalance();
   save();
+
+  closeLedgerItemForm();
+  // 날짜 시트 갱신
+  if (_ledgerDayDate === _ledgerItemDate) _renderDaySheet();
   renderModule.renderLedger();
   renderModule.renderHome();
-
-  if (document.getElementById('page-forecast')?.classList.contains('active')) {
-    renderModule.renderForecast();
-  }
-
   showBadge('✅ 가계부 저장됨');
 }
 
-export function clearLedgerExpense() {
-  if (!selectedLedgerDate) return;
+export function deleteLedgerItem(dateStr, itemId) {
+  if (!confirm('항목을 삭제할까요?')) return;
+  if (!state.ledgerData?.[dateStr]) return;
 
-  if (state.checkData) {
-    delete state.checkData[selectedLedgerDate];
-  }
+  state.ledgerData[dateStr] = state.ledgerData[dateStr].filter(i => i.id !== itemId);
+  if (state.ledgerData[dateStr].length === 0) delete state.ledgerData[dateStr];
 
-  syncCheckDataToBalance();
+  syncLedgerToBalance();
   save();
 
-  document.getElementById('ledger-amount-input').value = '';
-
+  _renderDaySheet();
   renderModule.renderLedger();
   renderModule.renderHome();
-  showBadge('🗑️ 가계부 삭제됨');
+  showBadge('🗑️ 항목 삭제됨');
 }
+
+// 날짜 시트에서 항목 삭제 (현재 열려있는 날짜 기준)
+export function deleteLedgerCurrentDayItem(itemId) {
+  if (!_ledgerDayDate) return;
+  deleteLedgerItem(_ledgerDayDate, itemId);
+}
+
+// 구버전 호환 alias (app.js에서 직접 참조할 경우)
+export const openLedgerEditor     = openLedgerDaySheet;
+export const closeLedgerEditor    = closeLedgerDaySheet;
+export const saveLedgerExpense    = () => {};
+export const clearLedgerExpense   = () => {};
 
 // ── 데이터 관리 ────────────────────────────────────────
 export function exportData() {
@@ -406,6 +578,7 @@ export function importData(e) {
       if (!Array.isArray(imported.entries)) imported.entries = [];
       if (typeof imported.cardData !== 'object' || imported.cardData === null) imported.cardData = {};
       if (typeof imported.checkData !== 'object' || imported.checkData === null) imported.checkData = {};
+      if (typeof imported.ledgerData !== 'object' || imported.ledgerData === null) imported.ledgerData = {};
       if (typeof imported.balance !== 'number') delete imported.balance;
       Object.assign(state, imported);
       save();
@@ -423,6 +596,7 @@ export function resetAll() {
   state.entries = [];
   state.cardData = {};
   state.checkData = {};
+  state.ledgerData = {};
   state.appliedCheckData = {};
   state.balance = 0;
 
