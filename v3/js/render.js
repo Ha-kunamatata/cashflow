@@ -93,11 +93,14 @@ export function setLedgerSubTab(tab) {
   document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.tab === tab)
   );
-  const cal   = document.getElementById('ledger-view-calendar');
-  const stats = document.getElementById('ledger-view-stats');
-  if (cal)   cal.style.display   = tab === 'calendar' ? '' : 'none';
-  if (stats) stats.style.display = tab === 'stats'    ? '' : 'none';
-  if (tab === 'stats') renderLedgerStats();
+  const cal    = document.getElementById('ledger-view-calendar');
+  const stats  = document.getElementById('ledger-view-stats');
+  const budget = document.getElementById('ledger-view-budget');
+  if (cal)    cal.style.display    = tab === 'calendar' ? '' : 'none';
+  if (stats)  stats.style.display  = tab === 'stats'    ? '' : 'none';
+  if (budget) budget.style.display = tab === 'budget'   ? '' : 'none';
+  if (tab === 'stats')  renderLedgerStats();
+  if (tab === 'budget') renderBudget();
 }
 
 export function setLedgerStatsTab(tab) {
@@ -118,12 +121,10 @@ export function renderAll() {
 
   const activePage = document.querySelector('.page.active');
   if (activePage?.id === 'page-forecast') renderForecast();
-  if (activePage?.id === 'page-cards') renderCards();
   if (activePage?.id === 'page-ledger') renderLedger();
   if (activePage?.id === 'page-report') renderReport();
   if (activePage?.id === 'page-goals') renderGoals();
   if (activePage?.id === 'page-assets') renderAssets();
-  if (activePage?.id === 'page-budget') renderBudget();
 }
 
 export function renderSettingsStats() {

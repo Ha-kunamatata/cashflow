@@ -206,10 +206,28 @@ document.getElementById('btn-google-login')?.addEventListener('click', signInWit
 // 탑바
 document.getElementById('btn-open-profile')?.addEventListener('click', openProfileSheet);
 document.getElementById('btn-open-balance')?.addEventListener('click', openBalanceSheet);
+document.getElementById('btn-open-settings-page')?.addEventListener('click', () => navigate('settings'));
+
+// 홈 예측 바로가기
+document.getElementById('btn-home-forecast-link')?.addEventListener('click', () => navigate('forecast'));
 
 // 바텀 탭
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
   btn.addEventListener('click', () => navigate(btn.dataset.page, btn));
+});
+
+// 항목 탭 서브탭 (고정항목 | 카드관리)
+document.querySelectorAll('[data-entries-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-entries-tab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.entriesTab;
+    const fixedPanel = document.getElementById('entries-panel-fixed');
+    const cardsPanel = document.getElementById('entries-panel-cards');
+    if (fixedPanel) fixedPanel.style.display = tab === 'fixed' ? '' : 'none';
+    if (cardsPanel) cardsPanel.style.display = tab === 'cards' ? '' : 'none';
+    if (tab === 'cards') renderCards();
+  });
 });
 
 // 예측 탭

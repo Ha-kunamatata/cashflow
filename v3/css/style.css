@@ -138,6 +138,8 @@ body::before {
 .topbar-balance-label { font-size:9px; color:var(--text3); margin-bottom:2px; }
 .topbar-balance-amount { font-family:var(--mono); font-size:clamp(14px,4.5vw,20px); font-weight:700; transition:color 0.3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:clamp(90px,28vw,150px); }
 .topbar-balance-amount.danger { color:var(--red2); }
+.topbar-gear-btn { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.10); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s,transform 0.2s; flex-shrink:0; }
+.topbar-gear-btn:hover { background:rgba(255,255,255,0.13); transform:rotate(30deg); }
 .user-avatar { width:40px; height:40px; border-radius:50%; border:1px solid rgba(96,165,250,0.34); box-shadow:0 8px 24px rgba(59,130,246,0.20); overflow:hidden; cursor:pointer; transition:transform 0.2s; }
 .user-avatar:hover { transform:scale(1.05); }
 .user-avatar img { width:100%; height:100%; object-fit:cover; }
