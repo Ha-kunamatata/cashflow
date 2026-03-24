@@ -90,17 +90,20 @@ function getLedgerYear(year) {
 
 export function setLedgerSubTab(tab) {
   _ledgerSubTab = tab;
-  document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
+  document.querySelectorAll('#page-ledger .ledger-sub-tab').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.tab === tab)
   );
-  const cal    = document.getElementById('ledger-view-calendar');
-  const stats  = document.getElementById('ledger-view-stats');
-  const budget = document.getElementById('ledger-view-budget');
-  if (cal)    cal.style.display    = tab === 'calendar' ? '' : 'none';
-  if (stats)  stats.style.display  = tab === 'stats'    ? '' : 'none';
-  if (budget) budget.style.display = tab === 'budget'   ? '' : 'none';
-  if (tab === 'stats')  renderLedgerStats();
-  if (tab === 'budget') renderBudget();
+  const cal      = document.getElementById('ledger-view-calendar');
+  const stats    = document.getElementById('ledger-view-stats');
+  const budget   = document.getElementById('ledger-view-budget');
+  const forecast = document.getElementById('ledger-view-forecast');
+  if (cal)      cal.style.display      = tab === 'calendar' ? '' : 'none';
+  if (stats)    stats.style.display    = tab === 'stats'    ? '' : 'none';
+  if (budget)   budget.style.display   = tab === 'budget'   ? '' : 'none';
+  if (forecast) forecast.style.display = tab === 'forecast' ? '' : 'none';
+  if (tab === 'stats')    renderLedgerStats();
+  if (tab === 'budget')   renderBudget();
+  if (tab === 'forecast') renderLedgerForecast();
 }
 
 export function setLedgerStatsTab(tab) {
@@ -373,7 +376,7 @@ export function renderHome() {
   }
 
   ul.innerHTML = upcoming
-    .map((f) => {
+    .map((f, i) => {
       const isDanger = f.balance < state.dangerLine;
       const dow = f.date.getDay();
       const dayColor =
@@ -384,7 +387,7 @@ export function renderHome() {
             : 'color:var(--text3)';
 
       return `
-        <div class="event-row">
+        <div class="event-row" data-forecast-idx="${i}">
           <div class="event-left">
             <span class="event-date">${f.date.getMonth() + 1}/${p2(f.date.getDate())}</span>
             <span class="event-day" style="${dayColor}">${DAYS_KR[dow]}</span>
@@ -853,9 +856,101 @@ export function renderCardMonths() {
 export function renderLedger() {
   if (_ledgerSubTab === 'stats') {
     renderLedgerStats();
+  } else if (_ledgerSubTab === 'forecast') {
+    renderLedgerForecast();
   } else {
     renderLedgerCalendar();
   }
+}
+
+// ── 가계부 내 예측 뷰 ──────────────────────────────────
+let _lfPeriod = 30;
+let _lfNavMonth = 0; // 0 = current, +1 = next, etc.
+
+export function setLedgerForecastPeriod(days, btn) {
+  _lfPeriod = days;
+  document.querySelectorAll('[data-lf-period]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderLedgerForecast();
+}
+
+export function shiftLedgerForecastMonth(delta) {
+  _lfNavMonth = Math.max(-12, Math.min(24, _lfNavMonth + delta));
+  renderLedgerForecast();
+}
+
+export function renderLedgerForecast() {
+  const fc = buildForecast(365);
+  const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];
+
+  // 차트
+  const chartEl = document.getElementById('ledger-forecast-chart');
+  if (chartEl) {
+    const slice = fc.slice(0, _lfPeriod);
+    const vals = slice.map(f => f.balance);
+    const min = Math.min(...vals, 0);
+    const max = Math.max(...vals, state.dangerLine);
+    const range = max - min || 1;
+    const W = 560, H = 100, PAD = 8;
+    const bw = W / slice.length;
+    const py = v => PAD + (H - PAD * 2) - ((v - min) / range) * (H - PAD * 2);
+    const pts = slice.map((f, i) => `${(i * bw + bw / 2).toFixed(1)},${py(f.balance).toFixed(1)}`).join(' ');
+    let dots = '';
+    slice.forEach((f, i) => {
+      if (!f.income && !f.expense) return;
+      const fill = f.balance < state.dangerLine ? '#ef4444' : f.income > 0 ? '#10b981' : '#f87171';
+      dots += `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${py(f.balance).toFixed(1)}" r="2.5" fill="${fill}" opacity="0.85"/>`;
+    });
+    const dangerY = py(state.dangerLine);
+    chartEl.innerHTML = `
+      <defs><linearGradient id="lfg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.32"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>
+      </linearGradient></defs>
+      ${state.dangerLine > min ? `<rect x="0" y="${dangerY.toFixed(1)}" width="${W}" height="${(py(0) - dangerY).toFixed(1)}" fill="rgba(249,115,22,0.06)"/>` : ''}
+      ${state.dangerLine > 0 ? `<line x1="0" y1="${dangerY.toFixed(1)}" x2="${W}" y2="${dangerY.toFixed(1)}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 3"/>` : ''}
+      <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#lfg)"/>
+      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
+      ${dots}`;
+  }
+
+  // 테이블: 이번달 + 다음달만 (navMonth로 이동 가능)
+  const t = today();
+  const baseYear = t.getFullYear();
+  const baseMonth = t.getMonth() + _lfNavMonth;
+  const targetDate = new Date(baseYear, baseMonth, 1);
+  const ym = targetDate.getFullYear() * 100 + (targetDate.getMonth() + 1);
+
+  const navBtn = document.getElementById('btn-lf-month-nav');
+  if (navBtn) navBtn.textContent = `${targetDate.getFullYear()}년 ${targetDate.getMonth() + 1}월`;
+
+  // 현재달 + 다음달 날짜 범위
+  const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+  const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 2, 0);
+
+  const filtered = fc.filter(f => f.date >= startDate && f.date <= endDate);
+  const tbody = document.getElementById('ledger-forecast-tbody');
+  if (!tbody) return;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px">해당 기간에 이벤트 없음</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(f => {
+    const isDanger = f.balance < state.dangerLine;
+    const dow = f.date.getDay();
+    const dayColor = dow === 0 ? '#ef4444' : dow === 6 ? '#60a5fa' : '';
+    const names = f.events.slice(0, 2).map(e => escapeHtml(e.name)).join(', ');
+    return `<tr class="${isDanger ? 'danger-row' : ''}" style="${isDanger ? 'background:rgba(239,68,68,0.06)' : ''}">
+      <td style="font-family:var(--mono);font-size:11px">${f.date.getMonth()+1}/${p2(f.date.getDate())}</td>
+      <td style="font-size:11px;${dayColor ? `color:${dayColor}` : ''}">${DAYS_KR[dow]}</td>
+      <td style="color:var(--green2);font-family:var(--mono);font-size:11px">${f.income > 0 ? '+'+fmtShort(f.income) : ''}</td>
+      <td style="color:var(--red2);font-family:var(--mono);font-size:11px">${f.expense > 0 ? '-'+fmtShort(f.expense) : ''}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:${isDanger ? 'var(--orange)' : 'var(--text)'}">${fmtShort(f.balance)}</td>
+      <td style="font-size:10px;color:var(--text3);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${names}${isDanger ? ' ⚠️' : ''}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderLedgerCalendar() {
@@ -867,7 +962,7 @@ function renderLedgerCalendar() {
   const startWd   = firstDay.getDay();
   const totalDays = lastDay.getDate();
 
-  const ml = document.getElementById('ledger-month-label');
+  const ml = document.getElementById('btn-ledger-month-label');
   if (ml) ml.textContent = `${y}년 ${m + 1}월`;
 
   const { expense: monthExp, income: monthInc, dayMap } = getLedgerMonth(y, m);
@@ -906,6 +1001,15 @@ function renderLedgerCalendar() {
     const heatPct = maxDay > 0 ? dayExp / maxDay : 0;
     const heatLevel = heatPct > 0.8 ? 4 : heatPct > 0.5 ? 3 : heatPct > 0.25 ? 2 : heatPct > 0 ? 1 : 0;
 
+    // 고정 항목 표시 (매월 반복 항목)
+    const fixedForDay = (state.entries || []).filter(e =>
+      e.repeat === '매월' && e.day === day &&
+      (!e.endMonth || parseInt(e.endMonth) >= yyyymm(new Date(y, m, 1)))
+    );
+    const fixedHtml = fixedForDay.slice(0, 2).map(e =>
+      `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : ''}">${escapeHtml(e.name.slice(0, 4))}</div>`
+    ).join('');
+
     html += `
       <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${heatLevel > 0 ? 'heat-' + heatLevel : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
@@ -914,6 +1018,7 @@ function renderLedgerCalendar() {
         <div class="ledger-day-amounts">
           ${dayExp > 0 ? `<div class="ledger-day-expense">-${fmtShort(dayExp)}</div>` : ''}
           ${dayInc > 0 ? `<div class="ledger-day-income">+${fmtShort(dayInc)}</div>` : ''}
+          ${fixedHtml}
         </div>
       </div>
     `;
@@ -1410,64 +1515,138 @@ export function renderGoals() {
 
   const goals = state.goals || [];
   if (!goals.length) {
-    container.innerHTML = '<div class="empty-state">목표가 없습니다<br>위 버튼으로 추가하세요!</div>';
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:48px;margin-bottom:12px">🎯</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">목표가 없습니다</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.6">저축 목표를 설정하고<br>달성까지 추적해보세요</div>
+      </div>`;
     return;
   }
 
   const now = today();
   const nowYm = yyyymm(now);
 
-  container.innerHTML = goals.map((g) => {
+  // 전체 진행 상황 요약
+  const totalSaved = goals.reduce((s, g) => s + (g.savedAmount || 0), 0);
+  const totalTarget = goals.reduce((s, g) => s + (g.targetAmount || 0), 0);
+  const overallPct = totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0;
+  const completedCount = goals.filter(g => (g.savedAmount || 0) >= (g.targetAmount || 1)).length;
+
+  const summaryHtml = `
+    <div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border-color:rgba(99,102,241,0.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-bottom:3px">전체 목표 달성률</div>
+          <div style="font-family:var(--mono);font-size:26px;font-weight:900;color:var(--accent2)">${overallPct}%</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">${goals.length}개 목표 중 ${completedCount}개 달성</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtShort(totalSaved)} / ${fmtShort(totalTarget)}</div>
+        </div>
+      </div>
+      <div class="goal-progress-track" style="height:8px">
+        <div class="goal-progress-fill" style="width:${overallPct}%;background:linear-gradient(90deg,var(--accent2),#8b5cf6)"></div>
+      </div>
+    </div>`;
+
+  const goalCards = goals.map((g) => {
     const saved = g.savedAmount || 0;
     const target = g.targetAmount || 1;
     const pct = Math.min(100, Math.round((saved / target) * 100));
+    const remaining = Math.max(0, target - saved);
 
     let monthsLeft = 0;
     let monthlyRequired = 0;
+    let daysLeft = 0;
+    let urgency = '';
     if (g.targetDate) {
       const ty = parseInt(g.targetDate.slice(0, 4), 10);
       const tm = parseInt(g.targetDate.slice(4), 10) - 1;
-      const targetDateObj = new Date(ty, tm, 1);
       monthsLeft = Math.max(0, (ty - now.getFullYear()) * 12 + (tm - now.getMonth()));
-      const remaining = Math.max(0, target - saved);
       monthlyRequired = monthsLeft > 0 ? Math.ceil(remaining / monthsLeft) : remaining;
+      daysLeft = Math.max(0, Math.round((new Date(ty, tm + 1, 0) - now) / 86400000));
+      if (monthsLeft <= 1 && pct < 100) urgency = 'urgent';
+      else if (monthsLeft <= 3 && pct < 100) urgency = 'warning';
     }
-    const barColor = pct >= 100 ? 'var(--green2)' : pct >= 60 ? 'var(--accent2)' : 'var(--orange)';
+    const barColor = pct >= 100 ? 'var(--green2)' : urgency === 'urgent' ? 'var(--red2)' : urgency === 'warning' ? 'var(--orange)' : pct >= 60 ? 'var(--accent2)' : '#60a5fa';
+
+    // Monthly savings speed relative to required
+    const monthlyIncome = state.entries
+      .filter(e => e.type === 'income' && e.repeat === '매월')
+      .reduce((s, e) => s + e.amount, 0);
+    const canSaveMonthly = monthlyIncome > 0 && monthlyRequired > 0
+      ? Math.min(100, Math.round((monthlyIncome * 0.3 / monthlyRequired) * 100)) : 0; // assume 30% savings rate
 
     return `
-      <div class="goal-card">
+      <div class="goal-card ${urgency ? 'goal-card-' + urgency : ''}" data-goal-id="${g.id}" style="cursor:default">
         <div class="goal-card-top">
           <div class="goal-emoji">${escapeHtml(g.emoji || '🎯')}</div>
           <div class="goal-info">
             <div class="goal-name">${escapeHtml(g.name)}</div>
-            ${g.targetDate ? `<div class="goal-date">${g.targetDate.slice(0, 4)}년 ${parseInt(g.targetDate.slice(4), 10)}월 목표 · ${monthsLeft}개월 남음</div>` : ''}
+            ${g.targetDate ? `
+              <div style="display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap">
+                <div class="goal-date">${g.targetDate.slice(0, 4)}년 ${parseInt(g.targetDate.slice(4), 10)}월 목표</div>
+                ${monthsLeft > 0 ? `<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:${urgency === 'urgent' ? 'rgba(239,68,68,0.15)' : urgency === 'warning' ? 'rgba(249,115,22,0.15)' : 'rgba(255,255,255,0.07)'};color:${urgency === 'urgent' ? 'var(--red2)' : urgency === 'warning' ? 'var(--orange)' : 'var(--text3)'}">D-${daysLeft}</span>` : ''}
+              </div>` : ''}
           </div>
-          <div style="display:flex;gap:6px;margin-left:auto">
-            <button class="icon-btn edit goal-edit-btn" data-id="${g.id}">
+          <div style="display:flex;gap:6px;margin-left:auto;align-items:flex-start">
+            <button class="icon-btn edit goal-edit-btn" data-id="${g.id}" title="수정">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
             </button>
-            <button class="icon-btn del goal-del-btn" data-id="${g.id}">
+            <button class="icon-btn del goal-del-btn" data-id="${g.id}" title="삭제">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
             </button>
           </div>
         </div>
-        <div class="goal-amounts">
-          <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--accent2)">${fmtShort(saved)}</span>
-          <span style="font-size:12px;color:var(--text3)"> / ${fmtShort(target)}</span>
-          <span style="font-size:12px;font-weight:700;color:${barColor};margin-left:auto">${pct}%</span>
+
+        <!-- 금액 & 진행률 -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:10px 0 6px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:2px">저축 현황</div>
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--accent2)">${fmtFull(saved)}</span>
+              <span style="font-size:11px;color:var(--text3)">/ ${fmtShort(target)}</span>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:28px;font-weight:900;font-family:var(--mono);color:${barColor};line-height:1">${pct}%</div>
+            ${pct < 100 ? `<div style="font-size:10px;color:var(--text3)">${fmtShort(remaining)} 남음</div>` : '<div style="font-size:10px;color:var(--green2)">달성 완료!</div>'}
+          </div>
         </div>
-        <div class="goal-progress-track">
-          <div class="goal-progress-fill" style="width:${pct}%;background:${barColor}"></div>
+        <div class="goal-progress-track" style="height:8px;margin-bottom:10px">
+          <div class="goal-progress-fill" style="width:${pct}%;background:${pct >= 100 ? 'linear-gradient(90deg,var(--green2),#10b981)' : `linear-gradient(90deg,${barColor},${barColor}aa)`}"></div>
         </div>
-        ${monthlyRequired > 0 && pct < 100 ? `<div class="goal-monthly-req">월 <strong>${fmtShort(monthlyRequired)}</strong> 씩 모으면 목표 달성 가능해요</div>` : pct >= 100 ? '<div class="goal-monthly-req" style="color:var(--green2)">🎉 목표 달성!</div>' : ''}
+
+        <!-- 월 필요 저축액 & 상태 -->
+        ${pct < 100 && monthsLeft > 0 ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="padding:8px 10px;border-radius:10px;background:var(--bg3);border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px">월 필요 저축액</div>
+            <div style="font-family:var(--mono);font-size:14px;font-weight:900;color:${urgency === 'urgent' ? 'var(--red2)' : 'var(--text)'}">${fmtShort(monthlyRequired)}</div>
+          </div>
+          <div style="padding:8px 10px;border-radius:10px;background:var(--bg3);border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:3px">남은 기간</div>
+            <div style="font-family:var(--mono);font-size:14px;font-weight:900;color:var(--text)">${monthsLeft}개월</div>
+          </div>
+        </div>
+        ${urgency === 'urgent' ? `<div style="font-size:11px;color:var(--red2);padding:8px 10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);margin-bottom:8px">⚠️ 목표 기간이 얼마 남지 않았습니다</div>` : ''}
+        ` : pct >= 100 ? `
+        <div style="font-size:13px;color:var(--green2);padding:10px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);margin-bottom:10px;text-align:center">
+          🎉 목표를 달성했어요! 훌륭합니다!
+        </div>
+        ` : ''}
+
         <!-- 공유 코드 -->
-        <div class="goal-share-row">
-          <button class="goal-share-btn" data-share-id="${g.id}">🔗 공유 코드 ${g.sharedCode ? '복사' : '생성'}</button>
-          ${g.sharedCode ? `<span class="goal-invite-code-inline" id="goal-share-code-${g.id}">${escapeHtml(g.sharedCode)}</span>` : ''}
-          ${g.sharedFrom ? `<span style="font-size:10px;color:var(--text3)">(${escapeHtml(g.sharedFrom)}에서 참여)</span>` : ''}
+        <div class="goal-share-row" style="justify-content:space-between;align-items:center">
+          <button class="goal-share-btn" data-share-id="${g.id}">🔗 ${g.sharedCode ? '코드 복사' : '공유 코드 생성'}</button>
+          ${g.sharedCode ? `<span class="goal-invite-code-inline">${escapeHtml(g.sharedCode)}</span>` : ''}
+          ${g.sharedFrom ? `<span style="font-size:10px;color:var(--text3)">📎 ${escapeHtml(g.sharedFrom)}</span>` : ''}
         </div>
       </div>`;
   }).join('');
+
+  container.innerHTML = summaryHtml + goalCards;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1485,6 +1664,7 @@ export function renderHouseLevel() {
     ? Math.min(100, Math.round((netWorth / level.next) * 100))
     : 100;
 
+  el.setAttribute('data-house-detail', '1');
   el.innerHTML = `
     <div class="house-level-inner">
       <span class="house-emoji">${level.icon}</span>
@@ -1499,6 +1679,7 @@ export function renderHouseLevel() {
       <div class="house-progress-fill" style="width:${pct}%"></div>
     </div>
     <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">${pct}%</div>` : ''}
+    <div style="font-size:10px;color:var(--accent2);text-align:center;margin-top:6px;opacity:0.7">탭해서 자세히 보기</div>
   `;
 }
 
