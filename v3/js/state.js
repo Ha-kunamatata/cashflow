@@ -27,11 +27,27 @@ export function save() {
   }
 }
 
+// ── 상태 유효성 검사 ──────────────────────────────────
+function validateState(d) {
+  if (typeof d !== 'object' || d === null || Array.isArray(d)) return false;
+  if ('balance'          in d && typeof d.balance !== 'number') return false;
+  if ('dangerLine'       in d && typeof d.dangerLine !== 'number') return false;
+  if ('entries'          in d && !Array.isArray(d.entries)) return false;
+  if ('goals'            in d && !Array.isArray(d.goals)) return false;
+  if ('cardData'         in d && (typeof d.cardData !== 'object' || Array.isArray(d.cardData))) return false;
+  if ('ledgerData'       in d && (typeof d.ledgerData !== 'object' || Array.isArray(d.ledgerData))) return false;
+  if ('appliedCheckData' in d && (typeof d.appliedCheckData !== 'object' || Array.isArray(d.appliedCheckData))) return false;
+  return true;
+}
+
 // ── 로드 ──────────────────────────────────────────────
 export function load() {
   try {
     const d = localStorage.getItem(STORAGE_KEY);
-    if (d) Object.assign(state, JSON.parse(d));
+    if (d) {
+      const parsed = JSON.parse(d);
+      if (validateState(parsed)) Object.assign(state, parsed);
+    }
   } catch (e) {}
 }
 

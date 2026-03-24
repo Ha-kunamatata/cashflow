@@ -742,7 +742,7 @@ export function renderEntries() {
           ? '<span class="badge kookmin">국민</span>'
           : '';
 
-    const endMonthStr = String(e.endMonth || '');
+    const endMonthStr = escapeHtml(String(e.endMonth || ''));
     const endMonthLabel = endMonthStr.length === 6
       ? `~${endMonthStr.slice(0, 4)}/${endMonthStr.slice(4)}`
       : `~${endMonthStr}`;
@@ -1252,7 +1252,7 @@ export function renderGoals() {
     return `
       <div class="goal-card">
         <div class="goal-card-top">
-          <div class="goal-emoji">${g.emoji || '🎯'}</div>
+          <div class="goal-emoji">${escapeHtml(g.emoji || '🎯')}</div>
           <div class="goal-info">
             <div class="goal-name">${escapeHtml(g.name)}</div>
             ${g.targetDate ? `<div class="goal-date">${g.targetDate.slice(0, 4)}년 ${parseInt(g.targetDate.slice(4), 10)}월 목표 · ${monthsLeft}개월 남음</div>` : ''}

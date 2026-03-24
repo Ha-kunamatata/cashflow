@@ -89,6 +89,15 @@
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
   <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
 
+  <!-- AI 인사이트 카드 -->
+  <div class="card ai-insight-card" id="ai-insight-card" style="display:none;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">🤖 AI 인사이트</div>
+      <button class="btn btn-ghost" id="btn-ai-insight-refresh" style="padding:4px 10px;font-size:11px"><div class="ripple-container"></div>↻ 새로고침</button>
+    </div>
+    <div id="ai-insight-content" style="font-size:13px;color:var(--text2);line-height:1.7">로드 중…</div>
+  </div>
+
   <div class="summary-grid">
     <div class="summary-item">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
@@ -266,6 +275,10 @@
       </div>
     </div>
     <div id="ledger-stats-content"></div>
+    <!-- AI 분석 버튼 -->
+    <div style="margin-top:12px;text-align:center" id="ledger-ai-btn-wrap">
+      <button class="btn" id="btn-ledger-ai" style="padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:13px;font-family:var(--font);display:inline-flex;align-items:center;gap:8px;justify-content:center;border:none"><div class="ripple-container"></div>🤖 AI로 이번달 소비 분석하기</button>
+    </div>
   </div>
 </div>
 
@@ -344,6 +357,17 @@
         <div class="setting-row">
           <div><div class="setting-label">Firebase 실시간 동기화</div><div class="setting-sub">로그인한 계정 기준으로 저장 및 동기화됩니다</div></div>
           <span style="font-size:11px;color:var(--green2)">● 활성</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🤖 Gemini AI 설정</div>
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div><div class="setting-label">Gemini API 키</div><div class="setting-sub">Google AI Studio에서 발급 · 기기에만 저장됨</div></div>
+          <div style="display:flex;gap:8px;width:100%">
+            <input class="setting-input" type="password" id="gemini-api-key-input" placeholder="AIza…" style="flex:1;font-size:12px;font-family:var(--mono)">
+            <button class="btn btn-ghost" id="btn-save-gemini-key" style="padding:8px 14px;font-size:12px;white-space:nowrap"><div class="ripple-container"></div>저장</button>
+          </div>
+          <div id="gemini-key-status" style="font-size:11px;color:var(--text3)"></div>
         </div>
       </div>
     </div>
@@ -545,6 +569,40 @@
       <button class="sheet-secondary-btn" id="btn-ledger-item-cancel">취소</button>
       <button class="sheet-primary-btn" id="btn-ledger-item-save">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- ── 플로팅 AI 채팅 버튼 ── -->
+<button class="btn ai-chat-fab" id="btn-ai-chat-fab" style="display:none">
+  <div class="ripple-container"></div>
+  <span style="font-size:20px">🤖</span>
+</button>
+
+<!-- ── AI 채팅 시트 ── -->
+<div class="sheet-overlay" id="ai-chat-sheet">
+  <div class="sheet-panel" style="max-height:80vh;display:flex;flex-direction:column">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:700">🤖 AI 재무 도우미</div>
+      <button class="btn btn-ghost" id="btn-ai-chat-close" style="padding:6px 12px;font-size:12px"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div id="ai-chat-messages" style="flex:1;overflow-y:auto;min-height:120px;max-height:360px;display:flex;flex-direction:column;gap:10px;padding:4px 0 12px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="form-input" id="ai-chat-input" type="text" placeholder="궁금한 점을 물어보세요…" style="flex:1;font-size:13px">
+      <button class="btn" id="btn-ai-chat-send" style="padding:10px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:13px;border:none;white-space:nowrap"><div class="ripple-container"></div>전송</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI 분석 결과 시트 ── -->
+<div class="sheet-overlay sheet-overlay-top" id="ai-analysis-sheet">
+  <div class="sheet-panel sheet-panel-tall">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700">🤖 AI 소비 분석</div>
+      <button class="btn btn-ghost" id="btn-ai-analysis-close" style="padding:6px 12px;font-size:12px"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div id="ai-analysis-content" style="font-size:13px;color:var(--text2);line-height:1.8;overflow-y:auto;flex:1">로드 중…</div>
   </div>
 </div>
 
