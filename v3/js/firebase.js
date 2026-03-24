@@ -123,6 +123,33 @@ export function startSync(callback) {
   });
 }
 
+// ── 공유 목표 코드 (전역 컬렉션) ───────────────────────
+export async function publishSharedGoal(code, goalSnapshot) {
+  try {
+    const user = auth.currentUser;
+    await setDoc(doc(db, 'sharedGoals', code.toUpperCase()), {
+      ...goalSnapshot,
+      publisherUid: user?.uid || '',
+      publisherName: user?.displayName || '알 수 없음',
+      publishedAt: new Date().toISOString(),
+    });
+    return true;
+  } catch (e) {
+    console.warn('공유 목표 저장 실패:', e);
+    return false;
+  }
+}
+
+export async function fetchSharedGoalByCode(code) {
+  try {
+    const snap = await getDoc(doc(db, 'sharedGoals', code.toUpperCase()));
+    return snap.exists() ? snap.data() : null;
+  } catch (e) {
+    console.warn('공유 목표 조회 실패:', e);
+    return null;
+  }
+}
+
 // onAuthStateChanged → app.js에서 등록한 콜백 호출
 export async function initAuth(onLogin, onLogout) {
   // 리다이렉트 로그인 결과 처리 (iOS Standalone 모드용)

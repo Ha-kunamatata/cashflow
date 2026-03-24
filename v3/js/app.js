@@ -27,6 +27,7 @@ import {
   renderGoals,
   renderAssets,
   renderBudget,
+  renderReportCatModal,
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
@@ -211,6 +212,51 @@ document.getElementById('btn-open-settings-page')?.addEventListener('click', () 
 // 홈 예측 바로가기
 document.getElementById('btn-home-forecast-link')?.addEventListener('click', () => navigate('forecast'));
 
+// 잔고 숨기기/보이기 토글
+let _balHidden = localStorage.getItem('balanceHidden') === '1';
+function _applyBalanceVisibility() {
+  const balEl = document.getElementById('balance-display');
+  const maskEl = document.getElementById('balance-hidden-mask');
+  const eyeOpen = document.getElementById('balance-eye-open');
+  const eyeClosed = document.getElementById('balance-eye-closed');
+  const topbarBal = document.getElementById('topbar-balance');
+  if (!balEl) return;
+  if (_balHidden) {
+    balEl.style.display = 'none';
+    if (maskEl) maskEl.style.display = '';
+    if (eyeOpen) eyeOpen.style.display = 'none';
+    if (eyeClosed) eyeClosed.style.display = '';
+    if (topbarBal) topbarBal.textContent = '●●●';
+  } else {
+    balEl.style.display = '';
+    if (maskEl) maskEl.style.display = 'none';
+    if (eyeOpen) eyeOpen.style.display = '';
+    if (eyeClosed) eyeClosed.style.display = 'none';
+  }
+}
+window._applyBalanceVisibility = _applyBalanceVisibility;
+document.getElementById('btn-toggle-balance')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _balHidden = !_balHidden;
+  localStorage.setItem('balanceHidden', _balHidden ? '1' : '0');
+  _applyBalanceVisibility();
+});
+
+// 리포트 카테고리 팝업 모달
+document.getElementById('report-cat-card')?.addEventListener('click', () => {
+  const modal = document.getElementById('report-cat-modal');
+  renderReportCatModal();
+  if (modal) modal.classList.add('open');
+});
+document.getElementById('report-cat-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.classList.remove('open');
+  }
+});
+document.getElementById('btn-report-cat-modal-close')?.addEventListener('click', () => {
+  document.getElementById('report-cat-modal')?.classList.remove('open');
+});
+
 // 바텀 탭
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
   btn.addEventListener('click', () => navigate(btn.dataset.page, btn));
@@ -276,9 +322,15 @@ document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) =
   if (day?.dataset.dk) openLedgerDaySheet(day.dataset.dk);
 });
 
-// 가계부 서브탭
+// 가계부 서브탭 (예측 버튼은 forecast 페이지 이동)
 document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
-  btn.addEventListener('click', () => setLedgerSubTab(btn.dataset.tab))
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'forecast-link') {
+      navigate('forecast');
+    } else {
+      setLedgerSubTab(btn.dataset.tab);
+    }
+  })
 );
 
 // 가계부 달력 월 이동
@@ -380,8 +432,10 @@ document.getElementById('goal-sheet')?.addEventListener('click', (e) => closeShe
 document.getElementById('goals-list')?.addEventListener('click', (e) => {
   const editBtn = e.target.closest('.goal-edit-btn');
   const delBtn = e.target.closest('.goal-del-btn');
+  const shareBtn = e.target.closest('.goal-share-btn');
   if (editBtn?.dataset.id) openGoalForm(editBtn.dataset.id);
   if (delBtn?.dataset.id) deleteGoal(delBtn.dataset.id);
+  if (shareBtn?.dataset.shareId) generateGoalShareCode(shareBtn.dataset.shareId);
 });
 
 // 목표 공유
