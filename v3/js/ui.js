@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config.js';
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
+import { publishSharedGoal, fetchSharedGoalByCode } from './firebase.js';
 import { state, save, syncLedgerToBalance } from './state.js';
 import * as renderModule from './render.js';
 import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI } from './ai.js';
@@ -948,30 +949,48 @@ export function openGoalJoinSheet() {
   setTimeout(() => document.getElementById('goal-join-code-input')?.focus(), 80);
 }
 
-export function joinGoalByCode() {
+export async function joinGoalByCode() {
   const code = document.getElementById('goal-join-code-input')?.value.trim().toUpperCase();
-  if (!code) { alert('초대 코드를 입력하세요'); return; }
+  if (!code || code.length < 6) { alert('6자리 초대 코드를 입력하세요'); return; }
 
-  // Simple: find goal with matching sharedCode
-  const allGoals = state.goals || [];
-  const match = allGoals.find(g => g.sharedCode === code);
-  if (!match) {
-    alert('해당 코드의 목표를 찾을 수 없습니다.');
-    return;
+  // 1) 내 로컬 목표에서 먼저 검색
+  const localMatch = (state.goals || []).find(g => g.sharedCode === code);
+  if (localMatch) { showBadge('ℹ️ 이미 보유 중인 목표 코드입니다'); closeSheet('goal-join-sheet'); return; }
+
+  // 2) Firebase 전역 공유 컬렉션에서 검색
+  const joinBtn = document.getElementById('btn-goal-join-confirm');
+  if (joinBtn) { joinBtn.disabled = true; joinBtn.textContent = '검색 중…'; }
+
+  try {
+    const sharedData = await fetchSharedGoalByCode(code);
+    if (!sharedData) {
+      alert('해당 코드를 찾을 수 없습니다.\n코드를 다시 확인해주세요.');
+      return;
+    }
+
+    // 내 목표 목록에 추가
+    if (!state.goals) state.goals = [];
+    const newGoal = {
+      id: uid(),
+      name: sharedData.name,
+      emoji: sharedData.emoji || '🎯',
+      targetAmount: sharedData.targetAmount || 0,
+      targetDate: sharedData.targetDate || '',
+      savedAmount: 0,
+      sharedCode: code,
+      sharedFrom: sharedData.publisherName || '알 수 없음',
+    };
+    state.goals.push(newGoal);
+    save();
+    closeSheet('goal-join-sheet');
+    renderModule.renderGoals();
+    showBadge(`✅ "${sharedData.name}" 목표에 참여했어요!`);
+  } finally {
+    if (joinBtn) { joinBtn.disabled = false; joinBtn.textContent = '참여하기'; }
   }
-
-  // Add current user as member
-  if (!match.members) match.members = {};
-  const userKey = (window.currentUser?.displayName || window.currentUser?.email || 'user').replace(/[^a-zA-Z0-9]/g, '_');
-  match.members[userKey] = { name: window.currentUser?.displayName || '참여자', joinedAt: new Date().toISOString() };
-
-  save();
-  closeSheet('goal-join-sheet');
-  renderModule.renderGoals();
-  showBadge('✅ 목표에 참여했어요!');
 }
 
-export function generateGoalShareCode(goalId) {
+export async function generateGoalShareCode(goalId) {
   const goal = (state.goals || []).find(g => g.id === goalId);
   if (!goal) return;
 
@@ -980,7 +999,22 @@ export function generateGoalShareCode(goalId) {
     save();
   }
 
+  // Firebase에 공유 목표 등록
+  const published = await publishSharedGoal(goal.sharedCode, {
+    name: goal.name,
+    emoji: goal.emoji,
+    targetAmount: goal.targetAmount,
+    targetDate: goal.targetDate,
+  });
+
   const codeEl = document.getElementById(`goal-share-code-${goalId}`);
   if (codeEl) codeEl.textContent = goal.sharedCode;
-  showBadge(`📋 코드: ${goal.sharedCode}`);
+
+  // 클립보드 복사
+  try {
+    await navigator.clipboard.writeText(goal.sharedCode);
+    showBadge(`📋 코드 복사됨: ${goal.sharedCode}`);
+  } catch {
+    showBadge(`📋 공유 코드: ${goal.sharedCode}`);
+  }
 }

@@ -47,12 +47,15 @@
 
 <div class="topbar" id="topbar" style="display:none">
   <div class="topbar-left">
-    <div class="topbar-sub">CASH FLOW</div>
-    <div class="topbar-title">내 자금 흐름 💰</div>
+    <div class="topbar-sub">내 자금 흐름</div>
+    <div class="topbar-title">CASH FLOW</div>
   </div>
   <div class="topbar-right">
-    <div class="topbar-balance">
-      <div class="topbar-balance-label">현재 잔고</div>
+    <div class="topbar-balance-pill">
+      <div class="topbar-balance-pill-inner">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;opacity:.6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span class="topbar-balance-label-sm">잔고</span>
+      </div>
       <div class="topbar-balance-amount" id="topbar-balance">-</div>
     </div>
     <button class="topbar-gear-btn" id="btn-open-settings-page" title="설정">
@@ -75,18 +78,31 @@
   <div class="home-grid">
     <div class="home-main">
       <div class="balance-card" id="btn-open-balance">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px">
+        <div class="balance-card-header">
           <div>
             <div class="balance-label">💳 현재 잔고</div>
-            <div style="font-size:11px;color:var(--text2)">오늘 기준 내 현금 흐름 상태</div>
+            <div class="balance-card-sub">오늘 기준 내 현금 흐름 상태</div>
           </div>
-          <div style="padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:700;color:#dbeafe">LIVE</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="balance-eye-btn" id="btn-toggle-balance" onclick="event.stopPropagation()" title="잔고 숨기기/보기">
+              <svg id="balance-eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="balance-eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+            <div class="balance-live-badge">LIVE</div>
+          </div>
         </div>
-        <div class="balance-amount" id="balance-display">-</div>
+        <!-- 잔고 표시 (토글) -->
+        <div class="balance-display-wrap">
+          <div class="balance-amount" id="balance-display">-</div>
+          <div class="balance-hidden-mask" id="balance-hidden-mask" style="display:none">
+            <span class="balance-mask-dots">●●●●●</span>
+            <span class="balance-mask-hint">탭해서 확인</span>
+          </div>
+        </div>
         <div class="balance-warning" id="balance-warning" style="display:none">
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
-        <div id="balance-insight" style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6"></div>
+        <div id="balance-insight" class="balance-insight-text"></div>
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
         <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
       </div>
@@ -271,9 +287,10 @@
 <!-- ⑤ 가계부 -->
 
 <div class="page" id="page-ledger">
-  <!-- 서브탭 (3개) -->
+  <!-- 서브탭 (4개) -->
   <div class="ledger-sub-tabs">
     <button class="ledger-sub-tab active" data-tab="calendar">📅 달력</button>
+    <button class="ledger-sub-tab" data-tab="forecast-link">📈 예측</button>
     <button class="ledger-sub-tab" data-tab="stats">📊 통계</button>
     <button class="ledger-sub-tab" data-tab="budget">💰 예산</button>
   </div>
@@ -336,17 +353,53 @@
 <!-- ⑥ 리포트 -->
 
 <div class="page" id="page-report">
-  <div class="card">
-    <div class="card-title">📊 월별 순현금 흐름</div>
+  <!-- 이달 요약 헤더 카드 -->
+  <div class="report-summary-header" id="report-header-card"></div>
+
+  <!-- 월별 현금 흐름 트렌드 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📊 6개월 현금 흐름</div>
     <div id="report-net-chart" style="min-height:100px"></div>
   </div>
-  <div class="card">
-    <div class="card-title">🗂️ 카테고리별 지출</div>
+
+  <!-- 카테고리별 지출 (클릭 시 모달) -->
+  <div class="card report-cat-card" id="report-cat-card" style="margin-bottom:12px;cursor:pointer">
+    <div class="card-title">
+      🗂️ 카테고리별 지출
+      <span style="font-size:10px;font-weight:400;color:var(--text3);margin-left:4px">탭해서 상세 보기 →</span>
+    </div>
     <div id="report-cat-donut" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;min-height:80px"></div>
   </div>
-  <div class="card">
+
+  <!-- 상위 지출 항목 TOP 5 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">💸 TOP 지출 항목</div>
+    <div id="report-top-expenses"></div>
+  </div>
+
+  <!-- 지출 절약률 & 재정 건강 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">🏥 재정 건강 지수</div>
+    <div id="report-health-score"></div>
+  </div>
+
+  <!-- 전월 비교 -->
+  <div class="card" style="margin-bottom:12px">
     <div class="card-title">📅 전월 비교</div>
     <div id="report-mom-compare"></div>
+  </div>
+</div>
+
+<!-- ── 리포트 카테고리 상세 모달 ── -->
+<div class="report-cat-modal-overlay" id="report-cat-modal">
+  <div class="report-cat-modal-panel">
+    <div class="report-cat-modal-header">
+      <div class="report-cat-modal-title">🗂️ 카테고리별 지출 분석</div>
+      <button class="report-cat-modal-close" id="btn-report-cat-modal-close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="report-cat-modal-content"></div>
   </div>
 </div>
 
@@ -732,10 +785,17 @@
 <div class="sheet-overlay" id="goal-join-sheet">
   <div class="sheet-panel">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">코드로 목표 참여</div>
-    <div class="sheet-sub">친구에게 받은 6자리 초대 코드를 입력하세요</div>
+    <div class="sheet-title">🔗 코드로 목표 참여</div>
+    <div class="sheet-sub">목표를 공유받은 6자리 코드를 입력하세요</div>
+    <!-- 사용법 안내 -->
+    <div class="goal-join-how" style="margin:12px 0;padding:12px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.15);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.7">
+      <div style="font-weight:700;color:var(--accent2);margin-bottom:4px">💡 사용 방법</div>
+      <div>① 상대방이 <b>목표 탭</b>에서 목표를 추가한 뒤</div>
+      <div>② 목표 카드의 <b>🔗 공유 코드 생성</b> 버튼을 누르면</div>
+      <div>③ 6자리 코드가 생성돼요. 그 코드를 여기에 입력!</div>
+    </div>
     <div style="margin:16px 0">
-      <input class="form-input" id="goal-join-code-input" placeholder="예: ABC123" style="text-align:center;font-size:22px;font-weight:900;letter-spacing:4px;font-family:var(--mono);text-transform:uppercase" maxlength="6">
+      <input class="form-input" id="goal-join-code-input" placeholder="A B C 1 2 3" style="text-align:center;font-size:26px;font-weight:900;letter-spacing:6px;font-family:var(--mono);text-transform:uppercase" maxlength="6" oninput="this.value=this.value.toUpperCase()">
     </div>
     <div class="sheet-actions">
       <button class="sheet-secondary-btn" id="btn-goal-join-cancel">취소</button>

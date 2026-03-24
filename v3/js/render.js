@@ -186,9 +186,19 @@ export function renderHome() {
   balEl.className = 'balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
 
   const tb = document.getElementById('topbar-balance');
+  const balHidden = localStorage.getItem('balanceHidden') === '1';
   if (tb) {
-    animateNumber(tb, state.balance, (v) => fmtShort(v));
+    if (balHidden) {
+      tb.textContent = '●●●';
+    } else {
+      animateNumber(tb, state.balance, (v) => fmtShort(v));
+    }
     tb.className = 'topbar-balance-amount' + (state.balance < state.dangerLine ? ' danger' : '');
+  }
+
+  // 잔고 숨김 상태 적용
+  if (typeof window._applyBalanceVisibility === 'function') {
+    window._applyBalanceVisibility();
   }
 
   const todayYm = yyyymm(today());
@@ -1096,134 +1106,299 @@ export function changeLedgerMonth(diff) {
 }
 
 // ════════════════════════════════════════════════════════
-// 리포트 탭
+// 리포트 탭 (고퀄리티 전면 개편)
 // ════════════════════════════════════════════════════════
+
+// 카테고리 컬러 팔레트 (확장)
+const REPORT_CAT_COLORS = {
+  '월급': '#34d399', '부수입': '#6ee7b7', '이자': '#a7f3d0',
+  '카드': '#f87171', '할부': '#fb923c', '공과금': '#facc15',
+  '보험': '#c084fc', '식비': '#60a5fa', '교통': '#38bdf8',
+  '통신': '#a78bfa', '구독': '#f472b6', '기타지출': '#94a3b8',
+  '주거': '#fbbf24', '의료': '#4ade80', '문화': '#e879f9',
+  '교육': '#22d3ee', '생활': '#fb923c', '저축': '#34d399',
+};
+
+function _calcMonthCF(d) {
+  const ym = yyyymm(d);
+  const ymStr = String(ym);
+  const income = state.entries
+    .filter((e) => e.type === 'income' && e.repeat === '매월')
+    .reduce((s, e) => s + e.amount, 0);
+  const fixedExp = state.entries
+    .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
+    .reduce((s, e) => s + e.amount, 0);
+  const cd = state.cardData[ymStr] || {};
+  const ledger = getLedgerMonth(d.getFullYear(), d.getMonth());
+  const expense = fixedExp + (cd.hyundai || 0) + (cd.kookmin || 0) + ledger.expense;
+  return { income, expense, net: income - expense, ym };
+}
+
+function _buildDonutSvg(cats, total, R = 52, CX = 60, CY = 60) {
+  if (!cats.length || total === 0) return '';
+  let paths = '', angle = -Math.PI / 2;
+  cats.forEach(([cat, amt]) => {
+    const pct = amt / total;
+    const a = pct * 2 * Math.PI;
+    const x1 = CX + R * Math.cos(angle), y1 = CY + R * Math.sin(angle);
+    const x2 = CX + R * Math.cos(angle + a), y2 = CY + R * Math.sin(angle + a);
+    const large = a > Math.PI ? 1 : 0;
+    const col = REPORT_CAT_COLORS[cat] || '#64748b';
+    paths += `<path d="M${CX},${CY} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" opacity="0.88"/>`;
+    angle += a;
+  });
+  paths += `<circle cx="${CX}" cy="${CY}" r="${Math.round(R * 0.48)}" fill="var(--bg2)"/>`;
+  return paths;
+}
+
 export function renderReport() {
   const now = today();
 
-  // ── 월별 순현금 흐름 차트 ─────────────────────────────
-  const netEl = document.getElementById('report-net-chart');
-  if (netEl) {
-    const months = [];
-    for (let i = -5; i <= 0; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const ym = yyyymm(d);
-      const ymStr = String(ym);
-      const income = state.entries
-        .filter((e) => e.type === 'income' && e.repeat === '매월')
-        .reduce((s, e) => s + e.amount, 0);
-      const fixedExp = state.entries
-        .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
-        .reduce((s, e) => s + e.amount, 0);
-      const cd = state.cardData[ymStr] || {};
-      const checkTotal = Object.entries(state.checkData || {})
-        .filter(([dk]) => dk.startsWith(`${d.getFullYear()}-${p2(d.getMonth() + 1)}`))
-        .reduce((s, [, v]) => s + v, 0);
-      const expense = fixedExp + (cd.hyundai || 0) + (cd.kookmin || 0) + checkTotal;
-      months.push({ label: `${d.getMonth() + 1}월`, net: income - expense, income, expense });
-    }
-    const maxAbs = Math.max(...months.map((m) => Math.abs(m.net)), 1);
-    netEl.innerHTML = `
-      <div class="monthly-chart-bar">
-        ${months.map((m) => {
-          const pct = Math.round((Math.abs(m.net) / maxAbs) * 100);
-          const isPos = m.net >= 0;
-          return `
-            <div class="bar-row">
-              <span class="bar-label">${m.label}</span>
-              <div class="bar-track">
-                <div class="bar-fill ${isPos ? 'income' : 'expense'}" style="width:${pct}%"></div>
-              </div>
-              <span class="bar-value" style="color:${isPos ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(m.net)}</span>
-            </div>`;
-        }).join('')}
+  // ── 6개월 데이터 수집 ─────────────────────────────────
+  const months = [];
+  for (let i = -5; i <= 0; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const cf = _calcMonthCF(d);
+    months.push({ label: `${d.getMonth() + 1}월`, ...cf, d });
+  }
+  const curMonth = months[months.length - 1];
+  const prevMonth = months[months.length - 2];
+
+  // ── 이달 요약 헤더 ────────────────────────────────────
+  const headerEl = document.getElementById('report-header-card');
+  if (headerEl) {
+    const savingsRate = curMonth.income > 0
+      ? Math.round(((curMonth.income - curMonth.expense) / curMonth.income) * 100)
+      : 0;
+    const srColor = savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)';
+    headerEl.innerHTML = `
+      <div class="report-header-month">${now.getFullYear()}년 ${now.getMonth() + 1}월 재정 요약</div>
+      <div class="report-header-grid">
+        <div class="report-header-item">
+          <div class="report-header-label">수입</div>
+          <div class="report-header-val green">${fmtShort(curMonth.income)}</div>
+        </div>
+        <div class="report-header-item">
+          <div class="report-header-label">지출</div>
+          <div class="report-header-val red">${fmtShort(curMonth.expense)}</div>
+        </div>
+        <div class="report-header-item">
+          <div class="report-header-label">순현금</div>
+          <div class="report-header-val" style="color:${curMonth.net >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(curMonth.net)}</div>
+        </div>
+        <div class="report-header-item">
+          <div class="report-header-label">저축률</div>
+          <div class="report-header-val" style="color:${srColor}">${savingsRate}%</div>
+        </div>
       </div>`;
   }
 
-  // ── 카테고리별 지출 도넛 ──────────────────────────────
+  // ── 6개월 현금 흐름 차트 ─────────────────────────────
+  const netEl = document.getElementById('report-net-chart');
+  if (netEl) {
+    const maxAmt = Math.max(...months.flatMap(m => [m.income, m.expense]), 1);
+    netEl.innerHTML = `
+      <div class="monthly-chart-bar">
+        ${months.map((m) => `
+          <div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:4px;font-weight:700">${m.label}</div>
+            <div class="bar-row">
+              <span class="bar-label" style="color:var(--green2)">수</span>
+              <div class="bar-track"><div class="bar-fill income" style="width:${((m.income / maxAmt) * 100).toFixed(1)}%"></div></div>
+              <span class="bar-value" style="color:var(--green2)">${fmtShort(m.income)}</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label" style="color:var(--red2)">지</span>
+              <div class="bar-track"><div class="bar-fill expense" style="width:${((m.expense / maxAmt) * 100).toFixed(1)}%"></div></div>
+              <span class="bar-value" style="color:var(--red2)">${fmtShort(m.expense)}</span>
+            </div>
+          </div>`).join('<div style="height:4px"></div>')}
+      </div>`;
+  }
+
+  // ── 카테고리별 지출 도넛 (클릭 시 모달) ──────────────
+  const catTotals = {};
+  state.entries.filter((e) => e.type === 'expense' && e.repeat === '매월')
+    .forEach((e) => { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
+  const total = Object.values(catTotals).reduce((s, v) => s + v, 0);
+  const cats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
   const donutEl = document.getElementById('report-cat-donut');
   if (donutEl) {
-    const catTotals = {};
-    state.entries
-      .filter((e) => e.type === 'expense' && e.repeat === '매월')
-      .forEach((e) => {
-        catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
-      });
-    const total = Object.values(catTotals).reduce((s, v) => s + v, 0);
     if (total === 0) {
       donutEl.innerHTML = '<div class="empty-state" style="padding:16px 0">지출 항목 없음</div>';
     } else {
-      const cats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-      const colors = { '카드': '#f87171', '할부': '#fb923c', '공과금': '#facc15', '보험': '#c084fc', '기타지출': '#94a3b8' };
-      // SVG donut
-      const R = 44; const CX = 52; const CY = 52;
-      let svgPaths = '';
-      let startAngle = -Math.PI / 2;
-      cats.forEach(([cat, amt]) => {
-        const pct = amt / total;
-        const angle = pct * 2 * Math.PI;
-        const endAngle = startAngle + angle;
-        const x1 = CX + R * Math.cos(startAngle);
-        const y1 = CY + R * Math.sin(startAngle);
-        const x2 = CX + R * Math.cos(endAngle);
-        const y2 = CY + R * Math.sin(endAngle);
-        const large = angle > Math.PI ? 1 : 0;
-        const col = colors[cat] || '#64748b';
-        svgPaths += `<path d="M${CX},${CY} L${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${col}" opacity="0.85"/>`;
-        startAngle = endAngle;
-      });
-      svgPaths += `<circle cx="${CX}" cy="${CY}" r="24" fill="var(--bg2)"/>`;
-
+      const svgPaths = _buildDonutSvg(cats, total, 44, 52, 52);
       const legend = cats.slice(0, 5).map(([cat, amt]) => {
-        const col = colors[cat] || '#64748b';
+        const col = REPORT_CAT_COLORS[cat] || '#64748b';
+        const pct = Math.round((amt / total) * 100);
         return `<div class="report-cat-legend-row">
-          <span style="width:10px;height:10px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0"></span>
-          <span style="font-size:11px;color:var(--text2)">${cat}</span>
-          <span style="font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text);margin-left:auto">${Math.round((amt / total) * 100)}%</span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0"></span>
+          <span style="font-size:11px;color:var(--text2)">${escapeHtml(cat)}</span>
+          <div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:4px;margin:0 6px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;opacity:.8"></div>
+          </div>
+          <span style="font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text)">${pct}%</span>
         </div>`;
       }).join('');
-
       donutEl.innerHTML = `
         <svg width="104" height="104" viewBox="0 0 104 104" style="flex-shrink:0">${svgPaths}</svg>
-        <div style="flex:1;display:flex;flex-direction:column;gap:5px">${legend}</div>`;
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">${legend}</div>`;
     }
+  }
+
+  // ── 카테고리 모달 렌더링 (나중에 클릭 시 사용) ────────
+  window._reportCatData = { cats, total };
+
+  // ── TOP 지출 항목 ────────────────────────────────────
+  const topEl = document.getElementById('report-top-expenses');
+  if (topEl) {
+    const expEntries = state.entries
+      .filter((e) => e.type === 'expense' && e.repeat === '매월')
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+    if (!expEntries.length) {
+      topEl.innerHTML = '<div class="empty-state" style="padding:12px 0">항목 없음</div>';
+    } else {
+      const maxAmt2 = expEntries[0].amount;
+      topEl.innerHTML = expEntries.map((e, i) => {
+        const col = REPORT_CAT_COLORS[e.category] || '#64748b';
+        const pct = Math.round((e.amount / maxAmt2) * 100);
+        return `<div class="report-top-item">
+          <span class="report-top-rank">${i + 1}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtml(e.name)}</span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:800;color:var(--red2)">-${fmtShort(e.amount)}</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;opacity:.8;transition:width 0.5s ease"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">${escapeHtml(e.category)} · 매월 ${e.day || '-'}일</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── 재정 건강 지수 ────────────────────────────────────
+  const healthEl = document.getElementById('report-health-score');
+  if (healthEl) {
+    const savingsRate = curMonth.income > 0
+      ? Math.round(((curMonth.income - curMonth.expense) / curMonth.income) * 100)
+      : 0;
+    const expenseRatio = curMonth.income > 0 ? Math.round((curMonth.expense / curMonth.income) * 100) : 100;
+    const activeHalbu = state.entries.filter(e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))).length;
+    const halbuRatio = state.entries.filter(e => e.type === 'expense' && e.repeat === '매월')
+      .filter(e => e.category === '할부').reduce((s, e) => s + e.amount, 0);
+    const halbuPct = curMonth.expense > 0 ? Math.round((halbuRatio / curMonth.expense) * 100) : 0;
+
+    const score = Math.max(0, Math.min(100,
+      (savingsRate >= 20 ? 30 : savingsRate >= 10 ? 20 : savingsRate >= 0 ? 10 : 0) +
+      (expenseRatio <= 70 ? 30 : expenseRatio <= 85 ? 20 : expenseRatio <= 100 ? 10 : 0) +
+      (halbuPct <= 10 ? 20 : halbuPct <= 25 ? 12 : halbuPct <= 40 ? 6 : 0) +
+      (activeHalbu <= 2 ? 20 : activeHalbu <= 5 ? 12 : 6)
+    ));
+    const scoreColor = score >= 70 ? 'var(--green2)' : score >= 45 ? 'var(--yellow)' : 'var(--red2)';
+    const scoreLabel = score >= 70 ? '우수' : score >= 45 ? '양호' : '주의';
+
+    healthEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+        <div class="report-health-circle" style="border-color:${scoreColor}">
+          <div style="font-size:22px;font-weight:900;color:${scoreColor};font-family:var(--mono)">${score}</div>
+          <div style="font-size:9px;color:var(--text3)">/ 100</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:${scoreColor}">${scoreLabel}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">재정 건강 지수</div>
+        </div>
+      </div>
+      <div class="report-health-items">
+        <div class="report-health-row">
+          <span>저축률</span>
+          <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${Math.min(100,Math.max(0,savingsRate))}%;background:${savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
+          <span style="font-family:var(--mono);font-weight:700;color:${savingsRate >= 0 ? 'var(--green2)' : 'var(--red2)'}">${savingsRate}%</span>
+        </div>
+        <div class="report-health-row">
+          <span>지출비율</span>
+          <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${Math.min(100,expenseRatio)}%;background:${expenseRatio <= 70 ? 'var(--green2)' : expenseRatio <= 85 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
+          <span style="font-family:var(--mono);font-weight:700">${expenseRatio}%</span>
+        </div>
+        <div class="report-health-row">
+          <span>할부비중</span>
+          <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${halbuPct}%;background:${halbuPct <= 10 ? 'var(--green2)' : halbuPct <= 25 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
+          <span style="font-family:var(--mono);font-weight:700">${halbuPct}%</span>
+        </div>
+      </div>`;
   }
 
   // ── 전월 비교 ────────────────────────────────────────
   const momEl = document.getElementById('report-mom-compare');
   if (momEl) {
-    const thisMonthD = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonthD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const calcMonth = (d) => {
-      const ym = yyyymm(d);
-      const ymStr = String(ym);
-      const income = state.entries
-        .filter((e) => e.type === 'income' && e.repeat === '매월')
-        .reduce((s, e) => s + e.amount, 0);
-      const expense = state.entries
-        .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
-        .reduce((s, e) => s + e.amount, 0);
-      const cd = state.cardData[ymStr] || {};
-      return { income, expense: expense + (cd.hyundai || 0) + (cd.kookmin || 0) };
-    };
-    const cur = calcMonth(thisMonthD);
-    const prv = calcMonth(lastMonthD);
-    const expDelta = cur.expense - prv.expense;
-    const inDelta = cur.income - prv.income;
+    const expDelta = curMonth.expense - prevMonth.expense;
+    const inDelta  = curMonth.income  - prevMonth.income;
+    const netDelta = curMonth.net     - prevMonth.net;
     momEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="report-mom-grid">
         <div class="report-mom-item">
-          <div class="report-mom-label">이번달 수입</div>
-          <div class="report-mom-value" style="color:var(--green2)">${fmtShort(cur.income)}</div>
-          <div class="report-mom-delta" style="color:${inDelta >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(inDelta)} 전월비</div>
+          <div class="report-mom-label">수입</div>
+          <div class="report-mom-value" style="color:var(--green2)">${fmtShort(curMonth.income)}</div>
+          <div class="report-mom-delta" style="color:${inDelta >= 0 ? 'var(--green2)' : 'var(--red2)'}">
+            ${inDelta >= 0 ? '▲' : '▼'} ${fmtShort(Math.abs(inDelta))} 전월비
+          </div>
         </div>
         <div class="report-mom-item">
-          <div class="report-mom-label">이번달 지출</div>
-          <div class="report-mom-value" style="color:var(--red2)">${fmtShort(cur.expense)}</div>
-          <div class="report-mom-delta" style="color:${expDelta <= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(expDelta)} 전월비</div>
+          <div class="report-mom-label">지출</div>
+          <div class="report-mom-value" style="color:var(--red2)">${fmtShort(curMonth.expense)}</div>
+          <div class="report-mom-delta" style="color:${expDelta <= 0 ? 'var(--green2)' : 'var(--red2)'}">
+            ${expDelta > 0 ? '▲' : '▼'} ${fmtShort(Math.abs(expDelta))} 전월비
+          </div>
+        </div>
+        <div class="report-mom-item">
+          <div class="report-mom-label">순현금</div>
+          <div class="report-mom-value" style="color:${curMonth.net >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(curMonth.net)}</div>
+          <div class="report-mom-delta" style="color:${netDelta >= 0 ? 'var(--green2)' : 'var(--red2)'}">
+            ${netDelta >= 0 ? '▲' : '▼'} ${fmtShort(Math.abs(netDelta))} 전월비
+          </div>
         </div>
       </div>`;
   }
+}
+
+export function renderReportCatModal() {
+  const { cats, total } = window._reportCatData || { cats: [], total: 0 };
+  const el = document.getElementById('report-cat-modal-content');
+  if (!el || !cats.length) return;
+
+  const svgPaths = _buildDonutSvg(cats, total, 68, 80, 80);
+  const rows = cats.map(([cat, amt], i) => {
+    const col = REPORT_CAT_COLORS[cat] || '#64748b';
+    const pct = Math.round((amt / total) * 100);
+    return `<div class="report-modal-cat-row" style="animation-delay:${i * 40}ms">
+      <span style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;margin-top:3px"></span>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:700">${escapeHtml(cat)}</span>
+          <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--red2)">-${fmtShort(amt)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+          <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:6px;opacity:.85"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text3);min-width:30px;text-align:right">${pct}%</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;padding:16px 0 8px">
+      <svg width="160" height="160" viewBox="0 0 160 160">${svgPaths}
+        <text x="80" y="76" fill="var(--text)" font-size="11" text-anchor="middle" font-family="monospace" font-weight="700">총 지출</text>
+        <text x="80" y="91" fill="var(--accent2)" font-size="13" text-anchor="middle" font-family="monospace" font-weight="900">${fmtShort(total)}</text>
+      </svg>
+    </div>
+    <div style="padding:0 4px 16px;display:flex;flex-direction:column;gap:10px">${rows}</div>`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1285,7 +1460,12 @@ export function renderGoals() {
           <div class="goal-progress-fill" style="width:${pct}%;background:${barColor}"></div>
         </div>
         ${monthlyRequired > 0 && pct < 100 ? `<div class="goal-monthly-req">월 <strong>${fmtShort(monthlyRequired)}</strong> 씩 모으면 목표 달성 가능해요</div>` : pct >= 100 ? '<div class="goal-monthly-req" style="color:var(--green2)">🎉 목표 달성!</div>' : ''}
-        ${g.sharedCode ? `<div style="margin-top:8px;font-size:11px;color:var(--text3)">공유 코드: <span class="goal-invite-code-inline" id="goal-share-code-${g.id}">${escapeHtml(g.sharedCode)}</span></div>` : ''}
+        <!-- 공유 코드 -->
+        <div class="goal-share-row">
+          <button class="goal-share-btn" data-share-id="${g.id}">🔗 공유 코드 ${g.sharedCode ? '복사' : '생성'}</button>
+          ${g.sharedCode ? `<span class="goal-invite-code-inline" id="goal-share-code-${g.id}">${escapeHtml(g.sharedCode)}</span>` : ''}
+          ${g.sharedFrom ? `<span style="font-size:10px;color:var(--text3)">(${escapeHtml(g.sharedFrom)}에서 참여)</span>` : ''}
+        </div>
       </div>`;
   }).join('');
 }

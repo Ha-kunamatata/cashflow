@@ -760,3 +760,106 @@ body.light-theme .badge-item.earned { background: rgba(99,102,241,0.06); border-
 body.light-theme .house-progress-fill { background: linear-gradient(90deg, #4f46e5, #7c3aed); }
 body.light-theme .streak-chip { background: rgba(234,88,12,0.10); border-color: rgba(234,88,12,0.25); color: var(--orange); }
 body.light-theme .ai-chat-fab { box-shadow: 0 4px 20px rgba(99,102,241,0.35); }
+
+/* ════════════════════════════════════════════════════════
+   탑바 밸런스 필
+   ════════════════════════════════════════════════════════ */
+.topbar-balance-pill { display:flex; flex-direction:column; align-items:flex-end; gap:1px; cursor:pointer; padding:5px 10px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); transition:background 0.2s; }
+.topbar-balance-pill:active { background:rgba(255,255,255,0.10); }
+.topbar-balance-pill-inner { display:flex; align-items:center; gap:4px; }
+.topbar-balance-label { font-size:9px; color:var(--text3); font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
+.topbar-balance-icon { font-size:10px; opacity:0.7; }
+#topbar-balance { font-family:var(--mono); font-size:14px; font-weight:900; color:var(--text); letter-spacing:-0.3px; }
+body.light-theme .topbar-balance-pill { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); }
+
+/* ════════════════════════════════════════════════════════
+   탑바 서브 타이틀 + 메인 타이틀
+   ════════════════════════════════════════════════════════ */
+.topbar-sub { font-size:9px; color:var(--text3); font-weight:600; letter-spacing:0.8px; line-height:1; margin-bottom:1px; }
+.topbar-title { font-size:18px; font-weight:900; color:var(--text); letter-spacing:2px; line-height:1; font-family:var(--mono); }
+.topbar-left { display:flex; flex-direction:column; justify-content:center; }
+
+/* ════════════════════════════════════════════════════════
+   잔고 카드 — 숨기기/보이기 토글
+   ════════════════════════════════════════════════════════ */
+.balance-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.balance-card-label { font-size:11px; color:var(--text3); font-weight:700; letter-spacing:0.4px; text-transform:uppercase; }
+.balance-eye-btn { background:none; border:none; cursor:pointer; padding:6px; border-radius:50%; color:var(--text3); display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; flex-shrink:0; }
+.balance-eye-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); }
+.balance-eye-btn:active { background:rgba(255,255,255,0.14); }
+.balance-display-wrap { position:relative; display:flex; align-items:center; min-height:48px; }
+.balance-amount { font-family:var(--mono); font-size:36px; font-weight:900; color:var(--text); letter-spacing:-1px; line-height:1; transition:opacity 0.2s; }
+.balance-hidden-mask { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+.balance-mask-dots { font-size:28px; color:var(--text3); letter-spacing:4px; line-height:1; }
+.balance-mask-hint { font-size:10px; color:var(--text3); font-weight:600; letter-spacing:0.5px; }
+body.light-theme .balance-eye-btn:hover { background:rgba(0,0,0,0.06); }
+
+/* ════════════════════════════════════════════════════════
+   리포트 탭 — 새 컴포넌트
+   ════════════════════════════════════════════════════════ */
+.report-summary-header { font-size:11px; font-weight:700; color:var(--text3); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:8px; }
+.report-header-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.report-header-item { background:var(--bg3); border-radius:14px; padding:12px 10px; text-align:center; border:1px solid var(--border); }
+.report-header-label { font-size:10px; color:var(--text3); font-weight:700; letter-spacing:0.3px; margin-bottom:4px; }
+.report-header-val { font-family:var(--mono); font-size:16px; font-weight:900; line-height:1; }
+
+/* 카테고리 카드 (클릭 가능) */
+.report-cat-card { cursor:pointer; transition:border-color 0.2s, transform 0.15s; }
+.report-cat-card:hover { border-color:rgba(96,165,250,0.3); transform:translateY(-1px); }
+.report-cat-card:active { transform:scale(0.99); }
+.report-cat-card-hint { font-size:10px; color:var(--text3); margin-top:8px; text-align:center; }
+
+/* 리포트 카테고리 모달 */
+.report-cat-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); z-index:9000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.report-cat-modal-overlay.open { opacity:1; pointer-events:all; }
+.report-cat-modal-panel { width:100%; max-width:520px; max-height:88vh; overflow-y:auto; background:var(--bg2); border-radius:28px 28px 0 0; padding:24px 20px calc(28px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,0.08); transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.report-cat-modal-overlay.open .report-cat-modal-panel { transform:translateY(0); }
+.report-cat-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.report-cat-modal-title { font-size:18px; font-weight:900; color:var(--text); }
+.report-cat-modal-close { background:none; border:none; cursor:pointer; color:var(--text3); padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.report-cat-modal-close:hover { background:rgba(255,255,255,0.08); color:var(--text); }
+.report-modal-cat-list { margin-top:16px; display:flex; flex-direction:column; gap:6px; }
+.report-modal-cat-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:var(--bg3); border:1px solid var(--border); }
+.report-modal-cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.report-modal-cat-name { flex:1; font-size:13px; font-weight:700; color:var(--text); }
+.report-modal-cat-amount { font-family:var(--mono); font-size:13px; font-weight:900; color:var(--text); }
+.report-modal-cat-pct { font-size:11px; color:var(--text3); min-width:32px; text-align:right; }
+
+/* TOP 지출 */
+.report-top-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.report-top-item:last-child { border-bottom:none; }
+.report-top-rank { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0; background:rgba(255,255,255,0.08); color:var(--text3); }
+.report-top-rank.gold { background:rgba(234,179,8,0.18); color:#eab308; }
+.report-top-rank.silver { background:rgba(148,163,184,0.18); color:#94a3b8; }
+.report-top-rank.bronze { background:rgba(180,83,9,0.18); color:#b45309; }
+.report-top-info { flex:1; min-width:0; }
+.report-top-memo { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.report-top-cat { font-size:10px; color:var(--text3); margin-top:1px; }
+.report-top-amount { font-family:var(--mono); font-size:14px; font-weight:900; color:var(--red2); flex-shrink:0; }
+
+/* 재정 건강 점수 */
+.report-health-circle { display:flex; align-items:center; justify-content:center; gap:20px; padding:12px 0 8px; }
+.report-health-score-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.report-health-score-num { font-family:var(--mono); font-size:48px; font-weight:900; line-height:1; }
+.report-health-score-label { font-size:11px; color:var(--text3); font-weight:700; letter-spacing:0.5px; }
+.report-health-items { flex:1; display:flex; flex-direction:column; gap:8px; }
+.report-health-row { display:flex; align-items:center; gap:8px; }
+.report-health-row-label { font-size:11px; color:var(--text3); width:60px; flex-shrink:0; }
+.report-health-bar-wrap { flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; }
+.report-health-bar { height:100%; border-radius:3px; transition:width 0.7s ease; }
+.report-health-row-val { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--text); min-width:28px; text-align:right; }
+
+/* 전월 비교 */
+.report-mom-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+
+/* 목표 공유 버튼 */
+.goal-share-row { margin-top:8px; display:flex; justify-content:flex-end; }
+.goal-share-btn { background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:var(--accent2); font-size:11px; font-weight:700; padding:6px 12px; border-radius:999px; cursor:pointer; transition:background 0.15s; }
+.goal-share-btn:hover { background:rgba(99,102,241,0.22); }
+.goal-share-btn:active { background:rgba(99,102,241,0.30); }
+
+/* 라이트 모드 */
+body.light-theme .report-cat-modal-panel { background:var(--bg2); }
+body.light-theme .report-modal-cat-row { background:var(--bg3); border-color:var(--border); }
+body.light-theme .report-header-item { background:var(--bg3); border-color:var(--border); }
+body.light-theme .topbar-balance-pill { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); }
