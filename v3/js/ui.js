@@ -4,7 +4,7 @@
 import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config.js';
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
 import { publishSharedGoal, fetchSharedGoalByCode } from './firebase.js';
-import { state, save, syncLedgerToBalance } from './state.js';
+import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state.js';
 import * as renderModule from './render.js';
 import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI } from './ai.js';
 import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets.js';
@@ -72,6 +72,8 @@ const PAGE_MAP = {
   ledger: 'page-ledger',
   report: 'page-report',
   goals: 'page-goals',
+  wishlist: 'page-wishlist',
+  finance: 'page-finance',
   settings: 'page-settings',
 };
 
@@ -92,6 +94,12 @@ export function navigate(page, btn) {
   if (page === 'report') renderModule.renderReport();
   if (page === 'goals') renderModule.renderGoals();
   if (page === 'assets') renderModule.renderAssets();
+  if (page === 'wishlist') renderModule.renderWishlist();
+  if (page === 'finance') {
+    renderModule.renderFinance();
+    // 탭 진입 시 자동 새로고침
+    renderModule.refreshAllStocks();
+  }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -205,10 +213,18 @@ export function showForm(entry) {
   document.getElementById('f-amount').value = entry?.amount || '';
   document.getElementById('f-repeat').value = entry?.repeat || '매월';
   document.getElementById('f-day').value = entry?.day || '';
-  document.getElementById('f-card').value = entry?.card || '';
   document.getElementById('f-endmonth').value = entry?.endMonth || '';
   document.getElementById('f-date').value = entry?.date || '';
   document.getElementById('form-save-btn').textContent = entry ? '수정 완료' : '추가';
+
+  // 카드 드롭다운 동적 생성
+  const cards = (state.cards && state.cards.length > 0) ? state.cards : DEFAULT_CARDS;
+  const cardSel = document.getElementById('f-card');
+  if (cardSel) {
+    cardSel.innerHTML = '<option value="">없음</option>' +
+      cards.map(c => `<option value="${c.id}">${c.name} (${c.payDay}일)</option>`).join('');
+    cardSel.value = entry?.card || '';
+  }
 
   updateCatOptions(state.formType, entry?.category);
   onRepeatChange();
@@ -1017,4 +1033,204 @@ export async function generateGoalShareCode(goalId) {
   } catch {
     showBadge(`📋 공유 코드: ${goal.sharedCode}`);
   }
+}
+
+// ════════════════════════════════════════════════════════
+// 카드 관리 CRUD
+// ════════════════════════════════════════════════════════
+let _editCardId = null;
+
+export function openCardForm(id) {
+  _editCardId = id || null;
+  const cards = (state.cards && state.cards.length > 0) ? state.cards : DEFAULT_CARDS;
+  const card = id ? cards.find(c => c.id === id) : null;
+
+  document.getElementById('card-form-title').textContent = card ? '카드 수정' : '카드 추가';
+  document.getElementById('cf-name').value = card?.name || '';
+  document.getElementById('cf-color').value = card?.color || '#3b82f6';
+  document.getElementById('cf-payday').value = card?.payDay || 1;
+  document.getElementById('card-form-overlay').style.display = 'flex';
+}
+
+export function hideCardForm() {
+  document.getElementById('card-form-overlay').style.display = 'none';
+  _editCardId = null;
+}
+
+export function saveCard() {
+  const name = document.getElementById('cf-name').value.trim();
+  const color = document.getElementById('cf-color').value;
+  const payDay = parseInt(document.getElementById('cf-payday').value, 10) || 1;
+
+  if (!name) { alert('카드명을 입력해주세요'); return; }
+  if (payDay < 1 || payDay > 31) { alert('결제일은 1~31일 사이여야 합니다'); return; }
+
+  if (!state.cards || state.cards.length === 0) {
+    state.cards = JSON.parse(JSON.stringify(DEFAULT_CARDS));
+  }
+
+  if (_editCardId) {
+    const idx = state.cards.findIndex(c => c.id === _editCardId);
+    if (idx >= 0) {
+      state.cards[idx] = { ...state.cards[idx], name, color, payDay };
+    }
+  } else {
+    state.cards.push({ id: uid(), name, color, payDay });
+  }
+
+  save();
+  hideCardForm();
+  renderModule.renderCards();
+  // 고정항목 폼의 카드 드롭다운도 갱신
+  const cardSel = document.getElementById('f-card');
+  if (cardSel) {
+    const allCards = state.cards;
+    cardSel.innerHTML = '<option value="">없음</option>' +
+      allCards.map(c => `<option value="${c.id}">${c.name} (${c.payDay}일)</option>`).join('');
+  }
+}
+
+export function deleteCard(id) {
+  if (!confirm('카드를 삭제하면 해당 카드의 변동 지출 데이터도 사라집니다.\n계속할까요?')) return;
+  if (!state.cards) state.cards = JSON.parse(JSON.stringify(DEFAULT_CARDS));
+  state.cards = state.cards.filter(c => c.id !== id);
+  // 해당 카드 데이터도 정리
+  for (const ym of Object.keys(state.cardData)) {
+    delete state.cardData[ym][id];
+  }
+  save();
+  renderModule.renderCards();
+}
+
+// ════════════════════════════════════════════════════════
+// 위시리스트 CRUD
+// ════════════════════════════════════════════════════════
+let _editWishId = null;
+
+export function openWishForm(id) {
+  _editWishId = id || null;
+  const wish = id ? (state.wishlist || []).find(w => w.id === id) : null;
+
+  document.getElementById('wish-form-title').textContent = wish ? '아이템 수정' : '위시 아이템 추가';
+  document.getElementById('wf-name').value = wish?.name || '';
+  document.getElementById('wf-price').value = wish?.price || '';
+  document.getElementById('wf-priority').value = wish?.priority || 'want';
+  document.getElementById('wf-category').value = wish?.category || '기타';
+  document.getElementById('wf-date').value = wish?.targetDate || '';
+  document.getElementById('wf-url').value = wish?.url || '';
+  document.getElementById('wf-notes').value = wish?.notes || '';
+  document.getElementById('wish-form-overlay').style.display = 'flex';
+}
+
+export function hideWishForm() {
+  document.getElementById('wish-form-overlay').style.display = 'none';
+  _editWishId = null;
+}
+
+export function saveWishItem() {
+  const name = document.getElementById('wf-name').value.trim();
+  const price = Number(document.getElementById('wf-price').value) || 0;
+  if (!name) { alert('아이템명을 입력해주세요'); return; }
+
+  const item = {
+    id: _editWishId || uid(),
+    name,
+    price,
+    priority: document.getElementById('wf-priority').value,
+    category: document.getElementById('wf-category').value,
+    targetDate: document.getElementById('wf-date').value || null,
+    url: document.getElementById('wf-url').value.trim() || null,
+    notes: document.getElementById('wf-notes').value.trim() || null,
+    bought: false,
+  };
+
+  if (!state.wishlist) state.wishlist = [];
+  if (_editWishId) {
+    const idx = state.wishlist.findIndex(w => w.id === _editWishId);
+    if (idx >= 0) item.bought = state.wishlist[idx].bought;
+    state.wishlist = state.wishlist.map(w => w.id === _editWishId ? item : w);
+  } else {
+    state.wishlist.push(item);
+  }
+
+  save();
+  hideWishForm();
+  renderModule.renderWishlist();
+}
+
+export function deleteWishItem(id) {
+  if (!confirm('위시 아이템을 삭제할까요?')) return;
+  state.wishlist = (state.wishlist || []).filter(w => w.id !== id);
+  save();
+  renderModule.renderWishlist();
+}
+
+export function toggleWishBought(id) {
+  const item = (state.wishlist || []).find(w => w.id === id);
+  if (!item) return;
+  item.bought = !item.bought;
+  save();
+  renderModule.renderWishlist();
+}
+
+// ════════════════════════════════════════════════════════
+// 워치리스트 CRUD
+// ════════════════════════════════════════════════════════
+let _editWatchSymbol = null;
+
+export function openWatchlistForm(symbol) {
+  _editWatchSymbol = symbol || null;
+  const item = symbol ? (state.watchlist || []).find(w => w.symbol === symbol) : null;
+
+  document.getElementById('wl-symbol').value = item?.symbol || '';
+  document.getElementById('wl-name').value = item?.name || '';
+  document.getElementById('wl-market').value = item?.market || 'KRX';
+  document.getElementById('wl-buyprice').value = item?.buyPrice || '';
+  document.getElementById('wl-qty').value = item?.quantity || '';
+  document.getElementById('wl-note').value = item?.note || '';
+  document.getElementById('watchlist-form-overlay').style.display = 'flex';
+}
+
+export function hideWatchlistForm() {
+  document.getElementById('watchlist-form-overlay').style.display = 'none';
+  _editWatchSymbol = null;
+}
+
+export async function saveWatchlistItem() {
+  const symbol = document.getElementById('wl-symbol').value.trim().toUpperCase();
+  if (!symbol) { alert('종목코드를 입력해주세요'); return; }
+
+  const item = {
+    id: _editWatchSymbol ? ((state.watchlist || []).find(w => w.symbol === _editWatchSymbol)?.id || uid()) : uid(),
+    symbol,
+    name: document.getElementById('wl-name').value.trim() || symbol,
+    market: document.getElementById('wl-market').value,
+    buyPrice: Number(document.getElementById('wl-buyprice').value) || null,
+    quantity: Number(document.getElementById('wl-qty').value) || null,
+    note: document.getElementById('wl-note').value.trim() || null,
+  };
+
+  if (!state.watchlist) state.watchlist = [];
+  if (_editWatchSymbol) {
+    state.watchlist = state.watchlist.map(w => w.symbol === _editWatchSymbol ? item : w);
+  } else {
+    if (state.watchlist.some(w => w.symbol === symbol)) {
+      alert('이미 추가된 종목입니다');
+      return;
+    }
+    state.watchlist.push(item);
+  }
+
+  save();
+  hideWatchlistForm();
+  renderModule.renderFinance();
+  // 가격 데이터 불러오기
+  renderModule.fetchStockPrice(item).then(() => renderModule.renderFinance());
+}
+
+export function deleteWatchlistItem(symbol) {
+  if (!confirm(`${symbol}을 관심종목에서 삭제할까요?`)) return;
+  state.watchlist = (state.watchlist || []).filter(w => w.symbol !== symbol);
+  save();
+  renderModule.renderFinance();
 }

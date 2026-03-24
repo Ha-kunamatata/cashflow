@@ -16,8 +16,8 @@ import {
   animateNumber,
   escapeHtml,
 } from './utils.js';
-import { state } from './state.js';
-import { buildForecast } from './forecast.js';
+import { state, DEFAULT_CARDS } from './state.js';
+import { buildForecast, getCards, simulateWishPurchase } from './forecast.js';
 
 let _chartPeriod = 30;
 let _forecastFilter = 'all';
@@ -128,6 +128,8 @@ export function renderAll() {
   if (activePage?.id === 'page-report') renderReport();
   if (activePage?.id === 'page-goals') renderGoals();
   if (activePage?.id === 'page-assets') renderAssets();
+  if (activePage?.id === 'page-wishlist') renderWishlist();
+  if (activePage?.id === 'page-finance') renderFinance();
 }
 
 export function renderSettingsStats() {
@@ -810,11 +812,39 @@ export function renderEntries() {
 // 카드 탭
 // ════════════════════════════════════════════════════════
 export function renderCards() {
+  renderCardDefs();
   renderCardMonths();
+}
+
+/** 카드 정의 목록 렌더 */
+export function renderCardDefs() {
+  const el = document.getElementById('card-defs-list');
+  if (!el) return;
+  const cards = getCards();
+  if (!cards.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:10px 0">등록된 카드 없음</div>';
+    return;
+  }
+  el.innerHTML = cards.map(card => `
+    <div class="card-def-row" data-card-id="${escapeHtml(card.id)}">
+      <div class="card-def-dot" style="background:${escapeHtml(card.color)}"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtml(card.name)}</div>
+        <div style="font-size:11px;color:var(--text3)">매월 ${card.payDay}일 결제</div>
+      </div>
+      <button class="icon-btn edit card-def-edit-btn" data-id="${escapeHtml(card.id)}" title="수정">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+      </button>
+      <button class="icon-btn delete card-def-del-btn" data-id="${escapeHtml(card.id)}" title="삭제">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </button>
+    </div>
+  `).join('');
 }
 
 export function renderCardMonths() {
   const t = today();
+  const cards = getCards();
   let html = '';
 
   for (let i = -1; i <= 12; i++) {
@@ -822,25 +852,49 @@ export function renderCardMonths() {
     const ym = String(yyyymm(d));
     const m = d.getMonth() + 1;
     const cd = state.cardData[ym] || {};
-    const h = cd.hyundai || 0;
-    const k = cd.kookmin || 0;
     const isCurrent = d.getFullYear() === t.getFullYear() && m === t.getMonth() + 1;
+
+    // 이달 고정항목 중 이 카드에 해당하는 것 합산
+    const fixedByCard = {};
+    for (const card of cards) {
+      const fixedSum = (state.entries || [])
+        .filter(e => e.type === 'expense' && e.card === card.id &&
+          (!e.endMonth || yyyymm(d) <= parseInt(e.endMonth, 10)))
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      fixedByCard[card.id] = fixedSum;
+    }
+
+    const totalVariable = cards.reduce((s, c) => s + Number(cd[c.id] || 0), 0);
+    const totalFixed = Object.values(fixedByCard).reduce((a, b) => a + b, 0);
+    const grandTotal = totalVariable + totalFixed;
+
+    const cardInputs = cards.map(card => {
+      const varAmt = cd[card.id] || 0;
+      const fixedAmt = fixedByCard[card.id] || 0;
+      return `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:${escapeHtml(card.color)};flex-shrink:0"></div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">${escapeHtml(card.name)} <span style="font-weight:400;color:var(--text3)">(${card.payDay}일)</span></div>
+          </div>
+          ${fixedAmt > 0 ? `<div style="font-size:10px;color:var(--text3);margin-bottom:4px">고정항목 자동합산: <span style="color:var(--accent2);font-weight:700">${fmtShort(fixedAmt)}</span></div>` : ''}
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">변동 지출 (식비·쇼핑 등)</div>
+          <input class="card-num-input" type="number" value="${varAmt || ''}" placeholder="0" inputmode="numeric"
+            data-ym="${ym}" data-card="${escapeHtml(card.id)}"
+            style="border-color:${escapeHtml(card.color)};border-width:1.5px">
+          ${fixedAmt > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">예상 총 청구: <span style="font-weight:700;color:var(--text)">${fmtShort(fixedAmt + varAmt)}</span></div>` : ''}
+        </div>
+      `;
+    }).join('');
 
     html += `
       <div class="card-month-item ${isCurrent ? 'current' : ''}">
         <div class="card-month-header">
           <span class="card-month-label">${d.getFullYear()}년 ${m}월 ${isCurrent ? '<span style="font-size:10px;color:var(--accent2)">(이번달)</span>' : ''}</span>
-          <span class="card-month-total">${h + k > 0 ? '-' + fmtShort(h + k) : '-'}</span>
+          <span class="card-month-total">${grandTotal > 0 ? '-' + fmtShort(grandTotal) : '-'}</span>
         </div>
-        <div class="card-inputs">
-          <div>
-            <div class="card-input-label hyundai">🔵 현대카드 (1일)</div>
-            <input class="card-num-input" type="number" value="${h || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="hyundai" style="border-color:var(--accent)">
-          </div>
-          <div>
-            <div class="card-input-label kookmin">🟠 국민카드 (3일)</div>
-            <input class="card-num-input" type="number" value="${k || ''}" placeholder="0" inputmode="numeric" data-ym="${ym}" data-card="kookmin" style="border-color:var(--orange)">
-          </div>
+        <div class="card-inputs" style="flex-direction:column">
+          ${cardInputs}
         </div>
       </div>
     `;
@@ -1902,4 +1956,335 @@ export function renderBudget() {
       ${allCats.size === 0 ? '<div class="empty-state" style="padding:20px 0">지출 내역 또는 예산이 없습니다</div>' : catRows}
     </div>
   `;
+}
+
+// ════════════════════════════════════════════════════════
+// 위시리스트 탭
+// ════════════════════════════════════════════════════════
+const WISH_PRIORITY_LABELS = { must: '꼭 살 것', want: '사고 싶음', maybe: '고민 중' };
+const WISH_PRIORITY_COLORS = { must: 'var(--red2)', want: 'var(--accent2)', maybe: 'var(--text3)' };
+let _wishFilter = '전체';
+
+export function setWishFilter(filter) {
+  _wishFilter = filter;
+  renderWishlist();
+}
+
+export function renderWishlist() {
+  const wishlist = state.wishlist || [];
+  const summaryBar = document.getElementById('wish-summary-bar');
+  const summaryInner = document.getElementById('wish-summary-inner');
+  const container = document.getElementById('wish-list');
+  if (!container) return;
+
+  // 요약
+  const total = wishlist.filter(w => !w.bought).reduce((s, w) => s + Number(w.price || 0), 0);
+  const mustTotal = wishlist.filter(w => w.priority === 'must' && !w.bought).reduce((s, w) => s + Number(w.price || 0), 0);
+  const boughtCount = wishlist.filter(w => w.bought).length;
+
+  if (wishlist.length && summaryBar && summaryInner) {
+    summaryBar.style.display = '';
+    summaryInner.innerHTML = `
+      <div style="flex:1;min-width:100px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px">미구매 합계</div>
+        <div style="font-size:18px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(total)}</div>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px">꼭 살 것</div>
+        <div style="font-size:18px;font-weight:900;color:var(--orange);font-family:var(--mono)">${fmtShort(mustTotal)}</div>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px">구매 완료</div>
+        <div style="font-size:18px;font-weight:900;color:var(--green2);font-family:var(--mono)">${boughtCount}개</div>
+      </div>
+    `;
+  } else if (summaryBar) {
+    summaryBar.style.display = 'none';
+  }
+
+  // 필터링
+  let filtered = wishlist;
+  if (_wishFilter === 'bought') {
+    filtered = wishlist.filter(w => w.bought);
+  } else if (_wishFilter !== '전체') {
+    filtered = wishlist.filter(w => !w.bought && w.priority === _wishFilter);
+  } else {
+    filtered = wishlist.filter(w => !w.bought);
+  }
+
+  if (!filtered.length) {
+    const msg = _wishFilter === 'bought'
+      ? '구매 완료된 항목 없음'
+      : wishlist.length ? '해당 필터에 아이템 없음' : '위에서 + 추가 버튼으로<br>사고 싶은 것들을 기록해보세요';
+    container.innerHTML = `<div class="empty-state" style="padding:40px 20px;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">🛒</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">아이템 없음</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.6">${msg}</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(w => {
+    const sim = !w.bought ? simulateWishPurchase(w) : null;
+    const priceStr = w.price ? fmtShort(Number(w.price)) : '가격 미입력';
+    const priColor = w.bought ? 'var(--green2)' : (WISH_PRIORITY_COLORS[w.priority] || 'var(--text3)');
+    const priLabel = w.bought ? '구매 완료' : (WISH_PRIORITY_LABELS[w.priority] || w.priority);
+    const dateStr = w.targetDate ? `목표: ${w.targetDate}` : '';
+
+    let impactHtml = '';
+    if (sim) {
+      const safeStr = sim.safeDate ? `구매 가능일: ${sim.safeDate}` : '';
+      const canStr = sim.canAfford ? '✅ 지금 구매 가능' : '⏳ 잔고 부족';
+      impactHtml = `
+        <div class="wish-impact-row">
+          <span class="wish-impact-badge ${sim.canAfford ? 'ok' : 'warn'}">${canStr}</span>
+          <span class="wish-impact-text">${sim.impactSummary}</span>
+          ${safeStr ? `<span class="wish-impact-date">${safeStr}</span>` : ''}
+        </div>`;
+    }
+
+    return `
+      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}">
+        <div class="wish-card-top">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              <span class="wish-priority-badge" style="background:${priColor}20;color:${priColor};border-color:${priColor}40">${priLabel}</span>
+              ${w.category ? `<span style="font-size:10px;color:var(--text3)">${escapeHtml(w.category)}</span>` : ''}
+              ${dateStr ? `<span style="font-size:10px;color:var(--text3)">${dateStr}</span>` : ''}
+            </div>
+            <div class="wish-name">${escapeHtml(w.name)}</div>
+            <div class="wish-price">${priceStr}</div>
+            ${w.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${escapeHtml(w.notes)}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+            ${w.url ? `<button class="wish-link-btn" data-url="${escapeHtml(w.url)}" title="링크 열기">🔗 링크</button>` : ''}
+            <div style="display:flex;gap:4px">
+              ${!w.bought ? `<button class="icon-btn wish-buy-btn" data-id="${escapeHtml(w.id)}" title="구매 완료 처리" style="color:var(--green2)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>` : `<button class="icon-btn wish-unbuy-btn" data-id="${escapeHtml(w.id)}" title="미구매로 되돌리기" style="color:var(--text3)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109 9"/><polyline points="3 3 3 12 12 12"/></svg>
+              </button>`}
+              <button class="icon-btn edit wish-edit-btn" data-id="${escapeHtml(w.id)}" title="수정">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+              </button>
+              <button class="icon-btn delete wish-del-btn" data-id="${escapeHtml(w.id)}" title="삭제">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        ${impactHtml}
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// 재테크 탭
+// ════════════════════════════════════════════════════════
+let _financeData = {}; // { symbol: { price, change, changePct, name, currency, lastUpdated } }
+let _financeLoading = {};
+
+export function setFinanceData(symbol, data) {
+  _financeData[symbol] = data;
+}
+
+export function renderFinance() {
+  const watchlist = state.watchlist || [];
+  const container = document.getElementById('watchlist-container');
+  if (!container) return;
+
+  if (!watchlist.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:40px 20px;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">📈</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">관심종목 없음</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.6">+ 추가 버튼으로 주식, ETF,<br>암호화폐 종목을 추적해보세요</div>
+    </div>`;
+    updateFinanceSummary();
+    return;
+  }
+
+  container.innerHTML = watchlist.map(item => {
+    const data = _financeData[item.symbol];
+    const isLoading = _financeLoading[item.symbol];
+    const name = (data && data.name) ? data.name : item.name;
+
+    let priceSection = '';
+    if (isLoading) {
+      priceSection = `<div style="font-size:12px;color:var(--text3)">불러오는 중...</div>`;
+    } else if (data && data.price != null) {
+      const chgColor = data.change > 0 ? 'var(--green2)' : data.change < 0 ? 'var(--red2)' : 'var(--text3)';
+      const chgSign = data.change > 0 ? '+' : '';
+      const currency = data.currency === 'KRW' ? '₩' : data.currency === 'USD' ? '$' : '';
+      const priceStr = data.currency === 'KRW'
+        ? (data.price >= 1000 ? data.price.toLocaleString() : data.price.toFixed(2))
+        : data.price.toFixed(2);
+
+      // 수익률 계산 (매수가 입력 시)
+      let returnHtml = '';
+      if (item.buyPrice && item.quantity) {
+        const investedKRW = Number(item.buyPrice) * Number(item.quantity);
+        const currentKRW = data.price * Number(item.quantity);
+        const pnl = currentKRW - investedKRW;
+        const pnlPct = investedKRW > 0 ? (pnl / investedKRW * 100) : 0;
+        const pnlColor = pnl >= 0 ? 'var(--green2)' : 'var(--red2)';
+        returnHtml = `<div style="font-size:10px;color:${pnlColor};font-weight:700;margin-top:2px">
+          ${pnl >= 0 ? '+' : ''}${currency}${Math.abs(pnl).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)
+        </div>`;
+      }
+
+      priceSection = `
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:900;font-family:var(--mono);color:var(--text)">${currency}${priceStr}</div>
+          <div style="font-size:12px;font-weight:700;color:${chgColor}">${chgSign}${data.change?.toFixed(2) || 0} (${chgSign}${data.changePct?.toFixed(2) || 0}%)</div>
+          ${returnHtml}
+        </div>`;
+    } else {
+      priceSection = `<div style="font-size:11px;color:var(--text3)">데이터 없음<br><span style="font-size:9px">⚠️ API 제한</span></div>`;
+    }
+
+    const mktLabel = { KRX: '🇰🇷', US: '🇺🇸', CRYPTO: '₿', OTHER: '🌐' }[item.market] || '🌐';
+
+    return `
+      <div class="watchlist-card" data-symbol="${escapeHtml(item.symbol)}">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <span style="font-size:14px">${mktLabel}</span>
+              <span style="font-size:15px;font-weight:900;color:var(--text)">${escapeHtml(name || item.symbol)}</span>
+              <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${escapeHtml(item.symbol)}</span>
+            </div>
+            ${item.buyPrice ? `<div style="font-size:10px;color:var(--text3)">매수가 ${Number(item.buyPrice).toLocaleString()} × ${item.quantity || 1}주</div>` : ''}
+            ${item.note ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(item.note)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            ${priceSection}
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <button class="icon-btn edit watchlist-edit-btn" data-symbol="${escapeHtml(item.symbol)}" title="수정">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+              </button>
+              <button class="icon-btn delete watchlist-del-btn" data-symbol="${escapeHtml(item.symbol)}" title="삭제">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  updateFinanceSummary();
+}
+
+function updateFinanceSummary() {
+  const el = document.getElementById('finance-summary-inner');
+  if (!el) return;
+  const watchlist = state.watchlist || [];
+  if (!watchlist.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">종목을 추가하면 여기에 요약이 표시됩니다</div>';
+    return;
+  }
+
+  let totalInvested = 0, totalCurrent = 0, updatedCount = 0;
+  for (const item of watchlist) {
+    const data = _financeData[item.symbol];
+    if (item.buyPrice && item.quantity && data?.price) {
+      totalInvested += Number(item.buyPrice) * Number(item.quantity);
+      totalCurrent += data.price * Number(item.quantity);
+      updatedCount++;
+    }
+  }
+
+  const pnl = totalCurrent - totalInvested;
+  const pnlPct = totalInvested > 0 ? (pnl / totalInvested * 100) : 0;
+  const pnlColor = pnl >= 0 ? 'var(--green2)' : 'var(--red2)';
+
+  el.innerHTML = updatedCount > 0 ? `
+    <div style="flex:1;min-width:80px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3)">총 평가액</div>
+      <div style="font-size:16px;font-weight:900;font-family:var(--mono);color:var(--text)">${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>
+    </div>
+    <div style="flex:1;min-width:80px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3)">수익/손실</div>
+      <div style="font-size:16px;font-weight:900;font-family:var(--mono);color:${pnlColor}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>
+      <div style="font-size:11px;color:${pnlColor}">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</div>
+    </div>
+  ` : `<div style="font-size:12px;color:var(--text3)">매수가 입력 시 수익률이 표시됩니다</div>`;
+}
+
+/** 종목 데이터 로드 (Yahoo Finance 비공개 API) */
+export async function fetchStockPrice(item) {
+  const { symbol, market } = item;
+  // 한국 주식: 종목코드.KS (코스피) 또는 .KQ (코스닥) 시도
+  let ticker = symbol;
+  if (market === 'KRX') {
+    ticker = symbol.includes('.') ? symbol : `${symbol}.KS`;
+  } else if (market === 'CRYPTO') {
+    ticker = symbol.includes('-') ? symbol : `${symbol}-USD`;
+  }
+
+  _financeLoading[symbol] = true;
+
+  try {
+    // CORS 프록시 사용 (Yahoo Finance 직접 접근)
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('API 오류');
+    const json = await res.json();
+    const result = json.chart?.result?.[0];
+    if (!result) throw new Error('데이터 없음');
+
+    const meta = result.meta;
+    const price = meta.regularMarketPrice || meta.previousClose;
+    const prevClose = meta.previousClose || meta.chartPreviousClose;
+    const change = price - prevClose;
+    const changePct = prevClose ? (change / prevClose * 100) : 0;
+
+    _financeData[symbol] = {
+      price,
+      change,
+      changePct,
+      name: item.name || meta.shortName || symbol,
+      currency: meta.currency || 'USD',
+      lastUpdated: new Date().toLocaleTimeString('ko-KR'),
+    };
+  } catch (e) {
+    // KOSDAQ 시도
+    if (market === 'KRX' && !symbol.includes('.')) {
+      try {
+        const url2 = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol + '.KQ')}?interval=1d&range=5d`;
+        const res2 = await fetch(url2, { signal: AbortSignal.timeout(6000) });
+        if (res2.ok) {
+          const json2 = await res2.json();
+          const result2 = json2.chart?.result?.[0];
+          if (result2) {
+            const meta2 = result2.meta;
+            const price2 = meta2.regularMarketPrice || meta2.previousClose;
+            const prev2 = meta2.previousClose || meta2.chartPreviousClose;
+            _financeData[symbol] = {
+              price: price2, change: price2 - prev2, changePct: prev2 ? ((price2 - prev2) / prev2 * 100) : 0,
+              name: item.name || meta2.shortName || symbol, currency: 'KRW',
+              lastUpdated: new Date().toLocaleTimeString('ko-KR'),
+            };
+          }
+        }
+      } catch {}
+    }
+    if (!_financeData[symbol]) {
+      _financeData[symbol] = null; // 실패 표시
+    }
+  } finally {
+    _financeLoading[symbol] = false;
+  }
+}
+
+export async function refreshAllStocks() {
+  const watchlist = state.watchlist || [];
+  if (!watchlist.length) return;
+
+  const infoEl = document.getElementById('finance-refresh-info');
+  if (infoEl) infoEl.textContent = '새로고침 중...';
+
+  await Promise.allSettled(watchlist.map(item => fetchStockPrice(item)));
+  renderFinance();
+
+  if (infoEl) infoEl.textContent = `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
