@@ -15,7 +15,8 @@ import {
   save,
   syncLedgerToBalance,
   migrateLedger,
-  initDefaultData
+  initDefaultData,
+  ensureStateFields,
 } from './state.js';
 
 import {
@@ -41,6 +42,11 @@ import {
   renderHouseLevel,
   currentLedgerYear,
   currentLedgerMonth,
+  renderWishlist,
+  setWishFilter,
+  renderFinance,
+  refreshAllStocks,
+  renderCardDefs,
 } from './render.js';
 
 import {
@@ -100,6 +106,22 @@ import {
   openGoalJoinSheet,
   joinGoalByCode,
   generateGoalShareCode,
+  // 카드 관리
+  openCardForm,
+  hideCardForm,
+  saveCard,
+  deleteCard,
+  // 위시리스트
+  openWishForm,
+  hideWishForm,
+  saveWishItem,
+  deleteWishItem,
+  toggleWishBought,
+  // 워치리스트
+  openWatchlistForm,
+  hideWatchlistForm,
+  saveWatchlistItem,
+  deleteWatchlistItem,
 } from './ui.js';
 
 import {
@@ -160,6 +182,7 @@ initAuth(
     }
 
     initDefaultData();
+    ensureStateFields();
     migrateLedger();
     syncLedgerToBalance();
 
@@ -219,7 +242,8 @@ document.getElementById('btn-open-settings-page')?.addEventListener('click', () 
 document.getElementById('btn-home-forecast-link')?.addEventListener('click', () => navigate('forecast'));
 
 // 잔고 숨기기/보이기 토글
-let _balHidden = localStorage.getItem('balanceHidden') === '1';
+// 기본값: 숨김 (명시적으로 '0' 저장 시에만 표시)
+let _balHidden = localStorage.getItem('balanceHidden') !== '0';
 function _applyBalanceVisibility() {
   const balEl = document.getElementById('balance-display');
   const maskEl = document.getElementById('balance-hidden-mask');
@@ -707,3 +731,80 @@ document.getElementById('btn-month-picker-close')?.addEventListener('click', () 
 document.getElementById('month-picker-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'month-picker-sheet'));
 document.getElementById('btn-mp-year-prev')?.addEventListener('click', () => _shiftPickerYear(-1));
 document.getElementById('btn-mp-year-next')?.addEventListener('click', () => _shiftPickerYear(1));
+
+// ══════════════════════════════════════════════════════════════
+// 카드 관리 이벤트
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-add-card')?.addEventListener('click', () => openCardForm(null));
+document.getElementById('card-form-save')?.addEventListener('click', saveCard);
+document.getElementById('card-form-cancel')?.addEventListener('click', hideCardForm);
+document.getElementById('card-form-overlay')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) hideCardForm();
+});
+
+// 카드 수정/삭제 (이벤트 위임)
+document.getElementById('card-defs-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.card-def-edit-btn');
+  const delBtn = e.target.closest('.card-def-del-btn');
+  if (editBtn) openCardForm(editBtn.dataset.id);
+  if (delBtn) deleteCard(delBtn.dataset.id);
+});
+
+// ══════════════════════════════════════════════════════════════
+// 위시리스트 이벤트
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-add-wish')?.addEventListener('click', () => openWishForm(null));
+document.getElementById('wish-form-save')?.addEventListener('click', saveWishItem);
+document.getElementById('wish-form-cancel')?.addEventListener('click', hideWishForm);
+document.getElementById('wish-form-overlay')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) hideWishForm();
+});
+
+// 위시리스트 필터 탭
+document.querySelectorAll('[data-wish-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-wish-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    setWishFilter(btn.dataset.wishFilter);
+  });
+});
+
+// 위시 아이템 클릭 위임
+document.getElementById('wish-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.wish-edit-btn');
+  const delBtn = e.target.closest('.wish-del-btn');
+  const buyBtn = e.target.closest('.wish-buy-btn');
+  const unbuyBtn = e.target.closest('.wish-unbuy-btn');
+  const linkBtn = e.target.closest('.wish-link-btn');
+
+  if (editBtn) openWishForm(editBtn.dataset.id);
+  if (delBtn) deleteWishItem(delBtn.dataset.id);
+  if (buyBtn) toggleWishBought(buyBtn.dataset.id);
+  if (unbuyBtn) toggleWishBought(unbuyBtn.dataset.id);
+  if (linkBtn) {
+    const url = linkBtn.dataset.url;
+    if (url) window.open(url, '_blank', 'noopener');
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 재테크 (워치리스트) 이벤트
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-add-watchlist')?.addEventListener('click', () => openWatchlistForm(null));
+document.getElementById('watchlist-form-save')?.addEventListener('click', saveWatchlistItem);
+document.getElementById('watchlist-form-cancel')?.addEventListener('click', hideWatchlistForm);
+document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) hideWatchlistForm();
+});
+
+document.getElementById('btn-finance-refresh')?.addEventListener('click', () => {
+  refreshAllStocks();
+});
+
+// 워치리스트 카드 클릭 위임
+document.getElementById('watchlist-container')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.watchlist-edit-btn');
+  const delBtn = e.target.closest('.watchlist-del-btn');
+  if (editBtn) openWatchlistForm(editBtn.dataset.symbol);
+  if (delBtn) deleteWatchlistItem(delBtn.dataset.symbol);
+});

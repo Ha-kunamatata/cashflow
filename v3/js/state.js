@@ -4,11 +4,18 @@
 import { STORAGE_KEY } from './config.js';
 import { uid, isPastOrToday } from './utils.js';
 
+// 기본 카드 정의 (커스터마이즈 가능)
+export const DEFAULT_CARDS = [
+  { id: 'hyundai', name: '현대카드', color: '#3b82f6', payDay: 1 },
+  { id: 'kookmin', name: '국민카드', color: '#f97316', payDay: 3 },
+];
+
 export const state = {
   balance: 0,
   dangerLine: 100000,
   entries: [],
-  cardData: {},         // { YYYYMM: { hyundai, kookmin } }
+  cards: null,          // [{ id, name, color, payDay }] — null이면 DEFAULT_CARDS 사용
+  cardData: {},         // { YYYYMM: { [card.id]: amount } }
   checkData: {},        // 구버전 호환용 (ledgerData로 마이그레이션됨)
   ledgerData: {},       // { YYYY-MM-DD: [{ id, type, category, amount, memo }] }
   appliedCheckData: {}, // 잔고에 이미 반영된 내역 (날짜별 순지출)
@@ -18,6 +25,8 @@ export const state = {
   budgets: {},          // { "YYYY-MM": { "category": amount } }
   badges: [],           // earned badge ids
   streak: { count: 0, lastDate: '' },
+  wishlist: [],         // [{ id, name, price, url, priority, targetDate, notes, category, bought }]
+  watchlist: [],        // [{ id, symbol, name, market, buyPrice, quantity, note }]
 };
 
 // ── 저장 ──────────────────────────────────────────────
@@ -57,6 +66,9 @@ export function load() {
       if (validateState(parsed)) Object.assign(state, parsed);
     }
   } catch (e) {}
+  // 누락 필드 보완 (구버전 데이터 호환)
+  if (!state.wishlist)  state.wishlist  = [];
+  if (!state.watchlist) state.watchlist = [];
 }
 
 // ── checkData → ledgerData 마이그레이션 ───────────────
@@ -113,15 +125,23 @@ export function syncLedgerToBalance() {
 // 구버전 호환 (app.js가 아직 이 이름을 사용하는 경우를 위한 alias)
 export { syncLedgerToBalance as syncCheckDataToBalance };
 
-// ── 기본 데이터 (첫 실행 시) ──────────────────────────
-export function initDefaultData() {
-  if (!state.goals) state.goals = [];
+// ── state 필드 초기화 (누락 필드 보완) ────────────────
+export function ensureStateFields() {
+  if (!state.goals)     state.goals     = [];
   if (!state.checkData) state.checkData = {};
   if (!state.ledgerData) state.ledgerData = {};
-  if (!state.assets) state.assets = [];
-  if (!state.budgets) state.budgets = {};
-  if (!state.badges) state.badges = [];
-  if (!state.streak) state.streak = { count: 0, lastDate: '' };
+  if (!state.assets)    state.assets    = [];
+  if (!state.budgets)   state.budgets   = {};
+  if (!state.badges)    state.badges    = [];
+  if (!state.streak)    state.streak    = { count: 0, lastDate: '' };
+  if (!state.wishlist)  state.wishlist  = [];
+  if (!state.watchlist) state.watchlist = [];
+  if (!state.cards)     state.cards     = null; // null = DEFAULT_CARDS
+}
+
+// ── 기본 데이터 (첫 실행 시) ──────────────────────────
+export function initDefaultData() {
+  ensureStateFields();
   if (state.entries.length > 0) return;
 
   state.balance = 923057;

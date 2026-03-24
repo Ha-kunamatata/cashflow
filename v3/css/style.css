@@ -1002,3 +1002,87 @@ body.light-theme .topbar-balance-pill { background:rgba(0,0,0,0.04); border-colo
 body.light-theme .info-chip { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
 body.light-theme .event-row:hover { background:rgba(0,0,0,0.03); }
 body.light-theme .month-picker-btn { background:var(--bg3); border-color:var(--border); }
+
+/* ════════════════════════════════════════════════════════
+   바텀 탭 — 스크롤 가능 (8개 탭)
+   ════════════════════════════════════════════════════════ */
+.bottom-nav {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+  justify-content: flex-start;
+  gap: 0;
+}
+.bottom-nav::-webkit-scrollbar { display: none; }
+.nav-btn { min-width: 68px; flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════════
+   카드 정의 행
+   ════════════════════════════════════════════════════════ */
+.card-def-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.card-def-row:last-child { border-bottom: none; }
+.card-def-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════════
+   위시리스트 탭
+   ════════════════════════════════════════════════════════ */
+.wish-card {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--card-grad), rgba(15,23,42,0.70);
+  padding: 14px 16px; margin-bottom: 10px;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.wish-card:hover { transform: translateY(-1px); border-color: rgba(96,165,250,0.2); }
+.wish-card.bought { opacity: 0.55; }
+.wish-card-top { display: flex; gap: 10px; }
+.wish-name { font-size: 15px; font-weight: 800; color: var(--text); line-height: 1.3; margin-bottom: 2px; }
+.wish-price { font-size: 16px; font-weight: 900; font-family: var(--mono); color: var(--accent2); }
+.wish-priority-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+  border: 1px solid; white-space: nowrap;
+}
+.wish-link-btn {
+  padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
+  background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);
+  color: var(--accent2); cursor: pointer; white-space: nowrap;
+  font-family: var(--font);
+}
+.wish-link-btn:hover { background: rgba(59,130,246,0.2); }
+.wish-impact-row {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
+}
+.wish-impact-badge {
+  padding: 3px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+  white-space: nowrap;
+}
+.wish-impact-badge.ok { background: rgba(16,185,129,0.12); color: var(--green2); }
+.wish-impact-badge.warn { background: rgba(239,68,68,0.12); color: var(--red2); }
+.wish-impact-text { font-size: 10px; color: var(--text3); flex: 1; min-width: 120px; }
+.wish-impact-date { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+
+/* ════════════════════════════════════════════════════════
+   재테크 탭
+   ════════════════════════════════════════════════════════ */
+.watchlist-card {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--card-grad), rgba(15,23,42,0.70);
+  padding: 14px 16px; margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.watchlist-card:hover { border-color: rgba(96,165,250,0.2); }
+
+/* 위시/워치 폼 패널 */
+.wish-form-panel { max-height: 90vh; overflow-y: auto; }
+.sheet-title { font-size: 17px; font-weight: 900; color: var(--text); margin-bottom: 16px; }
+
+/* ════════════════════════════════════════════════════════
+   라이트 테마 오버라이드
+   ════════════════════════════════════════════════════════ */
+body.light-theme .wish-card { background: var(--bg2); }
+body.light-theme .watchlist-card { background: var(--bg2); }
