@@ -87,10 +87,15 @@
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
       </div>
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
-  <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+  <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
+  </div>
+
+  <!-- 하우스 레벨 카드 -->
+  <div class="card house-level-card" id="house-level-card" style="margin-bottom:12px"></div>
 
   <!-- AI 인사이트 카드 -->
-  <div class="card ai-insight-card" id="ai-insight-card" style="display:none;margin-bottom:12px">
+  <div class="card ai-insight-card" id="ai-insight-card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="card-title" style="margin:0">🤖 AI 인사이트</div>
       <button class="btn btn-ghost" id="btn-ai-insight-refresh" style="padding:4px 10px;font-size:11px"><div class="ripple-container"></div>↻ 새로고침</button>
@@ -147,7 +152,35 @@
   </div>
 </div>
 
-<!-- ② 예측 -->
+<!-- ② 자산 (NEW) -->
+
+<div class="page" id="page-assets">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:18px;font-weight:900;color:var(--text)">내 자산</div>
+    <button class="btn" id="btn-add-asset" style="padding:10px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:13px;border:none;display:flex;align-items:center;gap:6px">
+      <div class="ripple-container"></div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      자산 추가
+    </button>
+  </div>
+  <div id="assets-page-content"></div>
+</div>
+
+<!-- ③ 예산 (NEW) -->
+
+<div class="page" id="page-budget">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:18px;font-weight:900;color:var(--text)">예산 관리</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-ghost" id="btn-budget-prev" style="padding:8px 12px;font-size:13px"><div class="ripple-container"></div>←</button>
+      <div id="budget-month-label" style="font-size:14px;font-weight:700;min-width:90px;text-align:center"></div>
+      <button class="btn btn-ghost" id="btn-budget-next" style="padding:8px 12px;font-size:13px"><div class="ripple-container"></div>→</button>
+    </div>
+  </div>
+  <div id="budget-page-content"></div>
+</div>
+
+<!-- ④ 예측 -->
 
 <div class="page" id="page-forecast">
   <div class="forecast-grid">
@@ -299,14 +332,20 @@
   </div>
 </div>
 
-<!-- ⑦ 목표 -->
+<!-- ⑨ 목표 -->
 
 <div class="page" id="page-goals">
-  <button class="btn btn-add-entry" id="btn-add-goal">
-    <div class="ripple-container"></div>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    목표 추가
-  </button>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-add-entry" id="btn-add-goal" style="flex:1">
+      <div class="ripple-container"></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      목표 추가
+    </button>
+    <button class="btn" id="btn-goal-join" style="padding:12px 16px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:6px">
+      <div class="ripple-container"></div>
+      🔗 코드로 참여
+    </button>
+  </div>
   <div id="goals-list"></div>
 </div>
 
@@ -434,6 +473,8 @@
 
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="nav-btn active" data-page="home"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
+  <button class="nav-btn" data-page="assets"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg><span>자산</span></button>
+  <button class="nav-btn" data-page="budget"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path d="M12 6v6l4 2"/></svg><span>예산</span></button>
   <button class="nav-btn" data-page="forecast"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>예측</span></button>
   <button class="nav-btn" data-page="entries"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>수입지출</span></button>
   <button class="nav-btn" data-page="cards"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>카드</span></button>
@@ -573,7 +614,7 @@
 </div>
 
 <!-- ── 플로팅 AI 채팅 버튼 ── -->
-<button class="btn ai-chat-fab" id="btn-ai-chat-fab" style="display:none">
+<button class="btn ai-chat-fab" id="btn-ai-chat-fab" style="display:flex">
   <div class="ripple-container"></div>
   <span style="font-size:20px">🤖</span>
 </button>
@@ -605,6 +646,92 @@
     <div id="ai-analysis-content" style="font-size:13px;color:var(--text2);line-height:1.8;overflow-y:auto;flex:1">로드 중…</div>
   </div>
 </div>
+
+<!-- ── 자산 추가/수정 시트 ── -->
+<div class="sheet-overlay" id="asset-form-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="asset-form-title">자산 추가</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">자산명</div>
+        <input class="form-input" id="asset-name" placeholder="예: 국민은행 통장">
+      </div>
+      <div>
+        <div class="form-label">금액 (원)</div>
+        <input class="form-input" id="asset-amount" type="number" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">자산 유형</div>
+        <select class="form-select" id="asset-type">
+          <option value="bank">🏦 은행 통장</option>
+          <option value="savings">💰 적금/예금</option>
+          <option value="investment">📈 주식/ETF</option>
+          <option value="cash">💵 현금</option>
+          <option value="crypto">🪙 가상화폐</option>
+          <option value="real_estate">🏠 부동산</option>
+          <option value="other">📦 기타</option>
+        </select>
+      </div>
+      <div>
+        <div class="form-label">용도</div>
+        <select class="form-select" id="asset-purpose">
+          <option value="생활비">생활비</option>
+          <option value="비상금">비상금</option>
+          <option value="투자금">투자금</option>
+          <option value="저축">저축</option>
+          <option value="자유">자유</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">메모 (선택)</div>
+      <input class="form-input" id="asset-memo" placeholder="간단히 메모">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-asset-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-asset-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 예산 편집 시트 ── -->
+<div class="sheet-overlay" id="budget-editor-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">예산 설정</div>
+    <div style="margin-bottom:14px;text-align:center;font-size:18px;font-weight:800;color:var(--accent2)" id="budget-editor-cat">카테고리</div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">예산 금액 (원) · 0 입력 시 삭제</div>
+      <input class="form-input" id="budget-editor-amount" type="number" placeholder="0" inputmode="numeric" style="text-align:right;font-family:var(--mono);font-size:18px">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-budget-editor-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-budget-editor-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 목표 공유 참여 시트 ── -->
+<div class="sheet-overlay" id="goal-join-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">코드로 목표 참여</div>
+    <div class="sheet-sub">친구에게 받은 6자리 초대 코드를 입력하세요</div>
+    <div style="margin:16px 0">
+      <input class="form-input" id="goal-join-code-input" placeholder="예: ABC123" style="text-align:center;font-size:22px;font-weight:900;letter-spacing:4px;font-family:var(--mono);text-transform:uppercase" maxlength="6">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-goal-join-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-goal-join-confirm">참여하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 코인 파티클 오버레이 ── -->
+<div id="coin-particle-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none"></div>
 
 <!-- ── JS 진입점 ── -->
 

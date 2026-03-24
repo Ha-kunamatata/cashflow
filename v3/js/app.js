@@ -25,6 +25,8 @@ import {
   renderLedger,
   renderReport,
   renderGoals,
+  renderAssets,
+  renderBudget,
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
@@ -76,6 +78,21 @@ import {
   runLedgerAIAnalysis,
   openAIChat,
   sendAIChatMessage,
+  // New functions
+  openAssetForm,
+  saveAsset,
+  deleteAsset,
+  openBudgetEditor,
+  saveBudgetItem,
+  changeBudgetMonth,
+  getBudgetYear,
+  getBudgetMonth,
+  applyBudgetSuggestion,
+  checkSalaryEvent,
+  runBadgeCheck,
+  openGoalJoinSheet,
+  joinGoalByCode,
+  generateGoalShareCode,
 } from './ui.js';
 
 import {
@@ -148,6 +165,13 @@ initAuth(
     // AI 초기화
     initGeminiKeyUI();
     refreshHomeInsight();
+
+    // 월급날 이벤트 & 배지 체크
+    checkSalaryEvent();
+    runBadgeCheck();
+
+    // 예산 모듈 참조 등록 (render.js에서 year/month 접근용)
+    window._budgetUiRef = { getBudgetYear, getBudgetMonth };
 
     // 실시간 동기화
     startSync((cloudData) => {
@@ -340,6 +364,39 @@ document.getElementById('goals-list')?.addEventListener('click', (e) => {
   const delBtn = e.target.closest('.goal-del-btn');
   if (editBtn?.dataset.id) openGoalForm(editBtn.dataset.id);
   if (delBtn?.dataset.id) deleteGoal(delBtn.dataset.id);
+});
+
+// 목표 공유
+document.getElementById('btn-goal-join')?.addEventListener('click', openGoalJoinSheet);
+document.getElementById('btn-goal-join-confirm')?.addEventListener('click', joinGoalByCode);
+document.getElementById('btn-goal-join-cancel')?.addEventListener('click', () => closeSheet('goal-join-sheet'));
+document.getElementById('goal-join-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'goal-join-sheet'));
+
+// 자산 탭
+document.getElementById('btn-add-asset')?.addEventListener('click', () => openAssetForm(null));
+document.getElementById('btn-asset-save')?.addEventListener('click', saveAsset);
+document.getElementById('btn-asset-cancel')?.addEventListener('click', () => closeSheet('asset-form-sheet'));
+document.getElementById('asset-form-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'asset-form-sheet'));
+
+document.getElementById('assets-page-content')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.asset-edit-btn');
+  const delBtn  = e.target.closest('.asset-del-btn');
+  if (editBtn?.dataset.id) openAssetForm(editBtn.dataset.id);
+  if (delBtn?.dataset.id)  deleteAsset(delBtn.dataset.id);
+});
+
+// 예산 탭
+document.getElementById('btn-budget-prev')?.addEventListener('click', () => changeBudgetMonth(-1));
+document.getElementById('btn-budget-next')?.addEventListener('click', () => changeBudgetMonth(1));
+document.getElementById('btn-budget-editor-save')?.addEventListener('click', saveBudgetItem);
+document.getElementById('btn-budget-editor-cancel')?.addEventListener('click', () => closeSheet('budget-editor-sheet'));
+document.getElementById('budget-editor-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'budget-editor-sheet'));
+
+document.getElementById('budget-page-content')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.budget-cat-edit-btn');
+  const suggestBtn = e.target.closest('#btn-budget-suggest');
+  if (editBtn?.dataset.cat) openBudgetEditor(editBtn.dataset.cat);
+  if (suggestBtn) applyBudgetSuggestion();
 });
 
 // AI 기능

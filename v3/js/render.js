@@ -2,6 +2,9 @@
 // render.js — 화면 렌더링
 // ════════════════════════════════════════════════════════
 import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config.js';
+import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel } from './assets.js';
+import { getMonthBudget, getMonthActual } from './budget.js';
+import { computeStreak, BADGE_DEFS } from './streak.js';
 import {
   today,
   dateKey,
@@ -119,6 +122,8 @@ export function renderAll() {
   if (activePage?.id === 'page-ledger') renderLedger();
   if (activePage?.id === 'page-report') renderReport();
   if (activePage?.id === 'page-goals') renderGoals();
+  if (activePage?.id === 'page-assets') renderAssets();
+  if (activePage?.id === 'page-budget') renderBudget();
 }
 
 export function renderSettingsStats() {
@@ -311,6 +316,10 @@ export function renderHome() {
     fillEl.style.width = `${pct}%`;
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
+
+  // ── 하우스 레벨 & 스트릭 ───────────────────────────────
+  renderHouseLevel();
+  renderStreak();
 
   const fc = buildForecast(365);
   const firstDanger = fc.find((f) => f.balance < state.dangerLine);
@@ -1275,6 +1284,260 @@ export function renderGoals() {
           <div class="goal-progress-fill" style="width:${pct}%;background:${barColor}"></div>
         </div>
         ${monthlyRequired > 0 && pct < 100 ? `<div class="goal-monthly-req">월 <strong>${fmtShort(monthlyRequired)}</strong> 씩 모으면 목표 달성 가능해요</div>` : pct >= 100 ? '<div class="goal-monthly-req" style="color:var(--green2)">🎉 목표 달성!</div>' : ''}
+        ${g.sharedCode ? `<div style="margin-top:8px;font-size:11px;color:var(--text3)">공유 코드: <span class="goal-invite-code-inline" id="goal-share-code-${g.id}">${escapeHtml(g.sharedCode)}</span></div>` : ''}
       </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// 하우스 레벨 카드
+// ════════════════════════════════════════════════════════
+export function renderHouseLevel() {
+  const el = document.getElementById('house-level-card');
+  if (!el) return;
+
+  const totalAssets = getTotalAssets(state.assets);
+  const netWorth = totalAssets; // simplified: total assets as net worth
+  const level = getHouseLevel(netWorth);
+
+  const pct = level.next && level.next > 0
+    ? Math.min(100, Math.round((netWorth / level.next) * 100))
+    : 100;
+
+  el.innerHTML = `
+    <div class="house-level-inner">
+      <span class="house-emoji">${level.icon}</span>
+      <div class="house-level-info">
+        <div style="font-size:14px;font-weight:800;color:var(--text)">${level.label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">순자산 ${fmtShort(netWorth)}</div>
+        ${level.nextLabel ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">다음: ${level.nextLabel} (${fmtShort(level.next)})</div>` : '<div style="font-size:10px;color:var(--yellow);margin-top:2px">최고 레벨 달성!</div>'}
+      </div>
+    </div>
+    ${level.next ? `
+    <div class="house-progress-track">
+      <div class="house-progress-fill" style="width:${pct}%"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">${pct}%</div>` : ''}
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// 스트릭 칩
+// ════════════════════════════════════════════════════════
+export function renderStreak() {
+  const el = document.getElementById('streak-chip-home');
+  if (!el) return;
+
+  const { count, hasToday } = computeStreak(state.ledgerData);
+  if (count === 0) {
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = 'inline-flex';
+  el.innerHTML = `🔥 ${count}일 연속 기록 중${hasToday ? ' ✓' : ''}`;
+}
+
+// ════════════════════════════════════════════════════════
+// 자산 탭
+// ════════════════════════════════════════════════════════
+export function renderAssets() {
+  const container = document.getElementById('assets-page-content');
+  if (!container) return;
+
+  const assets = state.assets || [];
+  const total = getTotalAssets(assets);
+  const usable = getUsableMoney(assets);
+  const byPurpose = getAssetsByPurpose(assets);
+
+  // Purpose donut SVG
+  const purposes = Object.entries(byPurpose).sort((a, b) => b[1] - a[1]);
+  let donutSvg = '';
+  const R = 40, CX = 48, CY = 48;
+  if (purposes.length > 0 && total > 0) {
+    let angle = -Math.PI / 2;
+    purposes.forEach(([purpose, amt]) => {
+      const pct = amt / total;
+      const a = pct * 2 * Math.PI;
+      const x1 = CX + R * Math.cos(angle);
+      const y1 = CY + R * Math.sin(angle);
+      const x2 = CX + R * Math.cos(angle + a);
+      const y2 = CY + R * Math.sin(angle + a);
+      const large = a > Math.PI ? 1 : 0;
+      const col = PURPOSE_COLORS[purpose] || '#64748b';
+      donutSvg += `<path d="M${CX},${CY} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" opacity="0.88"/>`;
+      angle += a;
+    });
+    donutSvg += `<circle cx="${CX}" cy="${CY}" r="24" fill="var(--bg2)"/>`;
+    donutSvg += `<text x="${CX}" y="${CY + 4}" fill="var(--text)" font-size="9" text-anchor="middle" font-family="monospace" font-weight="700">${fmtShort(total)}</text>`;
+  }
+
+  const purposeLegend = purposes.map(([p, amt]) => {
+    const col = PURPOSE_COLORS[p] || '#64748b';
+    return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)">
+      <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>
+      <span>${escapeHtml(p)}</span>
+      <span style="margin-left:auto;font-family:var(--mono);font-weight:700">${fmtShort(amt)}</span>
+    </div>`;
+  }).join('');
+
+  // Asset list
+  const assetItems = assets.map(a => {
+    const typeInfo = ASSET_TYPES[a.type] || ASSET_TYPES.other;
+    const col = PURPOSE_COLORS[a.purpose] || '#64748b';
+    return `
+      <div class="asset-card">
+        <div class="asset-icon">${typeInfo.icon}</div>
+        <div class="asset-info">
+          <div class="asset-name">${escapeHtml(a.name)}</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:3px">
+            <span class="purpose-tag" style="background:${col}22;color:${col};border-color:${col}44">${escapeHtml(a.purpose)}</span>
+            <span style="font-size:10px;color:var(--text3)">${escapeHtml(typeInfo.label)}</span>
+          </div>
+          ${a.memo ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">${escapeHtml(a.memo)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span class="asset-amount">${fmtShort(a.amount)}</span>
+          <div style="display:flex;gap:4px">
+            <button class="icon-btn edit asset-edit-btn" data-id="${a.id}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn del asset-del-btn" data-id="${a.id}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px">총 자산</div>
+          <div style="font-family:var(--mono);font-size:28px;font-weight:900;color:var(--text)">${fmtShort(total)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3)">사용 가능</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent2)">${fmtShort(usable)}</div>
+        </div>
+      </div>
+      ${purposes.length > 0 ? `
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <svg width="96" height="96" viewBox="0 0 96 96" style="flex-shrink:0">${donutSvg}</svg>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:140px">${purposeLegend}</div>
+      </div>` : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">자산 목록</div>
+      ${assets.length === 0 ? '<div class="empty-state" style="padding:24px 0">등록된 자산이 없습니다<br>아래 버튼으로 추가하세요</div>' : `<div class="assets-list">${assetItems}</div>`}
+    </div>
+
+    <!-- 배지 섹션 -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">배지</div>
+      <div class="badge-grid">
+        ${BADGE_DEFS.map(b => {
+          const earned = (state.badges || []).includes(b.id);
+          return `<div class="badge-item ${earned ? 'earned' : 'locked'}">
+            <span style="font-size:22px">${b.icon}</span>
+            <span style="font-size:10px;font-weight:700;color:var(--text)">${escapeHtml(b.label)}</span>
+            <span style="font-size:9px;color:var(--text3)">${escapeHtml(b.desc)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// 예산 탭
+// ════════════════════════════════════════════════════════
+export function renderBudget() {
+  const container = document.getElementById('budget-page-content');
+  if (!container) return;
+
+  // Get year/month from ui.js budget state
+  let budgetYear, budgetMonth;
+  try {
+    const uiModule = window._budgetUiRef;
+    budgetYear  = uiModule?.getBudgetYear?.()  ?? new Date().getFullYear();
+    budgetMonth = uiModule?.getBudgetMonth?.() ?? new Date().getMonth();
+  } catch (_) {
+    budgetYear  = new Date().getFullYear();
+    budgetMonth = new Date().getMonth();
+  }
+
+  // Update header label
+  const labelEl = document.getElementById('budget-month-label');
+  if (labelEl) labelEl.textContent = `${budgetYear}년 ${budgetMonth + 1}월`;
+
+  const budget = getMonthBudget(state.budgets, budgetYear, budgetMonth);
+  const actual = getMonthActual(state.ledgerData, budgetYear, budgetMonth);
+
+  // All categories with budget or spending
+  const allCats = new Set([...Object.keys(budget), ...Object.keys(actual)]);
+  const totalBudget = Object.values(budget).reduce((s, v) => s + v, 0);
+  const totalActual = Object.values(actual).reduce((s, v) => s + v, 0);
+  const totalPct = totalBudget > 0 ? Math.min(100, Math.round((totalActual / totalBudget) * 100)) : 0;
+
+  // Circular gauge SVG
+  const gaugeR = 42, gaugeCX = 52, gaugeCY = 52;
+  const circumference = 2 * Math.PI * gaugeR;
+  const dashOffset = circumference * (1 - totalPct / 100);
+  const gaugeColor = totalPct >= 100 ? '#ef4444' : totalPct >= 80 ? '#f97316' : '#10b981';
+  const gaugeSvg = `
+    <svg width="104" height="104" viewBox="0 0 104 104">
+      <circle cx="${gaugeCX}" cy="${gaugeCY}" r="${gaugeR}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10"/>
+      <circle cx="${gaugeCX}" cy="${gaugeCY}" r="${gaugeR}" fill="none" stroke="${gaugeColor}" stroke-width="10"
+        stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${dashOffset.toFixed(1)}"
+        stroke-linecap="round" transform="rotate(-90 ${gaugeCX} ${gaugeCY})" style="transition:stroke-dashoffset 1s ease"/>
+      <text x="${gaugeCX}" y="${gaugeCY - 6}" fill="var(--text)" font-size="16" text-anchor="middle" font-family="monospace" font-weight="900">${totalPct}%</text>
+      <text x="${gaugeCX}" y="${gaugeCY + 10}" fill="var(--text3)" font-size="8" text-anchor="middle">사용</text>
+    </svg>`;
+
+  const catRows = [...allCats].map(cat => {
+    const b = budget[cat] || 0;
+    const a = actual[cat] || 0;
+    const pct = b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
+    const over = a > b && b > 0;
+    const fillColor = over ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
+    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    return `
+      <div class="budget-cat-row" id="budget-row-${escapeHtml(cat)}" data-cat="${escapeHtml(cat)}">
+        <span class="lstat-cat-dot" style="background:${col}"></span>
+        <span style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${escapeHtml(cat)}</span>
+        <div class="budget-progress">
+          <div class="budget-progress-fill" style="width:${pct}%;background:${fillColor}"></div>
+        </div>
+        <span style="font-size:11px;font-family:var(--mono);min-width:70px;text-align:right;${over ? 'color:var(--red2)' : ''}">
+          ${fmtShort(a)}${b > 0 ? `<span style="color:var(--text3)">/${fmtShort(b)}</span>` : ''}
+        </span>
+        <button class="icon-btn edit budget-cat-edit-btn" data-cat="${escapeHtml(cat)}" style="margin-left:4px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+        </button>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        ${gaugeSvg}
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:4px">${budgetYear}년 ${budgetMonth + 1}월 예산</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--text)">${fmtShort(totalActual)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">예산 ${fmtShort(totalBudget)} 중</div>
+          ${totalActual > totalBudget && totalBudget > 0 ? `<div class="budget-over" style="margin-top:4px;font-size:11px">⚠️ 예산 초과 ${fmtShort(totalActual - totalBudget)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">카테고리별 예산
+        <button class="btn btn-ghost" id="btn-budget-suggest" style="font-size:11px;padding:4px 10px"><div class="ripple-container"></div>✨ 자동 추천</button>
+      </div>
+      ${allCats.size === 0 ? '<div class="empty-state" style="padding:20px 0">지출 내역 또는 예산이 없습니다</div>' : catRows}
+    </div>
+  `;
 }

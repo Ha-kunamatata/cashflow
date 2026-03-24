@@ -6,6 +6,9 @@ import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadg
 import { state, save, syncLedgerToBalance } from './state.js';
 import * as renderModule from './render.js';
 import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI } from './ai.js';
+import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets.js';
+import { setMonthBudget, getMonthBudget } from './budget.js';
+import { computeStreak, checkBadges, BADGE_DEFS } from './streak.js';
 
 // ── 목표 관련 ────────────────────────────────────────────
 let _editGoalId = null;
@@ -62,6 +65,8 @@ export function deleteGoal(id) {
 // ── 네비게이션 ─────────────────────────────────────────
 const PAGE_MAP = {
   home: 'page-home',
+  assets: 'page-assets',
+  budget: 'page-budget',
   forecast: 'page-forecast',
   entries: 'page-entries',
   cards: 'page-cards',
@@ -88,6 +93,8 @@ export function navigate(page, btn) {
   if (page === 'ledger') renderModule.renderLedger();
   if (page === 'report') renderModule.renderReport();
   if (page === 'goals') renderModule.renderGoals();
+  if (page === 'assets') renderModule.renderAssets();
+  if (page === 'budget') renderModule.renderBudget();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -581,6 +588,10 @@ export function importData(e) {
       if (typeof imported.checkData !== 'object' || imported.checkData === null) imported.checkData = {};
       if (typeof imported.ledgerData !== 'object' || imported.ledgerData === null) imported.ledgerData = {};
       if (typeof imported.balance !== 'number') delete imported.balance;
+      if (!Array.isArray(imported.assets)) imported.assets = [];
+      if (typeof imported.budgets !== 'object' || imported.budgets === null || Array.isArray(imported.budgets)) imported.budgets = {};
+      if (!Array.isArray(imported.badges)) imported.badges = [];
+      if (typeof imported.streak !== 'object' || imported.streak === null || Array.isArray(imported.streak)) imported.streak = { count: 0, lastDate: '' };
       Object.assign(state, imported);
       save();
       renderModule.renderAll();
@@ -600,6 +611,10 @@ export function resetAll() {
   state.ledgerData = {};
   state.appliedCheckData = {};
   state.balance = 0;
+  state.assets = [];
+  state.budgets = {};
+  state.badges = [];
+  state.streak = { count: 0, lastDate: '' };
 
   save();
   applyTheme();
@@ -623,9 +638,17 @@ export function initGeminiKeyUI() {
     if (status) status.textContent = stored ? '✅ API 키가 저장되어 있습니다' : '키를 입력하면 AI 기능이 활성화됩니다';
   }
 
-  const hasKey = hasGeminiKey();
-  if (fab) fab.style.display = hasKey ? 'flex' : 'none';
-  if (insightCard) insightCard.style.display = hasKey ? 'block' : 'none';
+  // AI insight card & FAB are always visible
+  if (fab) fab.style.display = 'flex';
+  if (insightCard) insightCard.style.display = 'block';
+
+  // If no key, show setup message in insight card
+  if (!hasGeminiKey()) {
+    const content = document.getElementById('ai-insight-content');
+    if (content) {
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui.js').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+    }
+  }
 }
 
 export function saveGeminiKey() {
@@ -637,17 +660,26 @@ export function saveGeminiKey() {
   if (val === '••••••••••••••••••••') { showBadge('ℹ️ 변경사항 없음'); return; }
 
   setGeminiKey(val);
-  const fab = document.getElementById('btn-ai-chat-fab');
-  const insightCard = document.getElementById('ai-insight-card');
   const hasKey = hasGeminiKey();
 
-  if (fab) fab.style.display = hasKey ? 'flex' : 'none';
-  if (insightCard) insightCard.style.display = hasKey ? 'block' : 'none';
+  // FAB and insight card always visible
+  const fab = document.getElementById('btn-ai-chat-fab');
+  const insightCard = document.getElementById('ai-insight-card');
+  if (fab) fab.style.display = 'flex';
+  if (insightCard) insightCard.style.display = 'block';
+
   if (input) input.value = hasKey ? '••••••••••••••••••••' : '';
   if (status) status.textContent = hasKey ? '✅ API 키가 저장되었습니다' : 'API 키가 삭제되었습니다';
   showBadge(hasKey ? '✅ API 키 저장됨' : '🗑️ API 키 삭제됨');
 
-  if (hasKey) refreshHomeInsight();
+  if (hasKey) {
+    refreshHomeInsight();
+  } else {
+    const content = document.getElementById('ai-insight-content');
+    if (content) {
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui.js').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+    }
+  }
 }
 
 // ── 홈 AI 인사이트 ────────────────────────────────────
@@ -667,7 +699,13 @@ export async function refreshHomeInsight() {
 // ── 통계 탭 AI 분석 ───────────────────────────────────
 export async function runLedgerAIAnalysis() {
   if (!hasGeminiKey()) {
-    alert('설정 탭에서 Gemini API 키를 먼저 입력해주세요.');
+    openSheet('ai-analysis-sheet');
+    const content = document.getElementById('ai-analysis-content');
+    if (content) content.innerHTML = `🤖 AI 분석을 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료)<br><br><button class="btn btn-ghost" id="btn-goto-settings-from-ai" style="font-size:12px;padding:6px 14px"><div class="ripple-container"></div>설정으로 →</button>`;
+    document.getElementById('btn-goto-settings-from-ai')?.addEventListener('click', () => {
+      closeSheet('ai-analysis-sheet');
+      navigate('settings');
+    });
     return;
   }
   const { currentLedgerYear: year, currentLedgerMonth: month } = renderModule;
@@ -692,11 +730,18 @@ export async function runLedgerAIAnalysis() {
 let _chatMessages = [];
 
 export function openAIChat() {
+  openSheet('ai-chat-sheet');
   if (!hasGeminiKey()) {
-    alert('설정 탭에서 Gemini API 키를 먼저 입력해주세요.');
+    const container = document.getElementById('ai-chat-messages');
+    if (container) {
+      container.innerHTML = `<div style="text-align:center;padding:20px;font-size:13px;color:var(--text2);line-height:1.8">🤖 AI 채팅을 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료)<br><br><button class="btn btn-ghost" id="btn-goto-settings-from-chat" style="font-size:12px;padding:6px 14px"><div class="ripple-container"></div>설정으로 →</button></div>`;
+      document.getElementById('btn-goto-settings-from-chat')?.addEventListener('click', () => {
+        closeSheet('ai-chat-sheet');
+        navigate('settings');
+      });
+    }
     return;
   }
-  openSheet('ai-chat-sheet');
   _renderChatMessages();
   setTimeout(() => document.getElementById('ai-chat-input')?.focus(), 80);
 }
@@ -736,4 +781,210 @@ export async function sendAIChatMessage() {
     _chatMessages[_chatMessages.length - 1] = { role: 'assistant', content: `⚠️ 오류: ${e.message}` };
   }
   _renderChatMessages();
+}
+
+// ════════════════════════════════════════════════════════
+// 자산 관리
+// ════════════════════════════════════════════════════════
+let _editAssetId = null;
+
+export function openAssetForm(id) {
+  _editAssetId = id || null;
+  const asset = id ? (state.assets || []).find(a => a.id === id) : null;
+
+  document.getElementById('asset-form-title').textContent = asset ? '자산 수정' : '자산 추가';
+  document.getElementById('asset-name').value = asset?.name || '';
+  document.getElementById('asset-amount').value = asset?.amount || '';
+  document.getElementById('asset-memo').value = asset?.memo || '';
+
+  // 타입 선택
+  const typeEl = document.getElementById('asset-type');
+  if (typeEl) typeEl.value = asset?.type || 'bank';
+
+  // 용도 선택
+  const purposeEl = document.getElementById('asset-purpose');
+  if (purposeEl) purposeEl.value = asset?.purpose || '자유';
+
+  openSheet('asset-form-sheet');
+  setTimeout(() => document.getElementById('asset-name')?.focus(), 80);
+}
+
+export function saveAsset() {
+  const name    = document.getElementById('asset-name')?.value.trim();
+  const amount  = Number(document.getElementById('asset-amount')?.value) || 0;
+  const type    = document.getElementById('asset-type')?.value || 'bank';
+  const purpose = document.getElementById('asset-purpose')?.value || '자유';
+  const memo    = document.getElementById('asset-memo')?.value.trim() || '';
+
+  if (!name)   { alert('자산명을 입력하세요'); return; }
+  if (!amount) { alert('금액을 입력하세요'); return; }
+
+  if (!state.assets) state.assets = [];
+
+  const asset = { id: _editAssetId || uid(), name, amount, type, purpose, memo };
+
+  if (_editAssetId) {
+    state.assets = state.assets.map(a => a.id === _editAssetId ? asset : a);
+  } else {
+    state.assets.push(asset);
+  }
+
+  save();
+  closeSheet('asset-form-sheet');
+  renderModule.renderAssets();
+  renderModule.renderHouseLevel();
+  showBadge('✅ 자산 저장됨');
+}
+
+export function deleteAsset(id) {
+  if (!confirm('자산을 삭제할까요?')) return;
+  state.assets = (state.assets || []).filter(a => a.id !== id);
+  save();
+  renderModule.renderAssets();
+  renderModule.renderHouseLevel();
+  showBadge('🗑️ 자산 삭제됨');
+}
+
+// ════════════════════════════════════════════════════════
+// 예산 관리
+// ════════════════════════════════════════════════════════
+let _budgetEditCat = null;
+let _budgetYear = new Date().getFullYear();
+let _budgetMonth = new Date().getMonth();
+
+export function getBudgetYear()  { return _budgetYear; }
+export function getBudgetMonth() { return _budgetMonth; }
+
+export function changeBudgetMonth(delta) {
+  _budgetMonth += delta;
+  if (_budgetMonth < 0)  { _budgetMonth = 11; _budgetYear--; }
+  if (_budgetMonth > 11) { _budgetMonth = 0;  _budgetYear++; }
+  renderModule.renderBudget();
+}
+
+export function openBudgetEditor(cat) {
+  _budgetEditCat = cat;
+  const existing = getMonthBudget(state.budgets, _budgetYear, _budgetMonth)[cat] || 0;
+  document.getElementById('budget-editor-cat').textContent = cat;
+  document.getElementById('budget-editor-amount').value = existing || '';
+  openSheet('budget-editor-sheet');
+  setTimeout(() => document.getElementById('budget-editor-amount')?.focus(), 80);
+}
+
+export function saveBudgetItem() {
+  const amount = Number(document.getElementById('budget-editor-amount')?.value) || 0;
+  setMonthBudget(state.budgets, _budgetYear, _budgetMonth, _budgetEditCat, amount);
+  save();
+  closeSheet('budget-editor-sheet');
+  renderModule.renderBudget();
+  showBadge('✅ 예산 저장됨');
+}
+
+export function applyBudgetSuggestion() {
+  import('./budget.js').then(({ suggestBudget }) => {
+    const suggested = suggestBudget(state.ledgerData, _budgetYear, _budgetMonth);
+    for (const [cat, amt] of Object.entries(suggested)) {
+      setMonthBudget(state.budgets, _budgetYear, _budgetMonth, cat, amt);
+    }
+    save();
+    renderModule.renderBudget();
+    showBadge('✅ 예산 자동 추천 적용됨');
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// 월급날 이벤트
+// ════════════════════════════════════════════════════════
+export function checkSalaryEvent() {
+  const t = new Date();
+  const todayStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  const lastShown = localStorage.getItem('salary_event_date');
+  if (lastShown === todayStr) return;
+
+  const salaryEntry = (state.entries || []).find(e =>
+    e.type === 'income' && e.category === '월급' && e.repeat === '매월' && e.day
+  );
+  if (!salaryEntry) return;
+  if (salaryEntry.day !== t.getDate()) return;
+
+  localStorage.setItem('salary_event_date', todayStr);
+  showCoinParticles();
+  showBadge('💰 월급날이에요!');
+}
+
+function showCoinParticles() {
+  const overlay = document.getElementById('coin-particle-overlay');
+  if (!overlay) return;
+  overlay.innerHTML = '';
+  overlay.style.display = 'block';
+  for (let i = 0; i < 30; i++) {
+    const coin = document.createElement('div');
+    coin.className = 'coin-particle';
+    coin.textContent = '💰';
+    coin.style.left = Math.random() * 100 + '%';
+    coin.style.animationDelay = Math.random() * 1.5 + 's';
+    coin.style.fontSize = (14 + Math.random() * 14) + 'px';
+    overlay.appendChild(coin);
+  }
+  setTimeout(() => { overlay.style.display = 'none'; overlay.innerHTML = ''; }, 3500);
+}
+
+// ════════════════════════════════════════════════════════
+// 배지 체크 & 목표 공유
+// ════════════════════════════════════════════════════════
+export function runBadgeCheck() {
+  const newBadges = checkBadges(state);
+  if (newBadges.length > 0) {
+    if (!state.badges) state.badges = [];
+    state.badges.push(...newBadges);
+    save();
+    for (const bid of newBadges) {
+      const def = BADGE_DEFS.find(b => b.id === bid);
+      if (def) showBadge(`${def.icon} ${def.label} 배지 획득!`);
+    }
+  }
+}
+
+// ── 목표 공유 코드 ─────────────────────────────────────
+export function openGoalJoinSheet() {
+  document.getElementById('goal-join-code-input').value = '';
+  openSheet('goal-join-sheet');
+  setTimeout(() => document.getElementById('goal-join-code-input')?.focus(), 80);
+}
+
+export function joinGoalByCode() {
+  const code = document.getElementById('goal-join-code-input')?.value.trim().toUpperCase();
+  if (!code) { alert('초대 코드를 입력하세요'); return; }
+
+  // Simple: find goal with matching sharedCode
+  const allGoals = state.goals || [];
+  const match = allGoals.find(g => g.sharedCode === code);
+  if (!match) {
+    alert('해당 코드의 목표를 찾을 수 없습니다.');
+    return;
+  }
+
+  // Add current user as member
+  if (!match.members) match.members = {};
+  const userKey = (window.currentUser?.displayName || window.currentUser?.email || 'user').replace(/[^a-zA-Z0-9]/g, '_');
+  match.members[userKey] = { name: window.currentUser?.displayName || '참여자', joinedAt: new Date().toISOString() };
+
+  save();
+  closeSheet('goal-join-sheet');
+  renderModule.renderGoals();
+  showBadge('✅ 목표에 참여했어요!');
+}
+
+export function generateGoalShareCode(goalId) {
+  const goal = (state.goals || []).find(g => g.id === goalId);
+  if (!goal) return;
+
+  if (!goal.sharedCode) {
+    goal.sharedCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    save();
+  }
+
+  const codeEl = document.getElementById(`goal-share-code-${goalId}`);
+  if (codeEl) codeEl.textContent = goal.sharedCode;
+  showBadge(`📋 코드: ${goal.sharedCode}`);
 }

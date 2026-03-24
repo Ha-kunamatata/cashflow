@@ -14,6 +14,10 @@ export const state = {
   appliedCheckData: {}, // 잔고에 이미 반영된 내역 (날짜별 순지출)
   goals: [],
   theme: 'dark',
+  assets: [],           // 자산 목록
+  budgets: {},          // { "YYYY-MM": { "category": amount } }
+  badges: [],           // earned badge ids
+  streak: { count: 0, lastDate: '' },
 };
 
 // ── 저장 ──────────────────────────────────────────────
@@ -37,6 +41,10 @@ function validateState(d) {
   if ('cardData'         in d && (typeof d.cardData !== 'object' || Array.isArray(d.cardData))) return false;
   if ('ledgerData'       in d && (typeof d.ledgerData !== 'object' || Array.isArray(d.ledgerData))) return false;
   if ('appliedCheckData' in d && (typeof d.appliedCheckData !== 'object' || Array.isArray(d.appliedCheckData))) return false;
+  if ('assets'   in d && !Array.isArray(d.assets))   return false;
+  if ('badges'   in d && !Array.isArray(d.badges))   return false;
+  if ('budgets'  in d && (typeof d.budgets  !== 'object' || Array.isArray(d.budgets)))  return false;
+  if ('streak'   in d && (typeof d.streak   !== 'object' || Array.isArray(d.streak)))   return false;
   return true;
 }
 
@@ -110,6 +118,10 @@ export function initDefaultData() {
   if (!state.goals) state.goals = [];
   if (!state.checkData) state.checkData = {};
   if (!state.ledgerData) state.ledgerData = {};
+  if (!state.assets) state.assets = [];
+  if (!state.budgets) state.budgets = {};
+  if (!state.badges) state.badges = [];
+  if (!state.streak) state.streak = { count: 0, lastDate: '' };
   if (state.entries.length > 0) return;
 
   state.balance = 923057;
