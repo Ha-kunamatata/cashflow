@@ -863,3 +863,142 @@ body.light-theme .report-cat-modal-panel { background:var(--bg2); }
 body.light-theme .report-modal-cat-row { background:var(--bg3); border-color:var(--border); }
 body.light-theme .report-header-item { background:var(--bg3); border-color:var(--border); }
 body.light-theme .topbar-balance-pill { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); }
+
+/* ── 항목 서브탭 시각적 강조 ── */
+.ledger-sub-tab { transition: all 0.18s cubic-bezier(0.4,0,0.2,1); }
+.ledger-sub-tab:not(.active) { opacity: 0.65; }
+.ledger-sub-tab.active { transform: scale(1.02); }
+#entries-panel-fixed, #entries-panel-cards { animation: fadeIn 0.22s ease; }
+
+/* ── 요약 아이템 클릭 가능 ── */
+.summary-item { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
+.summary-item:hover { transform: translateY(-2px); border-color: rgba(96,165,250,0.25); }
+.summary-item:active { transform: scale(0.98); }
+
+/* ── 인포 칩 ── */
+.info-chip { display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);color:var(--text2);cursor:pointer;transition:background 0.15s;white-space:nowrap; }
+.info-chip:hover { background:rgba(255,255,255,0.10); }
+.info-chip.success { background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.25);color:var(--green2); }
+.info-chip.warning { background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25);color:var(--red2); }
+.info-chip.salary { background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.25);color:var(--accent2); }
+
+/* ── 이벤트 행 클릭 가능 ── */
+.event-row { cursor: pointer; border-radius: 10px; padding: 8px 6px; transition: background 0.12s; margin-bottom: 4px; }
+.event-row:hover { background: rgba(255,255,255,0.05); }
+.event-row:active { background: rgba(255,255,255,0.09); }
+
+/* ── 하우스 레벨 카드 클릭 가능 ── */
+.house-level-card { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
+.house-level-card:hover { transform: translateY(-2px); border-color: rgba(99,102,241,0.3); }
+
+/* ── 상세 팝업 시트 ── */
+.detail-sheet { max-height: 80vh; overflow-y: auto; }
+.detail-sheet-header { font-size: 18px; font-weight: 900; color: var(--text); margin-bottom: 16px; }
+.detail-item-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.detail-item-row:last-child { border-bottom: none; }
+.detail-item-label { font-size: 13px; color: var(--text2); }
+.detail-item-value { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* ── 달력 고정항목 표시 ── */
+.ledger-day-fixed { font-size: 9px; color: var(--accent2); opacity: 0.7; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ledger-day-fixed-inc { color: var(--green2); }
+
+/* ── 달력 월 선택 ── */
+.month-picker-sheet { padding: 20px; }
+.month-picker-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 12px; }
+.month-picker-btn { padding: 10px 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; font-family: var(--font); }
+.month-picker-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.3); color: var(--text); }
+.month-picker-btn.current { background: linear-gradient(135deg,rgba(59,130,246,0.9),rgba(37,99,235,0.9)); border-color: transparent; color: #fff; }
+.month-picker-year-nav { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.month-picker-year { font-size: 18px; font-weight: 900; color: var(--text); font-family: var(--mono); }
+
+/* ════════════════════════════════════════════════════════
+   목표 탭 고퀄리티 개선
+   ════════════════════════════════════════════════════════ */
+.goal-card-urgent { border-color: rgba(239,68,68,0.3) !important; background: rgba(239,68,68,0.03), var(--card-grad),rgba(15,23,42,0.70) !important; }
+.goal-card-warning { border-color: rgba(249,115,22,0.3) !important; }
+
+/* ════════════════════════════════════════════════════════
+   항목 탭 서브탭 강조
+   ════════════════════════════════════════════════════════ */
+.ledger-sub-tab { transition: all 0.18s cubic-bezier(0.4,0,0.2,1); }
+.ledger-sub-tab:not(.active) { opacity: 0.6; }
+.ledger-sub-tab.active { transform: scale(1.02); }
+#entries-panel-fixed, #entries-panel-cards { animation: fadeIn 0.22s ease; }
+
+/* ════════════════════════════════════════════════════════
+   요약 카드 클릭
+   ════════════════════════════════════════════════════════ */
+.summary-item[data-action] { cursor: pointer; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; }
+.summary-item[data-action]:hover { transform: translateY(-2px); border-color: rgba(96,165,250,0.3); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.summary-item[data-action]:active { transform: scale(0.98); }
+
+/* ════════════════════════════════════════════════════════
+   정보 칩 개선
+   ════════════════════════════════════════════════════════ */
+.info-chip { display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);color:var(--text2);cursor:pointer;transition:background 0.15s, transform 0.12s;white-space:nowrap; }
+.info-chip:hover { background:rgba(255,255,255,0.11); transform:translateY(-1px); }
+.info-chip:active { transform:scale(0.97); }
+.info-chip.success { background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.25);color:var(--green2); }
+.info-chip.warning { background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25);color:var(--red2); }
+.info-chip.salary { background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.25);color:var(--accent2); }
+
+/* ════════════════════════════════════════════════════════
+   이벤트 열 클릭 강조
+   ════════════════════════════════════════════════════════ */
+.event-row { cursor: pointer; border-radius: 10px; padding: 8px 6px; transition: background 0.12s; margin: 0 -6px 2px; }
+.event-row:hover { background: rgba(255,255,255,0.05); }
+.event-row:active { background: rgba(255,255,255,0.09); }
+
+/* ════════════════════════════════════════════════════════
+   하우스 레벨 카드 클릭
+   ════════════════════════════════════════════════════════ */
+.house-level-card { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
+.house-level-card:hover { transform: translateY(-2px); border-color: rgba(99,102,241,0.3); }
+.house-level-card:active { transform: scale(0.98); }
+.house-tap-hint { font-size: 10px; color: var(--text3); text-align: center; margin-top: 6px; letter-spacing: 0.3px; }
+
+/* ════════════════════════════════════════════════════════
+   상세 팝업 시트
+   ════════════════════════════════════════════════════════ */
+.detail-sheet { max-height: 80vh; overflow-y: auto; }
+.detail-sheet-header { font-size: 18px; font-weight: 900; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.detail-item-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.detail-item-row:last-child { border-bottom: none; }
+.detail-item-label { font-size: 13px; color: var(--text2); font-weight: 600; }
+.detail-item-value { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); }
+.detail-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+.detail-stat-item { padding: 12px; border-radius: 14px; background: var(--bg3); border: 1px solid var(--border); text-align: center; }
+.detail-stat-val { font-family: var(--mono); font-size: 20px; font-weight: 900; color: var(--text); line-height: 1; }
+.detail-stat-lbl { font-size: 10px; color: var(--text3); font-weight: 700; margin-top: 4px; }
+
+/* ════════════════════════════════════════════════════════
+   월 선택 피커
+   ════════════════════════════════════════════════════════ */
+.month-picker-sheet { padding: 24px 20px; }
+.month-picker-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 16px; }
+.month-picker-btn { padding: 12px 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.15s; font-family: var(--font); }
+.month-picker-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.3); color: var(--text); }
+.month-picker-btn.current-month { background: linear-gradient(135deg,rgba(59,130,246,0.9),rgba(37,99,235,0.9)); border-color: transparent; color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
+.month-picker-year-nav { display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 4px; }
+.month-picker-year { font-size: 20px; font-weight: 900; color: var(--text); font-family: var(--mono); min-width: 80px; text-align: center; }
+
+/* ════════════════════════════════════════════════════════
+   달력 고정항목 표시
+   ════════════════════════════════════════════════════════ */
+.ledger-day-fixed { font-size: 8px; color: var(--accent2); opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; font-style: italic; }
+.ledger-day-fixed-inc { color: var(--green2) !important; }
+
+/* ════════════════════════════════════════════════════════
+   달력 월 레이블 클릭 버튼
+   ════════════════════════════════════════════════════════ */
+.ledger-month-chip-btn { cursor: pointer; user-select: none; transition: opacity 0.15s; }
+.ledger-month-chip-btn:hover { opacity: 0.75; }
+.ledger-month-chip-btn::after { content: ' ▾'; font-size: 10px; opacity: 0.5; }
+
+/* ════════════════════════════════════════════════════════
+   라이트 테마 오버라이드
+   ════════════════════════════════════════════════════════ */
+body.light-theme .info-chip { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
+body.light-theme .event-row:hover { background:rgba(0,0,0,0.03); }
+body.light-theme .month-picker-btn { background:var(--bg3); border-color:var(--border); }

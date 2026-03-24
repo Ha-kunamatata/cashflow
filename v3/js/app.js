@@ -28,6 +28,9 @@ import {
   renderAssets,
   renderBudget,
   renderReportCatModal,
+  renderLedgerForecast,
+  setLedgerForecastPeriod,
+  shiftLedgerForecastMonth,
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
@@ -35,6 +38,9 @@ import {
   setLedgerSubTab,
   setLedgerStatsTab,
   renderLedgerStats,
+  renderHouseLevel,
+  currentLedgerYear,
+  currentLedgerMonth,
 } from './render.js';
 
 import {
@@ -232,6 +238,8 @@ function _applyBalanceVisibility() {
     if (maskEl) maskEl.style.display = 'none';
     if (eyeOpen) eyeOpen.style.display = '';
     if (eyeClosed) eyeClosed.style.display = 'none';
+    // 잔고 복원: balEl에서 현재 텍스트 가져옴
+    if (topbarBal) topbarBal.textContent = balEl.textContent || '-';
   }
 }
 window._applyBalanceVisibility = _applyBalanceVisibility;
@@ -322,16 +330,22 @@ document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) =
   if (day?.dataset.dk) openLedgerDaySheet(day.dataset.dk);
 });
 
-// 가계부 서브탭 (예측 버튼은 forecast 페이지 이동)
-document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
-  btn.addEventListener('click', () => {
-    if (btn.dataset.tab === 'forecast-link') {
-      navigate('forecast');
-    } else {
-      setLedgerSubTab(btn.dataset.tab);
-    }
-  })
+// 가계부 서브탭 (모두 인라인 — 예측도 페이지 이동 없이 표시)
+document.querySelectorAll('#page-ledger .ledger-sub-tab').forEach(btn =>
+  btn.addEventListener('click', () => setLedgerSubTab(btn.dataset.tab))
 );
+
+// 가계부 예측 뷰 기간 버튼
+document.addEventListener('click', (e) => {
+  const periodBtn = e.target.closest('[data-lf-period]');
+  if (periodBtn && document.getElementById('ledger-view-forecast')?.contains(periodBtn)) {
+    setLedgerForecastPeriod(parseInt(periodBtn.dataset.lfPeriod), periodBtn);
+  }
+});
+
+// 예측 월 이동 버튼 (prev/next)
+document.getElementById('btn-lf-month-prev')?.addEventListener('click', () => shiftLedgerForecastMonth(-1));
+document.getElementById('btn-lf-month-next')?.addEventListener('click', () => shiftLedgerForecastMonth(1));
 
 // 가계부 달력 월 이동
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
@@ -486,3 +500,210 @@ document.getElementById('btn-ai-chat-send')?.addEventListener('click', sendAICha
 document.getElementById('ai-chat-input')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendAIChatMessage();
 });
+
+// ══════════════════════════════════════════════════════════════
+// 홈 요약 카드 클릭 → 관련 탭으로 이동
+// ══════════════════════════════════════════════════════════════
+document.querySelector('#page-home .summary-grid')?.addEventListener('click', (e) => {
+  const item = e.target.closest('.summary-item[data-action]');
+  if (!item) return;
+  const action = item.dataset.action;
+  if (action === 'entries-income' || action === 'entries-expense') {
+    navigate('entries');
+    setTimeout(() => {
+      const filter = action === 'entries-income' ? '수입' : '지출';
+      document.querySelector(`.filter-tab[data-entry-filter="${filter}"]`)?.click();
+    }, 100);
+  } else if (action === 'entries-halbu') {
+    navigate('entries');
+    setTimeout(() => document.querySelector('.filter-tab[data-entry-filter="할부"]')?.click(), 100);
+  } else if (action === 'forecast') {
+    navigate('forecast');
+  } else if (action === 'ledger') {
+    navigate('ledger');
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 인포 칩 클릭
+// ══════════════════════════════════════════════════════════════
+document.getElementById('balance-chips-row')?.addEventListener('click', (e) => {
+  const chip = e.target.closest('.info-chip');
+  if (!chip) return;
+  const text = chip.textContent;
+  if (text.includes('오늘')) {
+    navigate('ledger');
+  } else if (text.includes('월급')) {
+    navigate('entries');
+  } else if (text.includes('할부')) {
+    navigate('entries');
+    setTimeout(() => document.querySelector('.filter-tab[data-entry-filter="할부"]')?.click(), 100);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 하우스 레벨 카드 상세 팝업
+// ══════════════════════════════════════════════════════════════
+function _renderHouseDetailSheet() {
+  import('./assets.js').then(({ getTotalAssets, getHouseLevel, getAssetsByPurpose, ASSET_TYPES }) => {
+    import('./utils.js').then(({ fmtFull, fmtShort }) => {
+      import('./state.js').then(({ state: s }) => {
+        const totalAssets = getTotalAssets(s.assets);
+        const level = getHouseLevel(totalAssets);
+        const pct = level.next && level.next > 0
+          ? Math.min(100, Math.round((totalAssets / level.next) * 100))
+          : 100;
+        const byPurpose = getAssetsByPurpose(s.assets);
+
+        const assetRows = (s.assets || []).map(a =>
+          `<div class="detail-item-row">
+            <div class="detail-item-label">${a.name || a.type || '자산'}</div>
+            <div class="detail-item-value">${fmtFull(a.amount)}</div>
+          </div>`
+        ).join('');
+
+        const purposeRows = Object.entries(byPurpose).map(([p, v]) =>
+          `<div class="detail-item-row">
+            <div class="detail-item-label">${p}</div>
+            <div class="detail-item-value">${fmtShort(v)}</div>
+          </div>`
+        ).join('');
+
+        const el = document.getElementById('house-detail-content');
+        if (!el) return;
+        el.innerHTML = `
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:48px">${level.icon}</div>
+            <div style="font-size:22px;font-weight:900;color:var(--text);margin-top:4px">${level.label}</div>
+          </div>
+          <div class="detail-item-row">
+            <div class="detail-item-label">총 자산</div>
+            <div class="detail-item-value" style="color:var(--green2)">${fmtFull(totalAssets)}</div>
+          </div>
+          ${level.next ? `
+          <div class="detail-item-row">
+            <div class="detail-item-label">다음 레벨</div>
+            <div class="detail-item-value">${level.nextLabel} (${fmtShort(level.next)})</div>
+          </div>
+          <div class="detail-item-row">
+            <div class="detail-item-label">달성률</div>
+            <div class="detail-item-value">${pct}%</div>
+          </div>
+          <div style="height:8px;background:var(--bg3);border-radius:4px;margin:8px 0 16px">
+            <div style="height:8px;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width 0.5s"></div>
+          </div>
+          ` : '<div style="color:var(--yellow);text-align:center;padding:8px 0;font-weight:700">🏆 최고 레벨 달성!</div>'}
+          ${purposeRows ? `<div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 4px">용도별 자산</div>${purposeRows}` : ''}
+          ${assetRows ? `<div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 4px">자산 목록</div>${assetRows}` : ''}
+        `;
+      });
+    });
+  });
+}
+
+document.getElementById('page-home')?.addEventListener('click', (e) => {
+  const card = e.target.closest('#house-level-card[data-house-detail]');
+  if (!card) return;
+  _renderHouseDetailSheet();
+  openSheet('house-detail-sheet');
+});
+document.getElementById('btn-house-detail-close')?.addEventListener('click', () => closeSheet('house-detail-sheet'));
+document.getElementById('house-detail-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'house-detail-sheet'));
+
+// ══════════════════════════════════════════════════════════════
+// 다가오는 입출금 행 클릭 → 상세 팝업
+// ══════════════════════════════════════════════════════════════
+function _showUpcomingDetail(row) {
+  import('./forecast.js').then(({ buildForecast }) => {
+    import('./state.js').then(({ state: s }) => {
+      import('./utils.js').then(({ fmtFull, fmtShort, fmtSigned, p2, escapeHtml }) => {
+        const fc = buildForecast(s);
+        const upcoming = fc.slice(0, 30).filter(f => f.income > 0 || f.expense > 0);
+        const idx = parseInt(row.dataset.forecastIdx, 10);
+        const f = upcoming[idx];
+        if (!f) return;
+
+        const el = document.getElementById('upcoming-detail-content');
+        if (!el) return;
+
+        const dateStr = `${f.date.getFullYear()}년 ${f.date.getMonth() + 1}월 ${f.date.getDate()}일`;
+        const eventRows = f.events.map(ev =>
+          `<div class="detail-item-row">
+            <div class="detail-item-label">${escapeHtml(ev.name)}</div>
+            <div class="detail-item-value" style="color:${ev.type === 'income' ? 'var(--green2)' : 'var(--red2)'}">
+              ${ev.type === 'income' ? '+' : '-'}${fmtFull(Math.abs(ev.amount || 0))}
+            </div>
+          </div>`
+        ).join('');
+
+        el.innerHTML = `
+          <div class="detail-sheet-header">📅 ${dateStr}</div>
+          ${f.income > 0 ? `<div class="detail-item-row"><div class="detail-item-label">총 수입</div><div class="detail-item-value" style="color:var(--green2)">+${fmtFull(f.income)}</div></div>` : ''}
+          ${f.expense > 0 ? `<div class="detail-item-row"><div class="detail-item-label">총 지출</div><div class="detail-item-value" style="color:var(--red2)">-${fmtFull(f.expense)}</div></div>` : ''}
+          <div class="detail-item-row"><div class="detail-item-label">예상 잔고</div><div class="detail-item-value">${fmtFull(f.balance)}</div></div>
+          ${eventRows ? `<div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 4px">항목 상세</div>${eventRows}` : ''}
+        `;
+        openSheet('upcoming-detail-sheet');
+      });
+    });
+  });
+}
+
+document.getElementById('upcoming-list')?.addEventListener('click', (e) => {
+  const row = e.target.closest('.event-row[data-forecast-idx]');
+  if (!row) return;
+  _showUpcomingDetail(row);
+});
+document.getElementById('btn-upcoming-detail-close')?.addEventListener('click', () => closeSheet('upcoming-detail-sheet'));
+document.getElementById('upcoming-detail-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'upcoming-detail-sheet'));
+
+// ══════════════════════════════════════════════════════════════
+// 달력 월 선택 (Month Picker)
+// ══════════════════════════════════════════════════════════════
+let _pickerYear = new Date().getFullYear();
+
+function _renderMonthPicker() {
+  const grid = document.getElementById('month-picker-grid');
+  const yearDisplay = document.getElementById('mp-year-display');
+  if (!grid || !yearDisplay) return;
+  yearDisplay.textContent = _pickerYear;
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const curYear = currentLedgerYear;
+  const curMonth = currentLedgerMonth;
+  grid.innerHTML = months.map((label, i) => {
+    const isCurrent = _pickerYear === curYear && i === curMonth;
+    return `<button class="month-picker-btn ${isCurrent ? 'current' : ''}" data-month="${i}">${label}</button>`;
+  }).join('');
+  grid.querySelectorAll('.month-picker-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = parseInt(btn.dataset.month, 10);
+      // Navigate to chosen month in ledger
+      import('./render.js').then(mod => {
+        const diff = (_pickerYear - mod.currentLedgerYear) * 12 + (m - mod.currentLedgerMonth);
+        changeLedgerMonth(diff);
+      });
+      closeSheet('month-picker-sheet');
+    });
+  });
+}
+
+function _openMonthPicker() {
+  import('./render.js').then(mod => {
+    _pickerYear = mod.currentLedgerYear;
+    _renderMonthPicker();
+    openSheet('month-picker-sheet');
+  });
+}
+
+function _shiftPickerYear(delta) {
+  _pickerYear += delta;
+  _renderMonthPicker();
+}
+
+document.getElementById('btn-ledger-month-label')?.addEventListener('click', () => {
+  _openMonthPicker();
+});
+document.getElementById('btn-month-picker-close')?.addEventListener('click', () => closeSheet('month-picker-sheet'));
+document.getElementById('month-picker-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'month-picker-sheet'));
+document.getElementById('btn-mp-year-prev')?.addEventListener('click', () => _shiftPickerYear(-1));
+document.getElementById('btn-mp-year-next')?.addEventListener('click', () => _shiftPickerYear(1));
