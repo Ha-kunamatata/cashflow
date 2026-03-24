@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════
 // render.js — 화면 렌더링
 // ════════════════════════════════════════════════════════
-import { DAYS_KR, CAT_COLORS } from './config.js';
+import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config.js';
 import {
   today,
   dateKey,
@@ -33,9 +33,76 @@ try {
 } catch (_) {}
 
 let _selectedLedgerDate = null;
+let _ledgerSubTab   = 'calendar'; // 'calendar' | 'stats'
+let _ledgerStatsTab = 'monthly';  // 'monthly' | 'annual'
 
 export function setSelectedLedgerDate(dk) {
   _selectedLedgerDate = dk;
+}
+
+// ── 가계부 헬퍼 ──────────────────────────────────────
+function getLedgerDay(dk) {
+  const items   = state.ledgerData?.[dk] || [];
+  const expense = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+  const income  = items.filter(i => i.type === 'income' ).reduce((s, i) => s + i.amount, 0);
+  return { expense, income, items };
+}
+
+function getLedgerMonth(year, month) {
+  const prefix   = `${year}-${p2(month + 1)}`;
+  let expense = 0, income = 0;
+  const catTotals = {};
+  const dayMap    = {};
+
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    if (!dk.startsWith(prefix)) continue;
+    for (const item of items) {
+      if (item.type === 'expense') {
+        expense += item.amount;
+        catTotals[item.category] = (catTotals[item.category] || 0) + item.amount;
+        const day = parseInt(dk.split('-')[2], 10);
+        dayMap[day] = (dayMap[day] || 0) + item.amount;
+      } else {
+        income += item.amount;
+      }
+    }
+  }
+  return { expense, income, net: income - expense, catTotals, dayMap };
+}
+
+function getLedgerYear(year) {
+  let expense = 0, income = 0;
+  const monthMap = {}; // {month: {expense, income}}
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    if (!dk.startsWith(String(year))) continue;
+    const m = parseInt(dk.split('-')[1], 10);
+    if (!monthMap[m]) monthMap[m] = { expense: 0, income: 0 };
+    for (const item of items) {
+      if (item.type === 'expense') { expense += item.amount; monthMap[m].expense += item.amount; }
+      else                         { income  += item.amount; monthMap[m].income  += item.amount; }
+    }
+  }
+  return { expense, income, net: income - expense, monthMap };
+}
+
+export function setLedgerSubTab(tab) {
+  _ledgerSubTab = tab;
+  document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.tab === tab)
+  );
+  const cal   = document.getElementById('ledger-view-calendar');
+  const stats = document.getElementById('ledger-view-stats');
+  if (cal)   cal.style.display   = tab === 'calendar' ? '' : 'none';
+  if (stats) stats.style.display = tab === 'stats'    ? '' : 'none';
+  if (tab === 'stats') renderLedgerStats();
+}
+
+export function setLedgerStatsTab(tab) {
+  _ledgerStatsTab = tab;
+  document.querySelectorAll('.ledger-stats-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.tab === tab)
+  );
+  renderLedgerStats();
 }
 
 // ════════════════════════════════════════════════════════
@@ -72,7 +139,7 @@ export function renderSettingsStats() {
       e.repeat === '매월' &&
       (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(today())),
   ).length;
-  const checkDaysTotal = Object.keys(state.checkData || {}).length;
+  const checkDaysTotal = Object.keys(state.ledgerData || {}).filter(dk => (state.ledgerData[dk] || []).length > 0).length;
 
   el.innerHTML = `
     <div class="stat-item">
@@ -148,9 +215,7 @@ export function renderHome() {
   if (sh) sh.textContent = fmtShort(monthlyHalbu);
 
   const monthPrefix = `${today().getFullYear()}-${p2(today().getMonth() + 1)}`;
-  const checkTotal = Object.entries(state.checkData || {})
-    .filter(([d]) => d.startsWith(monthPrefix))
-    .reduce((sum, [, v]) => sum + v, 0);
+  const { expense: checkTotal } = getLedgerMonth(today().getFullYear(), today().getMonth());
 
   const sc = document.getElementById('sum-checkcard');
   if (sc) sc.textContent = fmtShort(checkTotal);
@@ -227,9 +292,17 @@ export function renderHome() {
   const netSub = document.getElementById('sum-net-sub');
   if (netSub) netSub.textContent = net >= 0 ? '✓ 흑자 유지' : '⚠ 지출 초과';
 
-  const checkDays = Object.keys(state.checkData || {}).filter((d) => d.startsWith(monthPrefix)).length;
+  const checkDays = Object.keys(state.ledgerData || {}).filter(dk => dk.startsWith(monthPrefix) && (state.ledgerData[dk] || []).length > 0).length;
   const scSub = document.getElementById('sum-checkcard-sub');
   if (scSub) scSub.textContent = `${checkDays}일 기록`;
+
+  // 오늘 지출 chip 추가
+  const todayKey  = dateKey(today());
+  const { expense: todayExp, income: todayInc } = getLedgerDay(todayKey);
+  if (todayExp > 0 || todayInc > 0) {
+    const todayChip = `<span class="info-chip">💸 오늘 ${todayExp > 0 ? fmtShort(todayExp) + ' 지출' : ''}${todayInc > 0 ? (todayExp > 0 ? ' / ' : '') + fmtShort(todayInc) + ' 수입' : ''}</span>`;
+    if (chipsEl) chipsEl.innerHTML = todayChip + (chipsEl.innerHTML || '');
+  }
 
   const fillEl = document.getElementById('checkcard-budget-fill');
   if (fillEl && monthlyIncome > 0) {
@@ -758,120 +831,70 @@ export function renderCardMonths() {
 // 가계부 탭
 // ════════════════════════════════════════════════════════
 export function renderLedger() {
+  if (_ledgerSubTab === 'stats') {
+    renderLedgerStats();
+  } else {
+    renderLedgerCalendar();
+  }
+}
+
+function renderLedgerCalendar() {
   const y = currentLedgerYear;
   const m = currentLedgerMonth;
 
-  const firstDay = new Date(y, m, 1);
-  const lastDay = new Date(y, m + 1, 0);
-  const startWd = firstDay.getDay();
+  const firstDay  = new Date(y, m, 1);
+  const lastDay   = new Date(y, m + 1, 0);
+  const startWd   = firstDay.getDay();
   const totalDays = lastDay.getDate();
-  const monthPrefix = `${y}-${p2(m + 1)}`;
 
   const ml = document.getElementById('ledger-month-label');
   if (ml) ml.textContent = `${y}년 ${m + 1}월`;
 
-  const monthEntries = Object.entries(state.checkData || {}).filter(([d]) =>
-    d.startsWith(monthPrefix)
-  );
-  const monthTotal = monthEntries.reduce((sum, [, v]) => sum + v, 0);
-  const spendDays = monthEntries.length;
+  const { expense: monthExp, income: monthInc, dayMap } = getLedgerMonth(y, m);
+  const spendDays = Object.keys(dayMap).length;
 
-  let maxDayText = '-';
-  if (monthEntries.length > 0) {
-    const [mx, ma] = monthEntries.reduce((max, cur) => (cur[1] > max[1] ? cur : max));
-    const md = new Date(mx);
-    maxDayText = `${md.getDate()}일 · ${fmtShort(ma)}`;
-  }
-
+  // 요약 상단 수치
   const te = document.getElementById('ledger-total-spend');
-  if (te) te.textContent = fmtShort(monthTotal);
-
+  if (te) te.textContent = fmtShort(monthExp);
+  const ti = document.getElementById('ledger-total-income');
+  if (ti) ti.textContent = fmtShort(monthInc);
+  const tn = document.getElementById('ledger-total-net');
+  if (tn) {
+    const net = monthInc - monthExp;
+    tn.textContent = fmtSigned(net);
+    tn.style.color = net >= 0 ? 'var(--green2)' : 'var(--red2)';
+  }
   const ae = document.getElementById('ledger-avg-spend');
-  if (ae) ae.textContent = spendDays > 0 ? fmtShort(Math.round(monthTotal / spendDays)) : '-';
+  if (ae) ae.textContent = spendDays > 0 ? fmtShort(Math.round(monthExp / spendDays)) : '-';
 
-  const me = document.getElementById('ledger-max-day');
-  if (me) me.textContent = maxDayText;
-
-  // ── 주간 소비 요약 ─────────────────────────────────────
-  const weeklyEl = document.getElementById('ledger-weekly-summary');
-  if (weeklyEl) {
-    const weeklySums = [];
-    monthEntries.forEach(([date, amt]) => {
-      const day = parseInt(date.split('-')[2], 10);
-      const weekIdx = Math.floor((day - 1 + startWd) / 7);
-      weeklySums[weekIdx] = (weeklySums[weekIdx] || 0) + amt;
-    });
-    const totalWeeks = Math.ceil((totalDays + startWd) / 7);
-    weeklyEl.innerHTML = Array.from({ length: totalWeeks }, (_, i) => {
-      const sum = weeklySums[i] || 0;
-      return `<div class="week-chip">
-        <div class="week-chip-label">${i + 1}주차</div>
-        <div class="week-chip-value ${sum === 0 ? 'zero' : ''}">${sum > 0 ? fmtShort(sum) : '-'}</div>
-      </div>`;
-    }).join('');
-  }
-
-  const ms = document.getElementById('ledger-month-summary');
-  if (ms) {
-    ms.innerHTML = `
-      <div class="ledger-summary-hero">
-        <div>
-          <strong>${m + 1}월 소비 요약</strong>
-          <span>날짜를 눌러 금액을 입력하거나 수정할 수 있어요</span>
-        </div>
-        <div style="font-family:var(--mono);font-size:16px;color:var(--orange);font-weight:800">${fmtShort(monthTotal)}</div>
-      </div>
-    `;
-  }
-
-  const chartEl = document.getElementById('ledger-bar-chart');
-  if (chartEl) {
-    if (!monthEntries.length) {
-      chartEl.innerHTML = '<div class="empty-state" style="padding:20px 0">이번 달 소비 기록이 없습니다</div>';
-    } else {
-      const maxAmt = Math.max(...monthEntries.map(([, v]) => v), 1);
-      chartEl.innerHTML = `
-        <div class="monthly-chart-bar">
-          ${monthEntries
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([date, amt]) => {
-              const dd = new Date(date);
-              return `
-                <div class="bar-row">
-                  <span class="bar-label">${dd.getDate()}일</span>
-                  <div class="bar-track">
-                    <div class="bar-fill expense" style="width:${((amt / maxAmt) * 100).toFixed(1)}%"></div>
-                  </div>
-                  <span class="bar-value" style="color:var(--red2)">${fmtShort(amt)}</span>
-                </div>
-              `;
-            })
-            .join('')}
-        </div>
-      `;
-    }
-  }
-
+  // 달력 그리드
+  const maxDay = Math.max(...Object.values(dayMap), 1);
   let html = '';
   for (let i = 0; i < startWd; i++) {
     html += '<div class="ledger-day empty"></div>';
   }
-
   for (let day = 1; day <= totalDays; day++) {
-    const d = new Date(y, m, day);
-    const dk = dateKey(d);
+    const d   = new Date(y, m, day);
+    const dk  = dateKey(d);
     const dow = d.getDay();
-    const isToday = dk === dateKey(today());
+    const isToday    = dk === dateKey(today());
     const isSelected = dk === _selectedLedgerDate;
-    const amt = state.checkData?.[dk] || 0;
-    const numClass = 'ledger-day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
+    const numClass   = 'ledger-day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
+
+    const { expense: dayExp, income: dayInc } = getLedgerDay(dk);
+    // 히트맵: 지출 많을수록 배경 진하게
+    const heatPct = maxDay > 0 ? dayExp / maxDay : 0;
+    const heatLevel = heatPct > 0.8 ? 4 : heatPct > 0.5 ? 3 : heatPct > 0.25 ? 2 : heatPct > 0 ? 1 : 0;
 
     html += `
-      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-dk="${dk}">
+      <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${heatLevel > 0 ? 'heat-' + heatLevel : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
           <div class="${numClass}">${day}</div>
         </div>
-        <div class="ledger-day-amount">${amt > 0 ? '-' + fmtShort(amt) : ''}</div>
+        <div class="ledger-day-amounts">
+          ${dayExp > 0 ? `<div class="ledger-day-expense">-${fmtShort(dayExp)}</div>` : ''}
+          ${dayInc > 0 ? `<div class="ledger-day-income">+${fmtShort(dayInc)}</div>` : ''}
+        </div>
       </div>
     `;
   }
@@ -880,26 +903,186 @@ export function renderLedger() {
   if (grid) grid.innerHTML = html;
 }
 
+export function renderLedgerStats() {
+  // 통계 뷰의 월/연 레이블도 동기화
+  const statsLbl = document.getElementById('ledger-month-label-stats');
+  if (statsLbl) {
+    statsLbl.textContent = _ledgerStatsTab === 'annual'
+      ? `${currentLedgerYear}년`
+      : `${currentLedgerYear}년 ${currentLedgerMonth + 1}월`;
+  }
+  if (_ledgerStatsTab === 'monthly') {
+    _renderMonthlyStats();
+  } else {
+    _renderAnnualStats();
+  }
+}
+
+function _renderMonthlyStats() {
+  const y = currentLedgerYear;
+  const m = currentLedgerMonth;
+  const { expense, income, net, catTotals, dayMap } = getLedgerMonth(y, m);
+
+  const el = document.getElementById('ledger-stats-content');
+  if (!el) return;
+
+  // 카테고리 도넛 + 랭킹
+  const cats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  const total = expense || 1;
+  let donutSvg = '', donutLegend = '';
+  if (cats.length > 0) {
+    const R = 44, CX = 52, CY = 52;
+    let angle = -Math.PI / 2;
+    cats.forEach(([cat, amt]) => {
+      const pct = amt / total;
+      const a = pct * 2 * Math.PI;
+      const x1 = CX + R * Math.cos(angle), y1 = CY + R * Math.sin(angle);
+      const x2 = CX + R * Math.cos(angle + a), y2 = CY + R * Math.sin(angle + a);
+      const large = a > Math.PI ? 1 : 0;
+      const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+      donutSvg += `<path d="M${CX},${CY} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" opacity="0.88"/>`;
+      angle += a;
+    });
+    donutSvg += `<circle cx="${CX}" cy="${CY}" r="26" fill="var(--bg2)"/>`;
+    donutSvg += `<text x="${CX}" y="${CY+4}" fill="var(--text)" font-size="10" text-anchor="middle" font-family="monospace" font-weight="700">${Math.round((expense/total)*100)}%</text>`;
+  }
+
+  cats.slice(0, 7).forEach(([cat, amt]) => {
+    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    const pct = Math.round((amt / total) * 100);
+    donutLegend += `
+      <div class="lstat-cat-row">
+        <span class="lstat-cat-dot" style="background:${col}"></span>
+        <span class="lstat-cat-name">${cat}</span>
+        <div class="lstat-cat-bar"><div style="width:${pct}%;background:${col};height:100%;border-radius:4px;opacity:.85"></div></div>
+        <span class="lstat-cat-amt">${fmtShort(amt)}</span>
+      </div>`;
+  });
+
+  // 일별 바 차트
+  const sortedDays = Object.entries(dayMap).sort((a, b) => a[0] - b[0]);
+  const maxDayAmt  = Math.max(...sortedDays.map(([, v]) => v), 1);
+  let dayBars = sortedDays.map(([day, amt]) => `
+    <div class="bar-row">
+      <span class="bar-label">${day}일</span>
+      <div class="bar-track"><div class="bar-fill expense" style="width:${((amt/maxDayAmt)*100).toFixed(1)}%"></div></div>
+      <span class="bar-value" style="color:var(--red2)">${fmtShort(amt)}</span>
+    </div>`).join('');
+
+  // 전월 비교
+  let prevM = m - 1, prevY = y;
+  if (prevM < 0) { prevM = 11; prevY--; }
+  const { expense: prevExp, income: prevInc } = getLedgerMonth(prevY, prevM);
+  const expDiff  = expense - prevExp;
+  const incDiff  = income  - prevInc;
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">${y}년 ${m + 1}월 요약</div>
+      <div class="lstat-summary-row">
+        <div class="lstat-summary-item"><div class="lstat-summary-label">지출</div><div class="lstat-summary-val red">${fmtShort(expense)}</div></div>
+        <div class="lstat-summary-item"><div class="lstat-summary-label">수입</div><div class="lstat-summary-val green">${fmtShort(income)}</div></div>
+        <div class="lstat-summary-item"><div class="lstat-summary-label">순액</div><div class="lstat-summary-val" style="color:${net>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(net)}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">카테고리별 지출</div>
+      ${expense === 0 ? '<div class="empty-state" style="padding:20px 0">지출 없음</div>' : `
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">
+          <svg width="104" height="104" viewBox="0 0 104 104" style="flex-shrink:0">${donutSvg}</svg>
+          <div style="flex:1;min-width:160px">${donutLegend}</div>
+        </div>`}
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">일별 지출</div>
+      ${sortedDays.length === 0 ? '<div class="empty-state" style="padding:20px 0">기록 없음</div>' : `<div class="monthly-chart-bar">${dayBars}</div>`}
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">전월 대비</div>
+      <div class="report-mom-item">
+        <span>지출</span>
+        <span style="color:${expDiff>0?'var(--red2)':'var(--green2)'}">${expDiff>=0?'+':''}${fmtSigned(expDiff)}</span>
+        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevExp)})</span>
+      </div>
+      <div class="report-mom-item" style="margin-top:8px">
+        <span>수입</span>
+        <span style="color:${incDiff>=0?'var(--green2)':'var(--red2)'}">${incDiff>=0?'+':''}${fmtSigned(incDiff)}</span>
+        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevInc)})</span>
+      </div>
+    </div>
+  `;
+}
+
+function _renderAnnualStats() {
+  const y = currentLedgerYear;
+  const { expense: yearExp, income: yearInc, net: yearNet, monthMap } = getLedgerYear(y);
+
+  const el = document.getElementById('ledger-stats-content');
+  if (!el) return;
+
+  // 월별 바 차트 (수입+지출)
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = monthMap[i + 1] || { expense: 0, income: 0 };
+    return { label: `${i + 1}월`, expense: d.expense, income: d.income };
+  });
+  const maxVal = Math.max(...months.flatMap(d => [d.expense, d.income]), 1);
+  const monthBars = months.map(d => `
+    <div>
+      <div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-weight:600">${d.label}</div>
+      <div class="bar-row">
+        <span class="bar-label" style="color:var(--green2)">수</span>
+        <div class="bar-track"><div class="bar-fill income" style="width:${((d.income/maxVal)*100).toFixed(1)}%"></div></div>
+        <span class="bar-value" style="color:var(--green2)">${fmtShort(d.income)}</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label" style="color:var(--red2)">지</span>
+        <div class="bar-track"><div class="bar-fill expense" style="width:${((d.expense/maxVal)*100).toFixed(1)}%"></div></div>
+        <span class="bar-value" style="color:var(--red2)">${fmtShort(d.expense)}</span>
+      </div>
+    </div>`).join('');
+
+  // 최대/최소 지출월
+  const expMonths = months.filter(d => d.expense > 0).sort((a, b) => b.expense - a.expense);
+  const bestLabel  = expMonths.length > 0 ? expMonths[expMonths.length - 1].label : '-';
+  const worstLabel = expMonths.length > 0 ? expMonths[0].label : '-';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">${y}년 연간 요약</div>
+      <div class="lstat-summary-row">
+        <div class="lstat-summary-item"><div class="lstat-summary-label">연간 지출</div><div class="lstat-summary-val red">${fmtShort(yearExp)}</div></div>
+        <div class="lstat-summary-item"><div class="lstat-summary-label">연간 수입</div><div class="lstat-summary-val green">${fmtShort(yearInc)}</div></div>
+        <div class="lstat-summary-item"><div class="lstat-summary-label">순액</div><div class="lstat-summary-val" style="color:${yearNet>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(yearNet)}</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="info-chip success">📉 지출 최소: ${bestLabel}</span>
+        <span class="info-chip warning">📈 지출 최대: ${worstLabel}</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">월별 수입 / 지출</div>
+      <div class="monthly-chart-bar">${monthBars}</div>
+    </div>
+  `;
+}
+
 export function changeLedgerMonth(diff) {
   currentLedgerMonth += diff;
 
-  if (currentLedgerMonth < 0) {
-    currentLedgerMonth = 11;
-    currentLedgerYear--;
-  }
-
-  if (currentLedgerMonth > 11) {
-    currentLedgerMonth = 0;
-    currentLedgerYear++;
-  }
+  if (currentLedgerMonth < 0)  { currentLedgerMonth = 11; currentLedgerYear--; }
+  if (currentLedgerMonth > 11) { currentLedgerMonth = 0;  currentLedgerYear++; }
 
   localStorage.setItem('cashflow_ledger_ym', JSON.stringify({ y: currentLedgerYear, m: currentLedgerMonth }));
   _selectedLedgerDate = null;
 
-  const ec = document.getElementById('ledger-editor-card');
-  if (ec) ec.style.display = 'none';
-
   renderLedger();
+
+  // 통계 탭 연도도 같이 이동
+  if (_ledgerSubTab === 'stats') renderLedgerStats();
 }
 
 // ════════════════════════════════════════════════════════

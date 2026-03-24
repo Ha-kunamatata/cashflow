@@ -13,7 +13,8 @@ import {
   state,
   load,
   save,
-  syncCheckDataToBalance,
+  syncLedgerToBalance,
+  migrateLedger,
   initDefaultData
 } from './state.js';
 
@@ -27,7 +28,10 @@ import {
   setChartPeriod,
   setForecastFilter,
   setEntryFilter,
-  changeLedgerMonth
+  changeLedgerMonth,
+  setLedgerSubTab,
+  setLedgerStatsTab,
+  renderLedgerStats,
 } from './render.js';
 
 import {
@@ -47,10 +51,16 @@ import {
   editEntry,
   deleteEntry,
   updateCardData,
-  openLedgerEditor,
-  closeLedgerEditor,
-  saveLedgerExpense,
-  clearLedgerExpense,
+  openLedgerDaySheet,
+  closeLedgerDaySheet,
+  openLedgerItemForm,
+  closeLedgerItemForm,
+  setLedgerItemType,
+  selectLedgerCatGroup,
+  selectLedgerCat,
+  saveLedgerItem,
+  deleteLedgerItem,
+  deleteLedgerCurrentDayItem,
   saveSetting,
   onDangerLineChange,
   exportData,
@@ -120,7 +130,8 @@ initAuth(
     }
 
     initDefaultData();
-    syncCheckDataToBalance();
+    migrateLedger();
+    syncLedgerToBalance();
 
     document.getElementById('setting-danger').value = state.dangerLine;
     document.getElementById('danger-line-input').value = state.dangerLine;
@@ -210,15 +221,64 @@ document.getElementById('card-months-list')?.addEventListener('input', (e) => {
 // 가계부 달력 이벤트 위임
 document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
   const day = e.target.closest('.ledger-day:not(.empty)');
-  if (day?.dataset.dk) openLedgerEditor(day.dataset.dk);
+  if (day?.dataset.dk) openLedgerDaySheet(day.dataset.dk);
 });
 
-// 가계부 탭
+// 가계부 서브탭
+document.querySelectorAll('.ledger-sub-tab').forEach(btn =>
+  btn.addEventListener('click', () => setLedgerSubTab(btn.dataset.tab))
+);
+
+// 가계부 달력 월 이동
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
 document.getElementById('btn-ledger-next')?.addEventListener('click', () => changeLedgerMonth(1));
-document.getElementById('btn-ledger-save')?.addEventListener('click', saveLedgerExpense);
-document.getElementById('btn-ledger-clear')?.addEventListener('click', clearLedgerExpense);
-document.getElementById('btn-ledger-close')?.addEventListener('click', closeLedgerEditor);
+
+// 가계부 통계 월 이동
+document.getElementById('btn-ledger-stats-prev')?.addEventListener('click', () => {
+  changeLedgerMonth(-1);
+  const lbl = document.getElementById('ledger-month-label-stats');
+  import('./render.js').then(m => { if(lbl) lbl.textContent = document.getElementById('ledger-month-label')?.textContent || ''; });
+});
+document.getElementById('btn-ledger-stats-next')?.addEventListener('click', () => {
+  changeLedgerMonth(1);
+  const lbl = document.getElementById('ledger-month-label-stats');
+  import('./render.js').then(m => { if(lbl) lbl.textContent = document.getElementById('ledger-month-label')?.textContent || ''; });
+});
+document.querySelectorAll('.ledger-stats-tab').forEach(btn =>
+  btn.addEventListener('click', () => setLedgerStatsTab(btn.dataset.tab))
+);
+
+// 날짜 시트
+document.getElementById('btn-ledger-day-close')?.addEventListener('click', closeLedgerDaySheet);
+document.getElementById('ledger-day-sheet')?.addEventListener('click', (e) => {
+  if (e.target?.id === 'ledger-day-sheet') closeLedgerDaySheet();
+});
+document.getElementById('btn-ledger-add-item')?.addEventListener('click', () =>
+  openLedgerItemForm(null, null)
+);
+document.getElementById('ledger-day-items-list')?.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.lday-edit-btn');
+  const delBtn  = e.target.closest('.lday-del-btn');
+  if (editBtn?.dataset.id) openLedgerItemForm(null, editBtn.dataset.id);
+  if (delBtn?.dataset.id)  deleteLedgerCurrentDayItem(delBtn.dataset.id);
+});
+
+// 항목 폼 시트
+document.getElementById('ledger-type-expense')?.addEventListener('click', () => setLedgerItemType('expense'));
+document.getElementById('ledger-type-income')?.addEventListener('click',  () => setLedgerItemType('income'));
+document.getElementById('ledger-cat-groups')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.ledger-cat-group-btn');
+  if (btn) selectLedgerCatGroup(btn.dataset.group);
+});
+document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.ledger-cat-chip');
+  if (btn) selectLedgerCat(btn.dataset.cat);
+});
+document.getElementById('btn-ledger-item-save')?.addEventListener('click', saveLedgerItem);
+document.getElementById('btn-ledger-item-cancel')?.addEventListener('click', closeLedgerItemForm);
+document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
+  if (e.target?.id === 'ledger-item-sheet') closeLedgerItemForm();
+});
 
 // 설정 탭
 document.getElementById('btn-settings-signout')?.addEventListener('click', () => openSheet('signout-sheet'));
