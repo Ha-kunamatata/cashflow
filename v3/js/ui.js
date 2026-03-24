@@ -5,6 +5,7 @@ import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES,
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
 import { state, save, syncLedgerToBalance } from './state.js';
 import * as renderModule from './render.js';
+import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI } from './ai.js';
 
 // ── 목표 관련 ────────────────────────────────────────────
 let _editGoalId = null;
@@ -603,4 +604,136 @@ export function resetAll() {
   save();
   applyTheme();
   renderModule.renderAll();
+}
+
+// ════════════════════════════════════════════════════════
+// AI 기능
+// ════════════════════════════════════════════════════════
+
+// ── Gemini API 키 설정 ────────────────────────────────
+export function initGeminiKeyUI() {
+  const input = document.getElementById('gemini-api-key-input');
+  const status = document.getElementById('gemini-key-status');
+  const fab = document.getElementById('btn-ai-chat-fab');
+  const insightCard = document.getElementById('ai-insight-card');
+
+  if (input) {
+    const stored = getGeminiKey();
+    input.value = stored ? '••••••••••••••••••••' : '';
+    if (status) status.textContent = stored ? '✅ API 키가 저장되어 있습니다' : '키를 입력하면 AI 기능이 활성화됩니다';
+  }
+
+  const hasKey = hasGeminiKey();
+  if (fab) fab.style.display = hasKey ? 'flex' : 'none';
+  if (insightCard) insightCard.style.display = hasKey ? 'block' : 'none';
+}
+
+export function saveGeminiKey() {
+  const input = document.getElementById('gemini-api-key-input');
+  const status = document.getElementById('gemini-key-status');
+  const val = input?.value?.trim() || '';
+
+  // 마스킹된 값은 그대로 유지
+  if (val === '••••••••••••••••••••') { showBadge('ℹ️ 변경사항 없음'); return; }
+
+  setGeminiKey(val);
+  const fab = document.getElementById('btn-ai-chat-fab');
+  const insightCard = document.getElementById('ai-insight-card');
+  const hasKey = hasGeminiKey();
+
+  if (fab) fab.style.display = hasKey ? 'flex' : 'none';
+  if (insightCard) insightCard.style.display = hasKey ? 'block' : 'none';
+  if (input) input.value = hasKey ? '••••••••••••••••••••' : '';
+  if (status) status.textContent = hasKey ? '✅ API 키가 저장되었습니다' : 'API 키가 삭제되었습니다';
+  showBadge(hasKey ? '✅ API 키 저장됨' : '🗑️ API 키 삭제됨');
+
+  if (hasKey) refreshHomeInsight();
+}
+
+// ── 홈 AI 인사이트 ────────────────────────────────────
+export async function refreshHomeInsight() {
+  if (!hasGeminiKey()) return;
+  const content = document.getElementById('ai-insight-content');
+  if (!content) return;
+  content.textContent = '분석 중…';
+  try {
+    const text = await getHomeInsight(state);
+    content.textContent = text;
+  } catch (e) {
+    content.textContent = `⚠️ 오류: ${e.message}`;
+  }
+}
+
+// ── 통계 탭 AI 분석 ───────────────────────────────────
+export async function runLedgerAIAnalysis() {
+  if (!hasGeminiKey()) {
+    alert('설정 탭에서 Gemini API 키를 먼저 입력해주세요.');
+    return;
+  }
+  const { currentLedgerYear: year, currentLedgerMonth: month } = renderModule;
+  const btn = document.getElementById('btn-ledger-ai');
+  if (btn) btn.textContent = '🤖 분석 중…';
+
+  openSheet('ai-analysis-sheet');
+  const content = document.getElementById('ai-analysis-content');
+  if (content) content.textContent = '분석 중…';
+
+  try {
+    const text = await getLedgerAnalysis(state, year, month);
+    if (content) content.textContent = text;
+  } catch (e) {
+    if (content) content.textContent = `⚠️ 오류: ${e.message}`;
+  } finally {
+    if (btn) btn.innerHTML = '<div class="ripple-container"></div>🤖 AI로 이번달 소비 분석하기';
+  }
+}
+
+// ── 미니 채팅 ─────────────────────────────────────────
+let _chatMessages = [];
+
+export function openAIChat() {
+  if (!hasGeminiKey()) {
+    alert('설정 탭에서 Gemini API 키를 먼저 입력해주세요.');
+    return;
+  }
+  openSheet('ai-chat-sheet');
+  _renderChatMessages();
+  setTimeout(() => document.getElementById('ai-chat-input')?.focus(), 80);
+}
+
+function _renderChatMessages() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  if (_chatMessages.length === 0) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">안녕하세요! 재무 관련 궁금한 점을 물어보세요 😊</div>`;
+    return;
+  }
+  container.innerHTML = _chatMessages.map(msg => `
+    <div style="display:flex;justify-content:${msg.role === 'user' ? 'flex-end' : 'flex-start'}">
+      <div style="max-width:80%;padding:10px 14px;border-radius:${msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};background:${msg.role === 'user' ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'var(--bg3)'};color:${msg.role === 'user' ? '#fff' : 'var(--text)'};font-size:13px;line-height:1.6;white-space:pre-wrap">${escapeHtml(msg.content)}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+export async function sendAIChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const msg = input?.value?.trim();
+  if (!msg) return;
+  input.value = '';
+
+  _chatMessages.push({ role: 'user', content: msg });
+  _renderChatMessages();
+
+  const thinkingMsg = { role: 'assistant', content: '답변을 생성하는 중…' };
+  _chatMessages.push(thinkingMsg);
+  _renderChatMessages();
+
+  try {
+    const reply = await chatWithAI(msg, state);
+    _chatMessages[_chatMessages.length - 1] = { role: 'assistant', content: reply };
+  } catch (e) {
+    _chatMessages[_chatMessages.length - 1] = { role: 'assistant', content: `⚠️ 오류: ${e.message}` };
+  }
+  _renderChatMessages();
 }

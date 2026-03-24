@@ -69,7 +69,13 @@ import {
   resetAll,
   openGoalForm,
   saveGoal,
-  deleteGoal
+  deleteGoal,
+  initGeminiKeyUI,
+  saveGeminiKey,
+  refreshHomeInsight,
+  runLedgerAIAnalysis,
+  openAIChat,
+  sendAIChatMessage,
 } from './ui.js';
 
 import {
@@ -138,6 +144,10 @@ initAuth(
 
     applyTheme();
     renderAll();
+
+    // AI 초기화
+    initGeminiKeyUI();
+    refreshHomeInsight();
 
     // 실시간 동기화
     startSync((cloudData) => {
@@ -330,4 +340,20 @@ document.getElementById('goals-list')?.addEventListener('click', (e) => {
   const delBtn = e.target.closest('.goal-del-btn');
   if (editBtn?.dataset.id) openGoalForm(editBtn.dataset.id);
   if (delBtn?.dataset.id) deleteGoal(delBtn.dataset.id);
+});
+
+// AI 기능
+document.getElementById('btn-save-gemini-key')?.addEventListener('click', saveGeminiKey);
+document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);
+document.getElementById('btn-ledger-ai')?.addEventListener('click', runLedgerAIAnalysis);
+document.getElementById('btn-ai-analysis-close')?.addEventListener('click', () => closeSheet('ai-analysis-sheet'));
+document.getElementById('ai-analysis-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-analysis-sheet'));
+
+// 플로팅 채팅
+document.getElementById('btn-ai-chat-fab')?.addEventListener('click', openAIChat);
+document.getElementById('btn-ai-chat-close')?.addEventListener('click', () => closeSheet('ai-chat-sheet'));
+document.getElementById('ai-chat-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-chat-sheet'));
+document.getElementById('btn-ai-chat-send')?.addEventListener('click', sendAIChatMessage);
+document.getElementById('ai-chat-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendAIChatMessage();
 });
