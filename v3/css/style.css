@@ -1252,3 +1252,64 @@ body.light-theme .ledger-sub-tab { background: #f1f5f9; border-color: #e2e8f0; c
 body.light-theme .ledger-sub-tab.active { background: linear-gradient(135deg,var(--accent),var(--accent2)); color: #fff; border-color: transparent; }
 body.light-theme #game-wrap { background: #f8fafc; }
 body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
+
+/* ════════════════════════════════════════════════════════
+   배지 도감 팝업 애니메이션
+   ════════════════════════════════════════════════════════ */
+@keyframes badgeIconPop {
+  0%   { transform: scale(0.2) rotate(-15deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(6deg);  opacity: 1; }
+  80%  { transform: scale(0.92) rotate(-3deg); }
+  100% { transform: scale(1)    rotate(0deg);  }
+}
+@keyframes badgeShine {
+  0%   { transform: translateX(-100%) rotate(30deg); opacity: 0; }
+  30%  { opacity: 0.6; }
+  100% { transform: translateX(200%) rotate(30deg);  opacity: 0; }
+}
+@keyframes badgeParticleFall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1);   opacity: 1; }
+  100% { transform: translateY(180px) rotate(720deg) scale(0.4); opacity: 0; }
+}
+@keyframes badgeParticleFloat {
+  0%   { transform: translateY(0) scale(1);   opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.3); opacity: 0; }
+}
+#badge-detail-icon-wrap::after {
+  content: '';
+  position: absolute;
+  top: -20px; left: -40px;
+  width: 60px; height: 200px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  animation: badgeShine 1.6s ease 0.3s both;
+  pointer-events: none;
+}
+#badge-detail-icon-wrap { position: relative; overflow: hidden; }
+
+/* ════════════════════════════════════════════════════════
+   바텀 네비 스크롤 (8개 이상 탭 대응)
+   ════════════════════════════════════════════════════════ */
+.bottom-nav {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.bottom-nav::-webkit-scrollbar { display: none; }
+.nav-btn { flex: 0 0 auto; min-width: 58px; }
+
+/* 오른쪽 페이드 힌트 */
+.bottom-nav::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  height: 65px;
+  background: linear-gradient(to left, rgba(10,15,30,0.92) 20%, transparent);
+  pointer-events: none;
+  z-index: 121;
+}
+body.light-theme .bottom-nav::after {
+  background: linear-gradient(to left, rgba(255,255,255,0.92) 20%, transparent);
+}

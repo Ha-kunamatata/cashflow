@@ -1863,7 +1863,7 @@ export function renderAssets() {
       </div>
       <!-- 카테고리별 필터 -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="badge-cat-filters">
-        ${['전체','기록','자산','절약','부채','목표','레벨','시작','특별'].map(cat =>
+        ${['전체','기록','자산','절약','부채','목표','레벨','시작','특별','투자','성취','도전'].map(cat =>
           `<button class="badge-filter-btn${cat==='전체'?' active':''}" data-cat="${cat}" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid var(--border);background:${cat==='전체'?'var(--accent)':'var(--bg3)'};color:${cat==='전체'?'#fff':'var(--text2)'};cursor:pointer">${cat}</button>`
         ).join('')}
       </div>
@@ -1878,7 +1878,7 @@ export function renderAssets() {
           const earned = (state.badges || []).includes(b.id);
           const r = RARITY_CONFIG[b.rarity] || RARITY_CONFIG.common;
           const glowStyle = earned && r.glow ? `box-shadow:0 0 16px ${r.color}55;` : '';
-          return `<div class="badge-item ${earned ? 'earned' : 'locked'}" data-badge-cat="${b.category}" title="${escapeHtml(b.desc)}" style="${earned ? `background:${r.bg};border-color:${r.border};${glowStyle}` : ''}">
+          return `<div class="badge-item ${earned ? 'earned' : 'locked'}" data-badge-id="${b.id}" data-badge-cat="${b.category}" title="${escapeHtml(b.desc)}" style="cursor:pointer;${earned ? `background:${r.bg};border-color:${r.border};${glowStyle}` : ''}">
             <div style="position:relative;display:inline-block">
               <span style="font-size:28px;${earned ? '' : 'filter:grayscale(1) opacity(0.3)'}">${b.icon}</span>
               ${earned ? `<div style="position:absolute;bottom:-2px;right:-4px;font-size:8px;background:${r.color};color:#fff;border-radius:4px;padding:1px 3px;font-weight:900;line-height:1">${r.label[0]}</div>` : ''}
@@ -2249,12 +2249,17 @@ export async function fetchStockPrice(item) {
 
   _financeLoading[symbol] = true;
 
+  const _yahooFetch = async (yahooUrl) => {
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
+    const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error('proxy error');
+    const wrapper = await res.json();
+    return JSON.parse(wrapper.contents);
+  };
+
   try {
-    // CORS 프록시 사용 (Yahoo Finance 직접 접근)
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new Error('API 오류');
-    const json = await res.json();
+    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+    const json = await _yahooFetch(yahooUrl);
     const result = json.chart?.result?.[0];
     if (!result) throw new Error('데이터 없음');
 
@@ -2276,21 +2281,17 @@ export async function fetchStockPrice(item) {
     // KOSDAQ 시도
     if (market === 'KRX' && !symbol.includes('.')) {
       try {
-        const url2 = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol + '.KQ')}?interval=1d&range=5d`;
-        const res2 = await fetch(url2, { signal: AbortSignal.timeout(6000) });
-        if (res2.ok) {
-          const json2 = await res2.json();
-          const result2 = json2.chart?.result?.[0];
-          if (result2) {
-            const meta2 = result2.meta;
-            const price2 = meta2.regularMarketPrice || meta2.previousClose;
-            const prev2 = meta2.previousClose || meta2.chartPreviousClose;
-            _financeData[symbol] = {
-              price: price2, change: price2 - prev2, changePct: prev2 ? ((price2 - prev2) / prev2 * 100) : 0,
-              name: item.name || meta2.shortName || symbol, currency: 'KRW',
-              lastUpdated: new Date().toLocaleTimeString('ko-KR'),
-            };
-          }
+        const json2 = await _yahooFetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol + '.KQ')}?interval=1d&range=5d`);
+        const result2 = json2.chart?.result?.[0];
+        if (result2) {
+          const meta2 = result2.meta;
+          const price2 = meta2.regularMarketPrice || meta2.previousClose;
+          const prev2 = meta2.previousClose || meta2.chartPreviousClose;
+          _financeData[symbol] = {
+            price: price2, change: price2 - prev2, changePct: prev2 ? ((price2 - prev2) / prev2 * 100) : 0,
+            name: item.name || meta2.shortName || symbol, currency: 'KRW',
+            lastUpdated: new Date().toLocaleTimeString('ko-KR'),
+          };
         }
       } catch {}
     }

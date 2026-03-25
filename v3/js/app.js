@@ -135,6 +135,7 @@ import {
 } from './utils.js';
 
 import { FinanceGame } from './game.js';
+import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
 
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
@@ -173,13 +174,21 @@ initAuth(
         : (user.displayName || user.email || '?')[0].toUpperCase();
     }
 
-    // 데이터 로드
+    // 데이터 로드 (사용자 격리: 다른 계정이면 로컬 데이터 초기화)
+    const prevUid = localStorage.getItem('cashflow_uid');
+    if (prevUid !== user.uid) {
+      // 다른 계정 → 이전 사용자 데이터 삭제
+      localStorage.removeItem('cashflow_v21');
+      localStorage.setItem('cashflow_uid', user.uid);
+    }
     load();
     const cloud = await loadFromFirebase();
 
     if (cloud) {
       Object.assign(state, cloud);
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
+      // Gemini API 키: 클라우드 → 로컬 복원 (크로스 디바이스 동기화)
+      if (state.geminiKey) localStorage.setItem('gemini_api_key', state.geminiKey);
       showBadge('☁️ 동기화됨');
     }
 
@@ -211,6 +220,7 @@ initAuth(
       Object.assign(state, cloudData);
       state.theme = localTheme;
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
+      if (state.geminiKey) localStorage.setItem('gemini_api_key', state.geminiKey);
       applyTheme();
       renderAll();
       showBadge('🔄 다른 기기에서 업데이트됨');
@@ -934,6 +944,86 @@ document.getElementById('assets-page-content')?.addEventListener('click', (e) =>
     item.style.display = (cat === '전체' || item.dataset.badgeCat === cat) ? '' : 'none';
   });
 });
+
+// ══════════════════════════════════════════════════════════════
+// 배지 도감 팝업
+// ══════════════════════════════════════════════════════════════
+document.getElementById('assets-page-content')?.addEventListener('click', (e) => {
+  const item = e.target.closest('.badge-item[data-badge-id]');
+  if (!item) return;
+  openBadgeDetail(item.dataset.badgeId);
+});
+
+function openBadgeDetail(badgeId) {
+  const b = BADGE_DEFS.find(x => x.id === badgeId);
+  if (!b) return;
+  const earned = (state.badges || []).includes(b.id);
+  const r = RARITY_CONFIG[b.rarity] || RARITY_CONFIG.common;
+
+  document.getElementById('badge-detail-icon').textContent = b.icon;
+  document.getElementById('badge-detail-label').textContent = b.label;
+  document.getElementById('badge-detail-desc').textContent = b.desc;
+  document.getElementById('badge-detail-cat').textContent = `# ${b.category}`;
+
+  const chip = document.getElementById('badge-detail-rarity-chip');
+  chip.textContent = r.label;
+  chip.style.background = r.bg;
+  chip.style.color = r.color;
+  chip.style.border = `1px solid ${r.border}`;
+
+  const iconWrap = document.getElementById('badge-detail-icon-wrap');
+  iconWrap.style.background = earned ? r.bg : 'rgba(100,116,139,0.12)';
+  iconWrap.style.borderColor = earned ? r.border : 'rgba(100,116,139,0.2)';
+  iconWrap.style.boxShadow = earned && r.glow ? `0 0 32px ${r.color}66` : 'none';
+  // restart animation
+  iconWrap.style.animation = 'none';
+  requestAnimationFrame(() => { iconWrap.style.animation = 'badgeIconPop 0.55s cubic-bezier(0.34,1.56,0.64,1)'; });
+
+  const statusEl = document.getElementById('badge-detail-status');
+  if (earned) {
+    statusEl.textContent = '✅ 획득 완료!';
+    statusEl.style.background = `${r.bg}`;
+    statusEl.style.color = r.color;
+    statusEl.style.border = `1px solid ${r.border}`;
+  } else {
+    statusEl.textContent = `🔒 미획득 — ${b.desc}`;
+    statusEl.style.background = 'rgba(100,116,139,0.08)';
+    statusEl.style.color = 'var(--text3)';
+    statusEl.style.border = '1px solid rgba(100,116,139,0.2)';
+  }
+
+  const glow = document.getElementById('badge-detail-glow');
+  glow.style.background = earned ? `radial-gradient(ellipse at 50% 0%, ${r.color}22 0%, transparent 70%)` : 'none';
+
+  // 파티클 (legendary + earned만)
+  const particles = document.getElementById('badge-detail-particles');
+  particles.innerHTML = '';
+  if (earned && b.rarity === 'legendary') {
+    _spawnBadgeParticles(particles, r.color);
+  }
+
+  openSheet('badge-detail-overlay');
+}
+
+function _spawnBadgeParticles(container, color) {
+  const shapes = ['●', '★', '◆', '▲', '✦'];
+  const colors = [color, '#fbbf24', '#f472b6', '#34d399', '#60a5fa'];
+  for (let i = 0; i < 22; i++) {
+    const el = document.createElement('div');
+    const size = 8 + Math.random() * 10;
+    const x = 10 + Math.random() * 80;
+    const delay = Math.random() * 0.8;
+    const dur = 1.0 + Math.random() * 0.8;
+    const anim = Math.random() > 0.5 ? 'badgeParticleFall' : 'badgeParticleFloat';
+    el.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+    el.style.cssText = `position:absolute;left:${x}%;top:${10 + Math.random() * 40}%;font-size:${size}px;color:${colors[i % colors.length]};opacity:0.9;animation:${anim} ${dur}s ease ${delay}s both;pointer-events:none`;
+    container.appendChild(el);
+  }
+}
+
+window.closeBadgeDetail = function() {
+  closeSheet('badge-detail-overlay');
+};
 
 // ══════════════════════════════════════════════════════════════
 // 뷰탭 — 재정 배틀 RPG
