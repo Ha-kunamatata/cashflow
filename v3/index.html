@@ -276,20 +276,22 @@
 
   <!-- 카드관리 패널 -->
   <div id="entries-panel-cards" style="display:none">
+    <!-- 카드 관리 개념 안내 -->
+    <div style="padding:12px 14px;border-radius:12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.8">
+      <div style="font-size:12px;font-weight:800;color:var(--accent2);margin-bottom:6px">💡 카드 관리 사용 방법</div>
+      <div style="margin-bottom:4px">📋 <strong>고정항목탭</strong>에서 항목별로 카드를 지정하면 → 결제일에 자동 차감되며 아래 표에 자동 합산됩니다.</div>
+      <div style="margin-bottom:4px">💳 <strong>여기 (카드 관리)</strong>에는 식비·쇼핑 등 매달 달라지는 변동 지출만 입력하세요.</div>
+      <div>🔢 <strong>총 청구 예상액</strong> = 고정항목 합산 + 변동 지출 입력값</div>
+    </div>
     <div class="card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">카드사 관리</div>
-        <button class="btn btn-ghost" id="btn-add-card" style="font-size:12px;padding:6px 12px">+ 카드 추가</button>
+        <div class="card-title" style="margin:0">💳 내 카드 목록</div>
+        <button class="btn btn-ghost" id="btn-add-card" style="font-size:12px;padding:6px 12px;border-radius:10px;font-weight:700">+ 카드 추가</button>
       </div>
       <div id="card-defs-list"></div>
     </div>
     <div class="card">
       <div class="card-title">월별 변동 지출 입력</div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:4px;line-height:1.6">
-        고정항목(할부 등)은 자동 포함됩니다.<br>
-        여기엔 <b>식비·쇼핑 등 변동 지출</b>만 입력하세요.<br>
-        결제일에 자동으로 잔고에서 차감됩니다.
-      </p>
       <div id="card-months-list"></div>
     </div>
   </div>
@@ -627,7 +629,40 @@
   <div id="watchlist-container"></div>
 </div>
 
-<!-- ── 바텀 탭 (8개 — 스크롤 가능) ── -->
+<!-- ── 뷰탭 (게임화면) ── -->
+<div class="page" id="page-view">
+  <!-- 우측 상단 급여 카운터 -->
+  <div id="salary-counter-wrap" style="position:absolute;top:10px;right:12px;z-index:10;text-align:right;pointer-events:none">
+    <div style="font-size:8px;color:#4ade80;font-weight:700;opacity:0.7;letter-spacing:1px">💰 초당 수입</div>
+    <div id="salary-counter" style="font-family:monospace;font-size:14px;font-weight:900;color:#4ade80;text-shadow:0 0 10px #4ade8088;letter-spacing:0.5px">+0원</div>
+  </div>
+  <!-- 캔버스 -->
+  <div id="game-wrap" style="position:relative;width:100%;border-radius:16px;overflow:hidden;background:#0a0f1e;border:1px solid rgba(59,130,246,0.2)">
+    <canvas id="game-canvas" style="display:block;width:100%;touch-action:none"></canvas>
+  </div>
+  <!-- 하단 설명 -->
+  <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15)">
+    <div style="font-size:12px;font-weight:800;color:var(--accent2);margin-bottom:6px">⚔️ 재정 배틀</div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.7">
+      고정 지출 항목들이 <strong style="color:#ef4444">몬스터</strong>로 등장합니다.<br>
+      월급은 초당 <strong style="color:#4ade80">힐</strong>로 캐릭터 머리 위에 표시됩니다.<br>
+      지출을 줄일수록 몬스터가 사라집니다!
+    </div>
+  </div>
+  <!-- 스탯 요약 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="game-stats-grid">
+    <div style="padding:10px 12px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)">
+      <div style="font-size:10px;color:#ef4444;font-weight:700;margin-bottom:3px">👾 적군 (고정지출)</div>
+      <div style="font-family:monospace;font-size:16px;font-weight:900;color:var(--text)" id="game-monster-count">-</div>
+    </div>
+    <div style="padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2)">
+      <div style="font-size:10px;color:#10b981;font-weight:700;margin-bottom:3px">💰 월 수입 (힐)</div>
+      <div style="font-family:monospace;font-size:16px;font-weight:900;color:var(--text)" id="game-income-stat">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 바텀 탭 (9개 — 스크롤 가능) ── -->
 
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="nav-btn active" data-page="home"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
@@ -637,6 +672,8 @@
   <button class="nav-btn" data-page="goals"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>목표</span></button>
   <button class="nav-btn" data-page="wishlist"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span>위시</span></button>
   <button class="nav-btn" data-page="finance"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>재테크</span></button>
+  <!-- 뷰탭 — 칼 엑스자 아이콘 -->
+  <button class="nav-btn" data-page="view"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/><path d="M3 3l2 2M19 19l2 2M21 3l-2 2M5 19l-2 2" stroke-width="1.5"/></svg><span>뷰</span></button>
   <button class="nav-btn" data-page="report"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>리포트</span></button>
 </nav>
 
@@ -903,6 +940,36 @@
   </div>
 </div>
 
+<!-- 오늘 지출 상세 시트 -->
+<div class="sheet-overlay" id="today-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">💸 오늘의 지출·수입</div>
+    <div id="today-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-today-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 월급/수입 상세 시트 -->
+<div class="sheet-overlay" id="salary-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">💰 수입 정보</div>
+    <div id="salary-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-salary-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 여유/예측 상세 시트 -->
+<div class="sheet-overlay" id="space-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">📊 재정 여유 분석</div>
+    <div id="space-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-space-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
 <!-- 다가오는 입출금 상세 시트 -->
 <div class="sheet-overlay" id="upcoming-detail-sheet">
   <div class="sheet-panel detail-sheet">
@@ -928,7 +995,7 @@
 </div>
 
 <!-- 위시리스트 추가/수정 폼 -->
-<div class="sheet-overlay" id="wish-form-overlay" style="display:none">
+<div class="sheet-overlay" id="wish-form-overlay">
   <div class="sheet-panel wish-form-panel">
     <div class="sheet-drag-handle"></div>
     <div class="sheet-title" id="wish-form-title">위시 아이템 추가</div>
@@ -960,7 +1027,7 @@
 </div>
 
 <!-- 카드 추가/수정 폼 -->
-<div class="sheet-overlay" id="card-form-overlay" style="display:none">
+<div class="sheet-overlay" id="card-form-overlay">
   <div class="sheet-panel" style="max-height:60vh">
     <div class="sheet-drag-handle"></div>
     <div class="sheet-title" id="card-form-title">카드 추가</div>
@@ -991,7 +1058,7 @@
 </div>
 
 <!-- 관심종목 추가 폼 -->
-<div class="sheet-overlay" id="watchlist-form-overlay" style="display:none">
+<div class="sheet-overlay" id="watchlist-form-overlay">
   <div class="sheet-panel" style="max-height:70vh">
     <div class="sheet-drag-handle"></div>
     <div class="sheet-title">관심종목 추가</div>

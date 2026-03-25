@@ -1086,3 +1086,169 @@ body.light-theme .month-picker-btn { background:var(--bg3); border-color:var(--b
    ════════════════════════════════════════════════════════ */
 body.light-theme .wish-card { background: var(--bg2); }
 body.light-theme .watchlist-card { background: var(--bg2); }
+
+/* ════════════════════════════════════════════════════════
+   뱃지 그리드 개선
+   ════════════════════════════════════════════════════════ */
+.badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.badge-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px; border-radius: 14px; text-align: center;
+  border: 1px solid var(--border); background: var(--bg3);
+  transition: transform 0.15s, box-shadow 0.2s;
+  cursor: default;
+}
+.badge-item.earned { transform: none; }
+.badge-item.earned:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+.badge-item.locked { opacity: 0.55; }
+@keyframes legendaryPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,0.3); }
+  50%       { box-shadow: 0 0 20px rgba(245,158,11,0.6); }
+}
+.badge-item.earned[style*="glow"] { animation: legendaryPulse 2.5s ease-in-out infinite; }
+
+/* ════════════════════════════════════════════════════════
+   가계부 탭 UI/UX 대폭 개선
+   ════════════════════════════════════════════════════════ */
+/* 서브탭 버튼 */
+.ledger-sub-tabs {
+  display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding: 2px 0;
+}
+.ledger-sub-tabs::-webkit-scrollbar { display: none; }
+.ledger-sub-tab {
+  flex-shrink: 0; padding: 8px 16px;
+  border-radius: 20px; font-size: 12px; font-weight: 800;
+  border: 1.5px solid var(--border); background: var(--bg3); color: var(--text3);
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap; font-family: var(--font);
+}
+.ledger-sub-tab.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-color: transparent; color: #fff;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+  transform: translateY(-1px);
+}
+.ledger-sub-tab:not(.active):hover {
+  background: var(--bg2); border-color: var(--accent2); color: var(--text2);
+}
+
+/* 달력 툴바 */
+.ledger-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 8px;
+}
+.ledger-toolbar .btn {
+  padding: 8px 14px; border-radius: 12px; font-size: 13px; font-weight: 700;
+  background: var(--bg3); border: 1px solid var(--border);
+  transition: all 0.15s; min-width: 60px;
+}
+.ledger-toolbar .btn:hover { background: var(--bg2); border-color: var(--accent2); color: var(--accent2); }
+.ledger-month-chip {
+  font-size: 15px; font-weight: 900; color: var(--text);
+  padding: 8px 16px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border);
+  letter-spacing: 0.5px;
+}
+#btn-ledger-month-label {
+  cursor: pointer; user-select: none; transition: background 0.15s;
+}
+#btn-ledger-month-label:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3); }
+#btn-ledger-month-label::after { content: ' ▾'; font-size: 10px; opacity: 0.5; }
+
+/* 달력 그리드 */
+.ledger-cal-summary {
+  display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.ledger-cal-summary-item {
+  flex: 1; min-width: 70px; padding: 8px 10px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border); text-align: center;
+}
+
+/* 예산 탭 내 버튼 */
+#ledger-view-budget .btn, #ledger-view-stats .btn {
+  border-radius: 12px; padding: 8px 14px; font-weight: 700;
+}
+
+/* ════════════════════════════════════════════════════════
+   게임 뷰탭
+   ════════════════════════════════════════════════════════ */
+#page-view {
+  position: relative; padding-bottom: 80px;
+}
+#game-wrap {
+  height: 52vh; min-height: 280px; max-height: 420px;
+}
+#game-canvas { display: block; }
+
+/* 급여 카운터 */
+#salary-counter-wrap {
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  border-radius: 12px; padding: 6px 10px; border: 1px solid rgba(74,222,128,0.25);
+}
+
+/* 게임 스탯 */
+#game-stats-grid .stat-val {
+  font-family: var(--mono); font-size: 18px; font-weight: 900; color: var(--text);
+}
+
+/* ════════════════════════════════════════════════════════
+   항목탭 카드 배지 스타일 강화
+   ════════════════════════════════════════════════════════ */
+.badge.hyundai {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.5px; vertical-align: middle;
+}
+.badge.kookmin {
+  background: linear-gradient(135deg, #047857, #059669);
+  color: #fff; padding: 2px 7px; border-radius: 6px; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.5px; vertical-align: middle;
+}
+.entry-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+
+/* ════════════════════════════════════════════════════════
+   하우스 레벨 카드 개선
+   ════════════════════════════════════════════════════════ */
+.house-level-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8));
+  border: 1.5px solid rgba(99,102,241,0.2);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.house-level-card:hover {
+  transform: translateY(-2px); border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.house-level-card::before {
+  content: ''; position: absolute; top: -40%; right: -20%; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+.house-progress-track { height: 6px; background: var(--bg3); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.house-progress-fill { height: 6px; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* ════════════════════════════════════════════════════════
+   @keyframes 추가
+   ════════════════════════════════════════════════════════ */
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+/* ════════════════════════════════════════════════════════
+   뷰탭 아이콘 (칼 엑스자)
+   ════════════════════════════════════════════════════════ */
+.nav-btn[data-page="view"] svg { stroke-width: 2.5; }
+.nav-btn[data-page="view"].active svg { stroke: var(--accent2); }
+
+/* ════════════════════════════════════════════════════════
+   라이트 테마 추가 오버라이드
+   ════════════════════════════════════════════════════════ */
+body.light-theme .ledger-sub-tab { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+body.light-theme .ledger-sub-tab.active { background: linear-gradient(135deg,var(--accent),var(--accent2)); color: #fff; border-color: transparent; }
+body.light-theme #game-wrap { background: #f8fafc; }
+body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
