@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 
 const GEMINI_KEY_STORAGE = 'gemini_api_key';
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // ── API 키 관리 ───────────────────────────────────────
 export function getGeminiKey() {

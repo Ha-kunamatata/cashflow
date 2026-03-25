@@ -134,6 +134,8 @@ import {
   hideLoading
 } from './utils.js';
 
+import { FinanceGame } from './game.js';
+
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
@@ -934,317 +936,30 @@ document.getElementById('assets-page-content')?.addEventListener('click', (e) =>
 });
 
 // ══════════════════════════════════════════════════════════════
-// 뷰탭 — 게임화면
+// 뷰탭 — 재정 배틀 RPG
 // ══════════════════════════════════════════════════════════════
-let _gameAnimFrame = null;
-let _gameRunning = false;
-let _gameMonsters = [];
-let _gameParticles = [];
-let _gameTick = 0;
-let _gameCanvas = null;
-let _gameCtx = null;
-let _salaryPerSec = 0;
-let _salaryAccum = 0;
-let _salaryFloats = [];
-let _heroHp = 100;
-let _heroMaxHp = 100;
-let _heroX = 0;
-let _heroY = 0;
-let _gameW = 0;
-let _gameH = 0;
+let _game = null;
 
 function _initGame() {
-  _gameCanvas = document.getElementById('game-canvas');
-  if (!_gameCanvas) return;
-  _gameCtx = _gameCanvas.getContext('2d');
-  _resizeGame();
-
-  // 월급 → 초당 수입 계산
-  import('./state.js').then(({ state: s }) => {
-    const monthlyIncome = (s.entries || [])
-      .filter(e => e.type === 'income' && e.repeat === '매월')
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-    _salaryPerSec = monthlyIncome / (30 * 24 * 3600);
-    _salaryAccum = 0;
-
-    // 고정 지출 항목 → 몬스터 생성
-    const expenses = (s.entries || []).filter(e => e.type === 'expense' && e.repeat === '매월');
-    _gameMonsters = expenses.map((e, i) => _spawnMonster(e, i, expenses.length));
-    _heroHp = 100;
-    _heroMaxHp = 100;
-    _heroX = _gameW * 0.2;
-    _heroY = _gameH * 0.55;
-  });
-
-  if (!_gameRunning) {
-    _gameRunning = true;
-    _gameLoop();
-  }
-}
-
-function _resizeGame() {
-  if (!_gameCanvas) return;
-  const wrap = _gameCanvas.parentElement;
-  // 페이지 활성화 전에는 0일 수 있어 여러 방법으로 폭 계산
-  _gameW = wrap.offsetWidth || wrap.clientWidth || (window.innerWidth - 32) || 360;
-  _gameH = wrap.offsetHeight || 360;
-  _gameCanvas.width = _gameW;
-  _gameCanvas.height = _gameH;
-  _heroX = _gameW * 0.2;
-  _heroY = _gameH * 0.58;
-}
-
-function _spawnMonster(entry, idx, total) {
-  const cols = 3;
-  const col = idx % cols;
-  const row = Math.floor(idx / cols);
-  const baseX = _gameW * 0.55 + col * 90 + Math.random() * 20;
-  const baseY = _gameH * 0.2 + row * 90 + Math.random() * 20;
-  const hp = Math.max(10, Math.min(100, Math.round(entry.amount / 50000)));
-  return {
-    id: entry.id,
-    name: entry.name,
-    amount: entry.amount,
-    x: baseX,
-    y: baseY,
-    hp,
-    maxHp: hp,
-    size: 22 + Math.min(20, entry.amount / 100000),
-    wobble: Math.random() * Math.PI * 2,
-    wobbleSpeed: 0.03 + Math.random() * 0.02,
-    color: entry.category === '할부' ? '#ef4444' : '#f97316',
-    dead: false,
-    deathTimer: 0,
-  };
-}
-
-function _gameLoop() {
-  if (!_gameRunning || !_gameCtx) return;
-  _gameTick++;
-  const ctx = _gameCtx;
-  const W = _gameW, H = _gameH;
-
-  // 배경
-  ctx.clearRect(0, 0, W, H);
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0a0f1e');
-  bg.addColorStop(1, '#0f172a');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // 바닥
-  ctx.fillStyle = 'rgba(30,41,59,0.8)';
-  ctx.fillRect(0, H * 0.75, W, H * 0.25);
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(0, H * 0.75, W, 2);
-
-  // 별 배경 (5개만 단순하게)
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  [15, 80, 160, 240, 310].forEach((x, i) => {
-    const y = 20 + (i * 31) % 60;
-    const r = 0.5 + ((_gameTick * 0.02 + i) % 1) * 0.5;
-    ctx.beginPath();
-    ctx.arc(x % W, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // 몬스터 (지출 항목)
-  _gameMonsters.forEach(m => {
-    if (m.dead) {
-      m.deathTimer++;
-      return;
-    }
-    m.wobble += m.wobbleSpeed;
-    const mx = m.x + Math.sin(m.wobble) * 4;
-    const my = m.y + Math.cos(m.wobble * 0.7) * 3;
-
-    // 그림자
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(mx, my + m.size + 4, m.size * 0.7, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 몬스터 몸통
-    const monGrad = ctx.createRadialGradient(mx - 4, my - 4, 2, mx, my, m.size);
-    monGrad.addColorStop(0, m.color + 'ff');
-    monGrad.addColorStop(1, m.color + '88');
-    ctx.fillStyle = monGrad;
-    ctx.beginPath();
-    ctx.arc(mx, my, m.size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = m.color;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // 눈
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(mx - 6, my - 4, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(mx + 6, my - 4, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1a1a2e';
-    ctx.beginPath(); ctx.arc(mx - 5, my - 4, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(mx + 7, my - 4, 2.5, 0, Math.PI * 2); ctx.fill();
-
-    // HP바
-    const bw = m.size * 2.2, bh = 5;
-    const bx = mx - bw / 2, by = my - m.size - 12;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx, by, bw, bh);
-    const hpPct = m.hp / m.maxHp;
-    ctx.fillStyle = hpPct > 0.5 ? '#10b981' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';
-    ctx.fillRect(bx, by, bw * hpPct, bh);
-
-    // 이름 + 금액
-    ctx.font = `bold ${Math.max(8, m.size * 0.38)}px sans-serif`;
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    const nameShort = m.name.length > 5 ? m.name.slice(0, 5) + '..' : m.name;
-    ctx.fillText(nameShort, mx, my + m.size + 16);
-    ctx.font = `700 8px monospace`;
-    ctx.fillStyle = m.color;
-    const amt = m.amount >= 10000 ? Math.round(m.amount/10000)+'만' : m.amount+'원';
-    ctx.fillText('-' + amt, mx, my + m.size + 26);
-    ctx.textAlign = 'left';
-
-    // 60틱마다 히어로를 향해 공격 (HP 감소)
-    if (_gameTick % 180 === Math.abs(m.id?.charCodeAt(0) || 0) % 180) {
-      _heroHp = Math.max(0, _heroHp - 2);
-      _gameParticles.push({ x: _heroX, y: _heroY - 10, text: '⚡ -2', color: '#ef4444', life: 60, vy: -1.5, type: 'hit' });
-    }
-  });
-
-  // 히어로 (내 캐릭터)
-  const hx = _heroX, hy = _heroY;
-  const heroWobble = Math.sin(_gameTick * 0.05) * 2;
-
-  // 히어로 그림자
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath(); ctx.ellipse(hx, hy + 22, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
-
-  // 히어로 몸 (단순 픽셀아트풍)
-  // 몸통
-  ctx.fillStyle = '#3b82f6';
-  ctx.fillRect(hx - 10, hy - 10 + heroWobble, 20, 26);
-  // 머리
-  ctx.fillStyle = '#fbbf24';
-  ctx.beginPath(); ctx.arc(hx, hy - 18 + heroWobble, 14, 0, Math.PI * 2); ctx.fill();
-  // 눈
-  ctx.fillStyle = '#1a1a2e';
-  ctx.beginPath(); ctx.arc(hx - 5, hy - 20 + heroWobble, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(hx + 5, hy - 20 + heroWobble, 2.5, 0, Math.PI * 2); ctx.fill();
-  // 입 (미소)
-  ctx.strokeStyle = '#1a1a2e';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.arc(hx, hy - 16 + heroWobble, 5, 0.2, Math.PI - 0.2); ctx.stroke();
-  // 다리
-  ctx.fillStyle = '#1e40af';
-  ctx.fillRect(hx - 9, hy + 16 + heroWobble, 7, 10);
-  ctx.fillRect(hx + 2, hy + 16 + heroWobble, 7, 10);
-  // 칼 (오른손)
-  ctx.save();
-  ctx.translate(hx + 14, hy - 5 + heroWobble);
-  ctx.rotate(-0.4 + Math.sin(_gameTick * 0.08) * 0.2);
-  ctx.fillStyle = '#94a3b8';
-  ctx.fillRect(-2, -18, 4, 18);
-  ctx.fillStyle = '#fbbf24';
-  ctx.fillRect(-6, -2, 12, 4);
-  ctx.restore();
-
-  // HP바 (히어로)
-  const hpBarW = 40;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(hx - hpBarW/2, hy - 42 + heroWobble, hpBarW, 6);
-  const hpColor = _heroHp > 50 ? '#10b981' : _heroHp > 25 ? '#f59e0b' : '#ef4444';
-  ctx.fillStyle = hpColor;
-  ctx.fillRect(hx - hpBarW/2, hy - 42 + heroWobble, hpBarW * (_heroHp/_heroMaxHp), 6);
-  ctx.font = 'bold 8px sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.fillText('HP', hx, hy - 36 + heroWobble);
-  ctx.textAlign = 'left';
-
-  // 월급 초당 수입 적립 + 플로팅 텍스트 생성
-  if (_salaryPerSec > 0) {
-    _salaryAccum += _salaryPerSec / 60; // 60fps 가정
-    if (_salaryAccum >= 1) {
-      const earned = Math.floor(_salaryAccum);
-      _salaryAccum -= earned;
-      _heroHp = Math.min(_heroMaxHp, _heroHp + 0.1); // 힐링 효과
-      _salaryFloats.push({
-        x: hx + (Math.random() - 0.5) * 30,
-        y: hy - 50,
-        text: `+${earned >= 1000 ? Math.round(earned/1000)+'천' : earned}`,
-        life: 90,
-        vy: -1.2,
-      });
-    }
-  }
-
-  // 월급 플로팅 텍스트 (힐 효과)
-  _salaryFloats = _salaryFloats.filter(f => f.life > 0);
-  _salaryFloats.forEach(f => {
-    f.y += f.vy;
-    f.life--;
-    const alpha = Math.min(1, f.life / 30);
-    ctx.globalAlpha = alpha;
-    ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = '#4ade80';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#4ade80';
-    ctx.shadowBlur = 6;
-    ctx.fillText(f.text, f.x, f.y);
-    ctx.shadowBlur = 0;
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  });
-
-  // 일반 파티클
-  _gameParticles = _gameParticles.filter(p => p.life > 0);
-  _gameParticles.forEach(p => {
-    p.y += p.vy || -1;
-    p.life--;
-    ctx.globalAlpha = Math.min(1, p.life / 20);
-    ctx.font = 'bold 10px sans-serif';
-    ctx.fillStyle = p.color;
-    ctx.textAlign = 'center';
-    ctx.fillText(p.text, p.x, p.y);
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  });
-
-  // 살아있는 몬스터 없으면 "승리"
-  const alive = _gameMonsters.filter(m => !m.dead);
-  if (_gameMonsters.length > 0 && alive.length === 0) {
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillStyle = '#f59e0b';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 20;
-    ctx.fillText('🎉 VICTORY!', W/2, H/2);
-    ctx.font = '14px sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.shadowBlur = 0;
-    ctx.fillText('고정 지출 없음! 재정 자유!', W/2, H/2 + 30);
-    ctx.textAlign = 'left';
-  } else if (_gameMonsters.length === 0) {
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'center';
-    ctx.fillText('항목탭에서 고정 지출을 추가하면', W/2, H/2);
-    ctx.fillText('몬스터가 나타납니다!', W/2, H/2 + 22);
-    ctx.textAlign = 'left';
-  }
-
-  _gameAnimFrame = requestAnimationFrame(_gameLoop);
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+  if (_game) { _game.destroy(); _game = null; }
+  _game = new FinanceGame(canvas, state);
+  _game.init();
+  _updateSalaryCounter();
+  _updateGameStats();
 }
 
 function _stopGame() {
-  _gameRunning = false;
-  if (_gameAnimFrame) { cancelAnimationFrame(_gameAnimFrame); _gameAnimFrame = null; }
+  if (_game) { _game.destroy(); _game = null; }
 }
+
 
 // 뷰탭 진입/이탈 감지
 document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.dataset.page === 'view') {
-      setTimeout(() => { _initGame(); _updateSalaryCounter(); _updateGameStats(); }, 200);
+      setTimeout(() => _initGame(), 200);
     } else {
       _stopGame();
     }
@@ -1252,45 +967,41 @@ document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
 });
 
 function _updateGameStats() {
-  import('./state.js').then(({ state: s }) => {
-    import('./utils.js').then(({ fmtShort }) => {
-      const monsters = (s.entries||[]).filter(e=>e.type==='expense'&&e.repeat==='매월');
-      const monthlyInc = (s.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
-      const monEl = document.getElementById('game-monster-count');
-      const incEl = document.getElementById('game-income-stat');
-      if (monEl) monEl.textContent = `${monsters.length}마리`;
-      if (incEl) incEl.textContent = fmtShort(monthlyInc) + '/월';
-    });
-  });
+  const monsters = (state.entries||[]).filter(e=>e.type==='expense'&&e.repeat==='매월');
+  const monthlyInc = (state.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
+  const monEl = document.getElementById('game-monster-count');
+  const incEl = document.getElementById('game-income-stat');
+  if (monEl) monEl.textContent = `${monsters.length}마리`;
+  if (incEl) {
+    const m = monthlyInc;
+    incEl.textContent = (m >= 10000 ? Math.round(m/10000)+'만' : m.toLocaleString()) + '원/월';
+  }
 }
 
 // 급여 카운터 업데이트
 function _updateSalaryCounter() {
   const el = document.getElementById('salary-counter');
   if (!el) return;
-  import('./state.js').then(({ state: s }) => {
-    const monthlyIncome = (s.entries || [])
-      .filter(e => e.type === 'income' && e.repeat === '매월')
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-    if (!monthlyIncome) { el.textContent = '월급 미설정'; return; }
-    const perSec = monthlyIncome / (30 * 24 * 3600);
-    let startTime = Date.now();
-    let accumulated = 0;
-    function tick() {
-      if (!document.getElementById('page-view')?.classList.contains('active')) return;
-      const elapsed = (Date.now() - startTime) / 1000;
-      accumulated = perSec * elapsed;
-      const fmt = n => n >= 10000 ? (n/10000).toFixed(2)+'만' : n.toFixed(0)+'원';
-      el.textContent = '+' + fmt(accumulated);
-      requestAnimationFrame(tick);
-    }
-    tick();
-  });
+  const monthlyIncome = (state.entries || [])
+    .filter(e => e.type === 'income' && e.repeat === '매월')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+  if (!monthlyIncome) { el.textContent = '월급 미설정'; return; }
+  const perSec = monthlyIncome / (30 * 24 * 3600);
+  const startTime = Date.now();
+  function tick() {
+    if (!document.getElementById('page-view')?.classList.contains('active')) return;
+    const elapsed = (Date.now() - startTime) / 1000;
+    const accumulated = perSec * elapsed;
+    const fmt = n => n >= 10000 ? (n/10000).toFixed(2)+'만' : n.toFixed(0)+'원';
+    el.textContent = '+' + fmt(accumulated);
+    requestAnimationFrame(tick);
+  }
+  tick();
 }
 
 // 윈도우 리사이즈
 window.addEventListener('resize', () => {
-  if (_gameCanvas) _resizeGame();
+  if (_game) _game.resize();
 });
 
 // 상세 시트 닫기 버튼
