@@ -117,6 +117,8 @@ import {
   saveWishItem,
   deleteWishItem,
   toggleWishBought,
+  getWishSelectedIds,
+  clearWishSelection,
   // 워치리스트
   openWatchlistForm,
   hideWatchlistForm,
@@ -905,6 +907,126 @@ document.getElementById('wish-list')?.addEventListener('click', (e) => {
     const url = linkBtn.dataset.url;
     if (url) window.open(url, '_blank', 'noopener');
   }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 위시리스트 드래그 순서 변경 + 다중선택 분석
+// ══════════════════════════════════════════════════════════════
+let _dragSrcId = null;
+
+document.getElementById('wish-list')?.addEventListener('dragstart', (e) => {
+  const card = e.target.closest('.wish-card[data-id]');
+  if (!card) return;
+  _dragSrcId = card.dataset.id;
+  card.style.opacity = '0.5';
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+document.getElementById('wish-list')?.addEventListener('dragend', (e) => {
+  const card = e.target.closest('.wish-card[data-id]');
+  if (card) card.style.opacity = '';
+  _dragSrcId = null;
+  document.querySelectorAll('.wish-card').forEach(c => c.classList.remove('drag-over'));
+});
+
+document.getElementById('wish-list')?.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const card = e.target.closest('.wish-card[data-id]');
+  document.querySelectorAll('.wish-card').forEach(c => c.classList.remove('drag-over'));
+  if (card && card.dataset.id !== _dragSrcId) card.classList.add('drag-over');
+});
+
+document.getElementById('wish-list')?.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const targetCard = e.target.closest('.wish-card[data-id]');
+  if (!targetCard || !_dragSrcId || targetCard.dataset.id === _dragSrcId) return;
+  targetCard.classList.remove('drag-over');
+
+  const wishlist = state.wishlist || [];
+  const srcIdx = wishlist.findIndex(w => w.id === _dragSrcId);
+  const tgtIdx = wishlist.findIndex(w => w.id === targetCard.dataset.id);
+  if (srcIdx === -1 || tgtIdx === -1) return;
+
+  const [moved] = wishlist.splice(srcIdx, 1);
+  wishlist.splice(tgtIdx, 0, moved);
+  state.wishlist = wishlist;
+  save();
+  renderWishlist();
+});
+
+// 체크박스 변경 → 바 업데이트 (이벤트 위임)
+document.getElementById('wish-list')?.addEventListener('change', (e) => {
+  if (e.target.classList.contains('wish-checkbox')) {
+    const bar = document.getElementById('wish-multiselect-bar');
+    const checked = document.querySelectorAll('.wish-checkbox:checked');
+    const count = checked.size ?? checked.length;
+    const countEl = document.getElementById('wish-select-count');
+    if (countEl) countEl.textContent = count > 0 ? `${count}개 선택됨` : '항목을 선택하세요';
+    if (bar) bar.style.display = count > 0 ? 'flex' : 'none';
+  }
+});
+
+// 다중선택 분석 버튼
+document.getElementById('btn-wish-multianalyze')?.addEventListener('click', async () => {
+  const checked = [...document.querySelectorAll('.wish-checkbox:checked')].map(cb => cb.dataset.id);
+  if (!checked.length) return;
+
+  const { escapeHtml, fmtShort } = await import('./utils.js');
+  const { buildForecast } = await import('./forecast.js');
+
+  const items = (state.wishlist || []).filter(w => checked.includes(w.id));
+  const totalPrice = items.reduce((s, w) => s + Number(w.price || 0), 0);
+  const canAffordAll = state.balance >= totalPrice;
+
+  const fc = buildForecast(365);
+  let safeDate = null;
+  for (const f of fc) {
+    if (f.balance >= totalPrice) { safeDate = f.date; break; }
+  }
+  const safeDateStr = safeDate
+    ? `${safeDate.getMonth()+1}/${safeDate.getDate()} 구매 가능`
+    : '1년 내 구매 불가';
+
+  const balAfter = state.balance - totalPrice;
+  const content = document.getElementById('wish-analyze-content');
+  if (content) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:16px 0;margin-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text3);margin-bottom:6px">선택한 ${items.length}개 항목 합계</div>
+        <div style="font-size:30px;font-weight:900;font-family:var(--mono);color:var(--red2)">-${fmtShort(totalPrice)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--bg3);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">현재 잔고</div>
+          <div style="font-size:16px;font-weight:800;color:var(--text);font-family:var(--mono)">${fmtShort(state.balance)}</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">구매 후 잔고</div>
+          <div style="font-size:16px;font-weight:800;color:${balAfter >= 0 ? 'var(--green2)' : 'var(--red2)'};font-family:var(--mono)">${balAfter >= 0 ? fmtShort(balAfter) : `-${fmtShort(Math.abs(balAfter))}`}</div>
+        </div>
+      </div>
+      <div style="background:${canAffordAll ? 'rgba(16,185,129,0.1)' : 'rgba(249,115,22,0.1)'};border:1px solid ${canAffordAll ? 'rgba(16,185,129,0.3)' : 'rgba(249,115,22,0.3)'};border-radius:12px;padding:14px;margin-bottom:16px;text-align:center">
+        <div style="font-size:17px;font-weight:900;color:${canAffordAll ? 'var(--green2)' : 'var(--orange)'}">
+          ${canAffordAll ? '✅ 지금 모두 구매 가능!' : '⏳ 잔고 부족'}
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">${safeDateStr}</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">선택 항목 목록</div>
+      ${items.map(w => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;color:var(--text);flex:1">${escapeHtml(w.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--red2);font-family:var(--mono)">${w.price ? fmtShort(Number(w.price)) : '-'}</span>
+      </div>`).join('')}
+    `;
+  }
+  openSheet('wish-analyze-sheet');
+});
+
+document.getElementById('btn-wish-clearselect')?.addEventListener('click', () => {
+  document.querySelectorAll('.wish-checkbox').forEach(cb => { cb.checked = false; });
+  const bar = document.getElementById('wish-multiselect-bar');
+  if (bar) bar.style.display = 'none';
+  clearWishSelection();
 });
 
 // ══════════════════════════════════════════════════════════════

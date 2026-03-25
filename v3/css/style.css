@@ -1313,3 +1313,21 @@ body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
 body.light-theme .bottom-nav::after {
   background: linear-gradient(to left, rgba(255,255,255,0.92) 20%, transparent);
 }
+
+/* ════════════════════════════════════════════════════════
+   위시리스트 드래그 + 다중선택
+   ════════════════════════════════════════════════════════ */
+.wish-drag-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; flex-shrink: 0; cursor: grab; touch-action: none;
+  padding: 0 2px; opacity: 0.4; transition: opacity 0.2s;
+}
+.wish-drag-handle:active { cursor: grabbing; }
+.wish-card:hover .wish-drag-handle { opacity: 0.7; }
+.wish-card-top { display: flex; align-items: center; gap: 8px; }
+.wish-select-wrap { display: flex; align-items: center; flex-shrink: 0; }
+.wish-card.drag-over {
+  border: 2px dashed var(--accent) !important;
+  background: rgba(99,102,241,0.06) !important;
+}
+.wish-card[draggable="true"] { cursor: default; }

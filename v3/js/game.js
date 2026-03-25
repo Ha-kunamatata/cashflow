@@ -2,7 +2,14 @@
 // game.js — 재정 배틀 RPG (모바일 방치형 픽셀 게임)
 // ════════════════════════════════════════════════════════
 
-// ── Pixel sprite renderer ─────────────────────────────
+// ── 수치 포맷 헬퍼 ───────────────────────────────────────
+function fmtHp(n) {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`;
+  if (n >= 10_000)      return `${Math.round(n / 10000)}만`;
+  if (n >= 1_000)       return `${(n / 1000).toFixed(0)}천`;
+  return `${Math.round(n)}`;
+}
+
 // grid: array of equal-length strings; palette: char→color (null=skip)
 function drawSprite(ctx, cx, cy, grid, palette, ps) {
   const rows = grid.length;
@@ -228,6 +235,11 @@ export class FinanceGame {
     this.salaryAccum  = 0;
     this.paydayFlash  = 0;
     this.respawnTimer = null;
+
+    // 클릭 정보 패널
+    this._infoPanel = { visible: false, lines: [], x: 0, y: 0, tick: 0, color: '#60a5fa' };
+    this._clickHandler = null;
+    this._touchHandler = null;
   }
 
   // ── Public API ────────────────────────────────────────
@@ -237,6 +249,12 @@ export class FinanceGame {
     this._buildHero();
     this._buildMonsters();
     this._calcSalary();
+    // 캔버스 클릭/터치 이벤트
+    this._clickHandler = (e) => this._handleClick(e);
+    this._touchHandler = (e) => { e.preventDefault(); if (e.changedTouches[0]) this._handleClick(e.changedTouches[0]); };
+    this.canvas.addEventListener('click', this._clickHandler);
+    this.canvas.addEventListener('touchend', this._touchHandler, { passive: false });
+    this.canvas.style.cursor = 'pointer';
     if (!this.running) { this.running = true; this._loop(); }
   }
 
@@ -244,6 +262,8 @@ export class FinanceGame {
     this.running = false;
     if (this.animFrame) cancelAnimationFrame(this.animFrame);
     if (this.respawnTimer) clearTimeout(this.respawnTimer);
+    if (this._clickHandler) this.canvas.removeEventListener('click', this._clickHandler);
+    if (this._touchHandler) this.canvas.removeEventListener('touchend', this._touchHandler);
     this.animFrame = null;
   }
 
@@ -276,19 +296,28 @@ export class FinanceGame {
     const monthly = (this.state.entries || [])
       .filter(e => e.type === 'income' && e.repeat === '매월')
       .reduce((s, e) => s + (e.amount || 0), 0);
+    // 초당 원 단위 수입 trickle (파티클 표시용)
     this.salaryPerSec = monthly / (30 * 24 * 3600);
+    this.salaryAccum = 0;
   }
 
   _buildHero() {
     const totalAssets = (this.state.assets || []).reduce((s, a) => s + (a.amount || 0), 0);
     const lvl = getHeroLevel(totalAssets);
+
+    // 월수입 = 영웅 최대 HP
     const monthly = (this.state.entries || [])
       .filter(e => e.type === 'income' && e.repeat === '매월')
-      .reduce((s, e) => s + e.amount, 0);
-    const atk = Math.max(5, Math.round(monthly / 100_000) + lvl * 3);
+      .reduce((s, e) => s + (e.amount || 0), 0);
+    const maxHp = Math.max(100_000, monthly); // 최소 10만원
 
-    const prevHp  = this.hero?.hp    ?? 100;
-    const prevMax = this.hero?.maxHp ?? 100;
+    // 잔고 = 현재 HP (월수입 대비 비율로 표시)
+    const balance = this.state.balance || 0;
+    const hp = Math.max(0, Math.min(maxHp, balance));
+
+    // 공격력 = 월수입 / 30 / 적 수 (일당 소득 배분)
+    const numExp = Math.max(1, (this.state.entries || []).filter(e => e.type === 'expense' && e.repeat === '매월').length);
+    const atk = Math.max(1_000, Math.round(monthly / 30 / numExp * 2));
 
     this.hero = {
       x: Math.round(this.W * 0.17),
@@ -296,8 +325,9 @@ export class FinanceGame {
       level: lvl,
       def: HERO_LEVELS[lvl],
       atk,
-      hp: prevHp,
-      maxHp: prevMax,
+      hp,
+      maxHp,
+      monthlyIncome: monthly,
       attackTick: 0,
       attackTarget: null,
     };
@@ -325,18 +355,22 @@ export class FinanceGame {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const mtype = getMonsterType(e.amount || 0);
-      const hpFrac = total > 0 ? (e.amount || 0) / total : 1 / Math.max(count, 1);
-      const maxHp  = Math.max(15, Math.round(hpFrac * 300));
+      // 몬스터 HP = 월 지출액 (실제 원 단위)
+      const maxHp = Math.max(1_000, e.amount || 0);
+      // 몬스터 공격력 = 지출액 / 30 (일 단위 부담)
+      const monAtk = Math.max(100, Math.round((e.amount || 0) / 30));
 
       return {
         id: e.id || `m${i}`,
         name: e.name || '지출',
         amount: e.amount || 0,
+        category: e.category || '',
         x: Math.round(areaX + col * cellW + cellW / 2),
         y: Math.round(areaY + row * cellH + cellH * 0.65),
         mtype,
         hp: maxHp,
         maxHp,
+        monAtk,
         wobble: Math.random() * Math.PI * 2,
         dead: false,
         deathTick: 0,
@@ -385,6 +419,7 @@ export class FinanceGame {
     this._drawHero();
     this._drawParticles();
     this._drawHUD();
+    this._drawInfoPanel();
 
     // Auto-battle every BATTLE_INTERVAL ticks
     if (this.tick - this.lastBattleTick >= this.BATTLE_INTERVAL) {
@@ -392,19 +427,17 @@ export class FinanceGame {
       this.lastBattleTick = this.tick;
     }
 
-    // Salary trickle heal
-    if (this.salaryPerSec > 0) {
+    // 월급 파티클 (시각적 효과만 — 실제 회복은 battle tick에서 처리)
+    if (this.salaryPerSec > 0 && this.hero) {
       this.salaryAccum += this.salaryPerSec / 60;
-      if (this.salaryAccum >= 1) {
+      if (this.salaryAccum >= 1000) {
         const n = Math.floor(this.salaryAccum);
         this.salaryAccum -= n;
-        if (this.hero) this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 0.05);
-        if (Math.random() < 0.2) {
-          const str = n >= 10000 ? `+${Math.round(n/1000)}천` : `+${n}`;
+        if (Math.random() < 0.15) {
           this._spawnParticle(
-            this.hero.x + (Math.random() - 0.5) * 32,
-            this.hero.y - 50,
-            str, '#4ade80', -1.0, 75, 10
+            this.hero.x + (Math.random() - 0.5) * 28,
+            this.hero.y - 52,
+            `+${fmtHp(n)}`, '#4ade80', -0.9, 70, 10
           );
         }
       }
@@ -554,7 +587,7 @@ export class FinanceGame {
     ctx.font = '700 7px "DM Mono", monospace';
     ctx.fillStyle = '#e2e8f0';
     ctx.textAlign = 'center';
-    ctx.fillText(`HP ${Math.ceil(h.hp)}/${h.maxHp}`, h.x, by - 3);
+    ctx.fillText(`잔고 ${fmtHp(h.hp)} / 월수입 ${fmtHp(h.maxHp)}`, h.x, by - 3);
 
     // Level badge
     const badgeW = 34, badgeH = 13;
@@ -620,32 +653,26 @@ export class FinanceGame {
         ctx.fillText('★ BOSS ★', dx, dy - sprH / 2 - 18);
       }
 
-      // HP bar
-      const bw = Math.max(30, sprW + 6);
+      // HP bar (HP = 지출액)
+      const bw = Math.max(36, sprW + 6);
       const bh = 5;
       const bx = dx - bw / 2;
       const by = dy - sprH / 2 - (m.mtype.isBoss ? 28 : 14);
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(bx, by, bw, bh);
-      const hp = m.hp / m.maxHp;
-      ctx.fillStyle = hp > 0.5 ? '#22c55e' : hp > 0.25 ? '#eab308' : '#ef4444';
-      ctx.fillRect(bx, by, Math.round(bw * hp), bh);
+      const hpPct = m.hp / m.maxHp;
+      ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#eab308' : '#ef4444';
+      ctx.fillRect(bx, by, Math.round(bw * hpPct), bh);
 
-      // Name & amount
+      // Name & HP(원)
       const nameStr = m.name.length > 5 ? m.name.slice(0, 4) + '…' : m.name;
-      const amtStr = m.amount >= 100_000
-        ? `${Math.round(m.amount / 10000)}만`
-        : m.amount >= 10_000
-        ? `${(m.amount / 10000).toFixed(1)}만`
-        : `${m.amount.toLocaleString()}원`;
-
       ctx.font = 'bold 8px monospace';
       ctx.fillStyle = '#e2e8f0';
       ctx.textAlign = 'center';
       ctx.fillText(nameStr, dx, by - 3);
       ctx.font = '600 7px monospace';
       ctx.fillStyle = m.mtype.baseColor;
-      ctx.fillText(`-${amtStr}/월`, dx, by - 12);
+      ctx.fillText(`HP ${fmtHp(m.hp)}/${fmtHp(m.maxHp)}`, dx, by - 12);
       ctx.textAlign = 'left';
     });
   }
@@ -741,9 +768,9 @@ export class FinanceGame {
     const alive = this.monsters.filter(m => !m.dead);
     if (!this.hero || alive.length === 0) return;
 
-    // Hero attacks one random target
+    // 영웅 공격: 랜덤 대상 1개 (±25% 편차)
     const target = alive[Math.floor(Math.random() * alive.length)];
-    const dmg = this.hero.atk + Math.floor(Math.random() * this.hero.atk * 0.25);
+    const dmg = Math.round(this.hero.atk * (0.75 + Math.random() * 0.5));
     target.hp = Math.max(0, target.hp - dmg);
     target.flashTick = 8;
     this.hero.attackTick = 15;
@@ -752,52 +779,142 @@ export class FinanceGame {
     this._spawnParticle(
       target.x + (Math.random() - 0.5) * 18,
       target.y - 16,
-      `-${dmg}`, '#fbbf24', -1.6, 65, 12
+      `-${fmtHp(dmg)}`, '#fbbf24', -1.6, 65, 11
     );
 
     if (target.hp <= 0) {
       target.dead = true;
-      // Coin burst
       for (let i = 0; i < 4; i++) {
         this._spawnParticle(
           target.x + (Math.random() - 0.5) * 28,
           target.y - 8,
           '💰', '#fbbf24',
-          -(0.7 + Math.random() * 1.3),
-          72, 14,
+          -(0.7 + Math.random() * 1.3), 72, 14,
           (Math.random() - 0.5) * 1.5
         );
       }
       this._spawnParticle(target.x, target.y - 22, '격파!', '#f59e0b', -2.0, 90, 13);
 
-      // Check all defeated
       if (this.monsters.filter(m => !m.dead).length === 0) {
         this.paydayFlash = 120;
         this._spawnParticle(this.W / 2, this.H * 0.34, '🎉 재정 자유!', '#f59e0b', -0.8, 200, 15);
-        // Respawn after 4 s
         this.respawnTimer = setTimeout(() => {
           this._buildMonsters();
-          if (this.hero) this.hero.hp = this.hero.maxHp;
+          if (this.hero) this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + Math.round(this.hero.maxHp * 0.3));
         }, 4000);
       }
     }
 
-    // Each alive monster counter-attacks hero
+    // 몬스터 반격: 공격력 = 지출액/30 (일 단위 부담)
     alive.forEach(m => {
       if (m.dead) return;
-      const monDmg = Math.max(1, Math.round(m.mtype.atk * (m.hp / m.maxHp) * 0.35));
+      const monDmg = Math.max(100, Math.round(m.monAtk * 0.4 * (m.hp / m.maxHp + 0.3)));
       this.hero.hp = Math.max(0, this.hero.hp - monDmg);
       if (Math.random() < 0.55) {
         this._spawnParticle(
           this.hero.x + (Math.random() - 0.5) * 18,
           this.hero.y - 20,
-          `-${monDmg}`, '#ef4444', -1.1, 50, 10
+          `-${fmtHp(monDmg)}`, '#ef4444', -1.1, 50, 10
         );
       }
     });
 
-    // Passive regen
-    this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + 1.5);
+    // 수동 회복: 월수입/30 / 8 per battle (하루 소득 8분할)
+    const regen = Math.max(1000, Math.round(this.hero.maxHp / 30 / 8));
+    this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + regen);
+  }
+
+  // ── 캔버스 클릭/터치 ──────────────────────────────────
+  _handleClick(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const sx = this.W / rect.width;
+    const sy = this.H / rect.height;
+    const cx = (e.clientX - rect.left) * sx;
+    const cy = (e.clientY - rect.top) * sy;
+
+    // 영웅 히트체크 (반경 32)
+    const h = this.hero;
+    if (h && Math.hypot(cx - h.x, cy - h.y) < 38) {
+      const hpPct = h.maxHp > 0 ? Math.round(h.hp / h.maxHp * 100) : 0;
+      this._showInfo(
+        [`LV.${h.level} ${h.def.label}`, `월수입: ${fmtHp(h.monthlyIncome)}원`, `잔고: ${fmtHp(h.hp)}원 (${hpPct}%)`, `공격력: ${fmtHp(h.atk)}원`],
+        h.x, h.y - 68, '#4ade80'
+      );
+      return;
+    }
+
+    // 몬스터 히트체크
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      const ps = m.mtype.ps;
+      const sprW = m.mtype.grid[0].length * ps;
+      const sprH = m.mtype.grid.length * ps;
+      if (cx >= m.x - sprW / 2 - 10 && cx <= m.x + sprW / 2 + 10 &&
+          cy >= m.y - sprH / 2 - 10 && cy <= m.y + sprH / 2 + 10) {
+        const hpPct = Math.round(m.hp / m.maxHp * 100);
+        this._showInfo(
+          [`${m.mtype.label} — ${m.name}`, `월 지출: ${fmtHp(m.amount)}원`, `HP: ${fmtHp(m.hp)}/${fmtHp(m.maxHp)} (${hpPct}%)`, `일 공격력: ${fmtHp(m.monAtk)}원`],
+          m.x, m.y - sprH / 2 - 32, m.mtype.baseColor
+        );
+        return;
+      }
+    }
+  }
+
+  _showInfo(lines, x, y, color = '#60a5fa') {
+    this._infoPanel = {
+      visible: true,
+      lines,
+      x: Math.max(90, Math.min(this.W - 90, x)),
+      y: Math.max(40, y),
+      tick: 200,
+      color,
+    };
+  }
+
+  _drawInfoPanel() {
+    const p = this._infoPanel;
+    if (!p.visible || p.tick <= 0) { this._infoPanel.visible = false; return; }
+    p.tick--;
+
+    const { ctx } = this;
+    const alpha = Math.min(1, p.tick / 25);
+    ctx.globalAlpha = alpha;
+
+    const lh = 13;
+    const pad = 10;
+    const bw = 170;
+    const bh = p.lines.length * lh + pad * 2;
+    const bx = p.x - bw / 2;
+    const by = p.y - bh;
+
+    // 배경
+    ctx.fillStyle = 'rgba(4,7,20,0.95)';
+    const r = 8;
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by); ctx.lineTo(bx + bw - r, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + r, r);
+    ctx.lineTo(bx + bw, by + bh - r);
+    ctx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+    ctx.lineTo(bx + r, by + bh);
+    ctx.arcTo(bx, by + bh, bx, by + bh - r, r);
+    ctx.lineTo(bx, by + r);
+    ctx.arcTo(bx, by, bx + r, by, r);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = p.color + '88';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    p.lines.forEach((line, i) => {
+      ctx.font = i === 0 ? 'bold 9px monospace' : '8px monospace';
+      ctx.fillStyle = i === 0 ? p.color : '#cbd5e1';
+      ctx.fillText(line, p.x, by + pad + (i + 1) * lh - 1);
+    });
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   }
 
   _spawnParticle(x, y, text, color, vy = -1.5, life = 60, size = 11, vx = 0) {
