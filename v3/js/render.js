@@ -927,6 +927,70 @@ export function renderLedgerForecast() {
   const fc = buildForecast(365);
   const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
+  // ── 예측 요약 카드 ─────────────────────────────────────
+  const summaryEl = document.getElementById('ledger-forecast-summary');
+  if (summaryEl) {
+    const t = today();
+    const months = [0, 1].map(offset => {
+      const d = new Date(t.getFullYear(), t.getMonth() + offset, 1);
+      const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const ymNum = Number(ym);
+      const monthFc = fc.filter(f => f.ym === ymNum);
+      const totalInc = monthFc.reduce((s, f) => s + f.income, 0);
+      const totalExp = monthFc.reduce((s, f) => s + f.expense, 0);
+      const net = totalInc - totalExp;
+      const dangerDays = monthFc.filter(f => f.balance < (state.dangerLine || 0)).length;
+      const lowestBalance = monthFc.length ? Math.min(...monthFc.map(f => f.balance)) : state.balance;
+      return { label: `${d.getMonth() + 1}월`, totalInc, totalExp, net, dangerDays, lowestBalance };
+    });
+
+    // 전체 위험일
+    const allDangerDays = fc.filter(f => f.balance < (state.dangerLine || 0));
+    const firstDanger = allDangerDays[0];
+    const dangerCount = allDangerDays.length;
+
+    // 큰 지출 TOP 3 (30일 내)
+    const next30 = fc.slice(0, 30);
+    const bigEvents = [];
+    next30.forEach(f => {
+      f.events.filter(e => e.type === 'expense' && e.amt >= 50_000).forEach(e => {
+        bigEvents.push({ date: `${f.date.getMonth()+1}/${f.date.getDate()}`, name: e.name, amt: e.amt });
+      });
+    });
+    bigEvents.sort((a, b) => b.amt - a.amt);
+    const top3 = bigEvents.slice(0, 3);
+
+    summaryEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${months.map(m => `
+          <div style="background:var(--bg3);border-radius:14px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">${m.label} 예상</div>
+            <div style="font-size:11px;color:var(--green2)">▲ ${fmtShort(m.totalInc)}</div>
+            <div style="font-size:11px;color:var(--red2)">▼ ${fmtShort(m.totalExp)}</div>
+            <div style="font-size:13px;font-weight:900;color:${m.net >= 0 ? 'var(--green2)' : 'var(--red2)'};margin-top:4px">${m.net >= 0 ? '+' : ''}${fmtShort(m.net)}</div>
+            ${m.dangerDays > 0 ? `<div style="font-size:10px;color:var(--orange);margin-top:4px">⚠️ 위험일 ${m.dangerDays}일</div>` : `<div style="font-size:10px;color:var(--green2);margin-top:4px">✅ 안전</div>`}
+          </div>`).join('')}
+      </div>
+      ${firstDanger ? `
+        <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px">
+          <span style="font-weight:700;color:var(--orange)">⚠️ 위험 알림</span>
+          <span style="color:var(--text2);margin-left:8px">앞으로 ${dangerCount}일 위험 구간, 최초 ${firstDanger.date.getMonth()+1}/${firstDanger.date.getDate()}일 (잔고 ${fmtShort(firstDanger.balance)})</span>
+        </div>` : `
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px">
+          <span style="font-weight:700;color:var(--green2)">✅ 365일 안전</span>
+          <span style="color:var(--text2);margin-left:8px">앞 1년 위험일 없음</span>
+        </div>`}
+      ${top3.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">📌 30일 내 큰 지출</div>
+          ${top3.map(e => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--text2)">${e.date} ${escapeHtml(e.name)}</span>
+            <span style="color:var(--red2);font-weight:700;font-family:var(--mono)">-${fmtShort(e.amt)}</span>
+          </div>`).join('')}
+        </div>` : ''}
+    `;
+  }
+
   // 차트
   const chartEl = document.getElementById('ledger-forecast-chart');
   if (chartEl) {
@@ -1990,11 +2054,31 @@ export function renderBudget() {
 const WISH_PRIORITY_LABELS = { must: '꼭 살 것', want: '사고 싶음', maybe: '고민 중' };
 const WISH_PRIORITY_COLORS = { must: 'var(--red2)', want: 'var(--accent2)', maybe: 'var(--text3)' };
 let _wishFilter = '전체';
+let _wishSelectedIds = new Set();  // 다중선택 ID 집합
 
 export function setWishFilter(filter) {
   _wishFilter = filter;
+  _wishSelectedIds.clear();
   renderWishlist();
 }
+
+// 다중선택 분석 바 업데이트
+function _updateWishSelectBar() {
+  const bar = document.getElementById('wish-multiselect-bar');
+  if (!bar) return;
+  // 현재 체크된 체크박스들 동기화
+  document.querySelectorAll('.wish-checkbox').forEach(cb => {
+    if (cb.checked) _wishSelectedIds.add(cb.dataset.id);
+    else _wishSelectedIds.delete(cb.dataset.id);
+  });
+  const count = _wishSelectedIds.size;
+  const countEl = document.getElementById('wish-select-count');
+  if (countEl) countEl.textContent = count > 0 ? `${count}개 선택됨` : '항목을 선택하세요';
+  bar.style.display = count > 0 ? 'flex' : 'none';
+}
+
+export function getWishSelectedIds() { return _wishSelectedIds; }
+export function clearWishSelection() { _wishSelectedIds.clear(); renderWishlist(); }
 
 export function renderWishlist() {
   const wishlist = state.wishlist || [];
@@ -2050,7 +2134,7 @@ export function renderWishlist() {
     return;
   }
 
-  container.innerHTML = filtered.map(w => {
+  container.innerHTML = filtered.map((w, idx) => {
     const sim = !w.bought ? simulateWishPurchase(w) : null;
     const priceStr = w.price ? fmtShort(Number(w.price)) : '가격 미입력';
     const priColor = w.bought ? 'var(--green2)' : (WISH_PRIORITY_COLORS[w.priority] || 'var(--text3)');
@@ -2070,8 +2154,16 @@ export function renderWishlist() {
     }
 
     return `
-      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}">
+      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}" data-idx="${idx}" draggable="true">
         <div class="wish-card-top">
+          <!-- 드래그 핸들 -->
+          <div class="wish-drag-handle" data-id="${escapeHtml(w.id)}" title="드래그하여 순서 변경">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+          </div>
+          <!-- 다중선택 체크박스 -->
+          ${!w.bought ? `<label class="wish-select-wrap" onclick="event.stopPropagation()">
+            <input type="checkbox" class="wish-checkbox" data-id="${escapeHtml(w.id)}" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+          </label>` : ''}
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
               <span class="wish-priority-badge" style="background:${priColor}20;color:${priColor};border-color:${priColor}40">${priLabel}</span>
@@ -2102,6 +2194,9 @@ export function renderWishlist() {
         ${impactHtml}
       </div>`;
   }).join('');
+
+  // 다중선택 바 업데이트
+  _updateWishSelectBar();
 }
 
 // ════════════════════════════════════════════════════════
