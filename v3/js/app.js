@@ -47,6 +47,8 @@ import {
   renderFinance,
   refreshAllStocks,
   renderCardDefs,
+  getWishSelectedIds,
+  clearWishSelection,
 } from './render.js';
 
 import {
@@ -117,8 +119,6 @@ import {
   saveWishItem,
   deleteWishItem,
   toggleWishBought,
-  getWishSelectedIds,
-  clearWishSelection,
   // 워치리스트
   openWatchlistForm,
   hideWatchlistForm,
