@@ -27,6 +27,7 @@ export const state = {
   streak: { count: 0, lastDate: '' },
   wishlist: [],         // [{ id, name, price, url, priority, targetDate, notes, category, bought }]
   watchlist: [],        // [{ id, symbol, name, market, buyPrice, quantity, note }]
+  geminiKey: '',        // Gemini API 키 (크로스 디바이스 동기화용)
 };
 
 // ── 저장 ──────────────────────────────────────────────

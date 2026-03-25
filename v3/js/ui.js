@@ -674,6 +674,9 @@ export function saveGeminiKey() {
   if (val === '••••••••••••••••••••') { showBadge('ℹ️ 변경사항 없음'); return; }
 
   setGeminiKey(val);
+  // 크로스 디바이스 동기화: state에도 저장
+  state.geminiKey = val;
+  save();
   const hasKey = hasGeminiKey();
 
   // FAB and insight card always visible
@@ -1050,11 +1053,11 @@ export function openCardForm(id) {
   document.getElementById('cf-name').value = card?.name || '';
   document.getElementById('cf-color').value = card?.color || '#3b82f6';
   document.getElementById('cf-payday').value = card?.payDay || 1;
-  document.getElementById('card-form-overlay').style.display = 'flex';
+  openSheet('card-form-overlay');
 }
 
 export function hideCardForm() {
-  document.getElementById('card-form-overlay').style.display = 'none';
+  closeSheet('card-form-overlay');
   _editCardId = null;
 }
 
