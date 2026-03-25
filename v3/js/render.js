@@ -2,9 +2,9 @@
 // render.js — 화면 렌더링
 // ════════════════════════════════════════════════════════
 import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config.js';
-import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel } from './assets.js';
+import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel, HOUSE_LEVELS } from './assets.js';
 import { getMonthBudget, getMonthActual } from './budget.js';
-import { computeStreak, BADGE_DEFS } from './streak.js';
+import { computeStreak, BADGE_DEFS, RARITY_CONFIG } from './streak.js';
 import {
   today,
   dateKey,
@@ -270,7 +270,7 @@ export function renderHome() {
       let next = new Date(t.getFullYear(), t.getMonth(), salaryEntry.day);
       if (next <= t) next = new Date(t.getFullYear(), t.getMonth() + 1, salaryEntry.day);
       const diff = Math.round((next - t) / 86400000);
-      chips += `<span class="info-chip ${diff === 0 ? 'success' : ''}">💰 ${diff === 0 ? '오늘 월급날!' : `월급까지 D-${diff}`}</span>`;
+      chips += `<span class="info-chip ${diff === 0 ? 'success' : ''}" data-chip="salary" style="cursor:pointer">💰 ${diff === 0 ? '오늘 월급날!' : `월급까지 D-${diff}`}</span>`;
     }
     const nextYm = yyyymm(new Date(today().getFullYear(), today().getMonth() + 1, 1));
     const endingHalbu = state.entries.filter(
@@ -281,11 +281,11 @@ export function renderHome() {
         (parseInt(e.endMonth, 10) === todayYm || parseInt(e.endMonth, 10) === nextYm),
     );
     if (endingHalbu.length > 0) {
-      chips += `<span class="info-chip success">✅ 할부 ${endingHalbu.length}건 종료 임박</span>`;
+      chips += `<span class="info-chip success" data-chip="halbu" style="cursor:pointer">✅ 할부 ${endingHalbu.length}건 종료 임박</span>`;
     }
     if (monthlyIncome > 0) {
       const remaining = monthlyIncome - monthlyExpense - checkTotal;
-      chips += `<span class="info-chip ${remaining < 0 ? 'warning' : ''}">📊 여유 ${remaining >= 0 ? fmtShort(remaining) : '-' + fmtShort(-remaining)}</span>`;
+      chips += `<span class="info-chip ${remaining < 0 ? 'warning' : ''}" data-chip="space" style="cursor:pointer">📊 여유 ${remaining >= 0 ? fmtShort(remaining) : '-' + fmtShort(-remaining)}</span>`;
     }
     chipsEl.innerHTML = chips;
     chipsEl.style.display = chips ? 'flex' : 'none';
@@ -321,7 +321,7 @@ export function renderHome() {
   const todayKey  = dateKey(today());
   const { expense: todayExp, income: todayInc } = getLedgerDay(todayKey);
   if (todayExp > 0 || todayInc > 0) {
-    const todayChip = `<span class="info-chip">💸 오늘 ${todayExp > 0 ? fmtShort(todayExp) + ' 지출' : ''}${todayInc > 0 ? (todayExp > 0 ? ' / ' : '') + fmtShort(todayInc) + ' 수입' : ''}</span>`;
+    const todayChip = `<span class="info-chip" data-chip="today" style="cursor:pointer">💸 오늘 ${todayExp > 0 ? fmtShort(todayExp) + ' 지출' : '무지출'}${todayInc > 0 ? (todayExp > 0 ? ' / ' : '') + fmtShort(todayInc) + ' 수입' : ''}</span>`;
     if (chipsEl) chipsEl.innerHTML = todayChip + (chipsEl.innerHTML || '');
   }
 
@@ -751,21 +751,11 @@ export function renderEntries() {
     }
 
     const isEnded = e.endMonth && parseInt(e.endMonth, 10) < todayYm;
-    const amtClass =
-      e.type === 'income'
-        ? 'income'
-        : e.category === '할부' && e.card === '현대카드'
-          ? 'halbu-h'
-          : e.category === '할부' && e.card === '국민카드'
-            ? 'halbu-k'
-            : 'expense';
-
-    const cardBadge =
-      e.card === '현대카드'
-        ? '<span class="badge hyundai">현대</span>'
-        : e.card === '국민카드'
-          ? '<span class="badge kookmin">국민</span>'
-          : '';
+    const cardInfo = e.card ? getCards().find(c => c.id === e.card || c.name === e.card) : null;
+    const amtClass = e.type === 'income' ? 'income' : e.category === '할부' ? 'halbu-h' : 'expense';
+    const cardBadge = cardInfo
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:800;background:${cardInfo.color}22;color:${cardInfo.color};border:1px solid ${cardInfo.color}44;vertical-align:middle">💳 ${escapeHtml(cardInfo.name)} ${cardInfo.payDay}일</span>`
+      : (e.card ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(100,116,139,0.15);color:var(--text3);vertical-align:middle">💳 ${escapeHtml(e.card)}</span>` : '');
 
     const endMonthStr = escapeHtml(String(e.endMonth || ''));
     const endMonthLabel = endMonthStr.length === 6
@@ -1719,21 +1709,36 @@ export function renderHouseLevel() {
     : 100;
 
   el.setAttribute('data-house-detail', '1');
+  // 레벨 바 미니 (전체 레벨 중 현재 위치)
+  const miniLevels = HOUSE_LEVELS.map((l, i) => {
+    const isActive = i === level.index;
+    const isPast = i < level.index;
+    return `<div title="${l.label}" style="flex:1;height:6px;border-radius:3px;background:${isPast ? l.color : isActive ? l.color : 'var(--bg3)'};opacity:${isActive ? 1 : isPast ? 0.6 : 0.3};transition:all 0.3s"></div>`;
+  }).join('');
+
   el.innerHTML = `
-    <div class="house-level-inner">
-      <span class="house-emoji">${level.icon}</span>
-      <div class="house-level-info">
-        <div style="font-size:14px;font-weight:800;color:var(--text)">${level.label}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">순자산 ${fmtShort(netWorth)}</div>
-        ${level.nextLabel ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">다음: ${level.nextLabel} (${fmtShort(level.next)})</div>` : '<div style="font-size:10px;color:var(--yellow);margin-top:2px">최고 레벨 달성!</div>'}
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-size:42px;line-height:1;filter:drop-shadow(0 2px 8px ${level.color}66)">${level.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <div style="font-size:16px;font-weight:900;color:var(--text)">${level.label}</div>
+          <div style="font-size:9px;padding:2px 6px;border-radius:6px;font-weight:800;background:${level.color}22;color:${level.color};border:1px solid ${level.color}44">${level.sublabel}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">순자산 ${fmtShort(netWorth)} · ${level.index + 1}/${HOUSE_LEVELS.length} 단계</div>
+        ${level.next ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">다음: ${level.nextIcon} ${level.nextLabel} · ${fmtShort(level.next - netWorth)} 부족</div>` : '<div style="font-size:10px;color:#f59e0b;margin-top:2px;font-weight:700">🏆 최고 레벨 달성!</div>'}
       </div>
     </div>
     ${level.next ? `
-    <div class="house-progress-track">
-      <div class="house-progress-fill" style="width:${pct}%"></div>
-    </div>
-    <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">${pct}%</div>` : ''}
-    <div style="font-size:10px;color:var(--accent2);text-align:center;margin-top:6px;opacity:0.7">탭해서 자세히 보기</div>
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:4px">
+        <span>현재 레벨 진행도</span><span style="color:${level.color};font-weight:700">${pct}%</span>
+      </div>
+      <div class="house-progress-track">
+        <div class="house-progress-fill" style="width:${pct}%;background:${level.color}"></div>
+      </div>
+    </div>` : ''}
+    <div style="display:flex;gap:3px;margin-top:10px;align-items:center">${miniLevels}</div>
+    <div style="font-size:10px;color:var(--accent2);text-align:center;margin-top:8px;opacity:0.7;letter-spacing:0.3px">▼ 탭해서 전체 레벨 보기</div>
   `;
 }
 
@@ -1852,14 +1857,35 @@ export function renderAssets() {
 
     <!-- 배지 섹션 -->
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">배지</div>
-      <div class="badge-grid">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="card-title" style="margin:0">🏅 배지 컬렉션</div>
+        <div style="font-size:11px;color:var(--text3)">${(state.badges||[]).length} / ${BADGE_DEFS.length} 획득</div>
+      </div>
+      <!-- 카테고리별 필터 -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="badge-cat-filters">
+        ${['전체','기록','자산','절약','부채','목표','레벨','시작','특별'].map(cat =>
+          `<button class="badge-filter-btn${cat==='전체'?' active':''}" data-cat="${cat}" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid var(--border);background:${cat==='전체'?'var(--accent)':'var(--bg3)'};color:${cat==='전체'?'#fff':'var(--text2)'};cursor:pointer">${cat}</button>`
+        ).join('')}
+      </div>
+      <!-- 희귀도 범례 -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${Object.entries(RARITY_CONFIG).map(([k,v]) =>
+          `<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${v.color}"></div><span style="font-size:9px;color:var(--text3);font-weight:700">${v.label}</span></div>`
+        ).join('')}
+      </div>
+      <div class="badge-grid" id="badge-grid-main">
         ${BADGE_DEFS.map(b => {
           const earned = (state.badges || []).includes(b.id);
-          return `<div class="badge-item ${earned ? 'earned' : 'locked'}">
-            <span style="font-size:22px">${b.icon}</span>
-            <span style="font-size:10px;font-weight:700;color:var(--text)">${escapeHtml(b.label)}</span>
-            <span style="font-size:9px;color:var(--text3)">${escapeHtml(b.desc)}</span>
+          const r = RARITY_CONFIG[b.rarity] || RARITY_CONFIG.common;
+          const glowStyle = earned && r.glow ? `box-shadow:0 0 16px ${r.color}55;` : '';
+          return `<div class="badge-item ${earned ? 'earned' : 'locked'}" data-badge-cat="${b.category}" title="${escapeHtml(b.desc)}" style="${earned ? `background:${r.bg};border-color:${r.border};${glowStyle}` : ''}">
+            <div style="position:relative;display:inline-block">
+              <span style="font-size:28px;${earned ? '' : 'filter:grayscale(1) opacity(0.3)'}">${b.icon}</span>
+              ${earned ? `<div style="position:absolute;bottom:-2px;right:-4px;font-size:8px;background:${r.color};color:#fff;border-radius:4px;padding:1px 3px;font-weight:900;line-height:1">${r.label[0]}</div>` : ''}
+            </div>
+            <span style="font-size:10px;font-weight:800;color:${earned ? 'var(--text)' : 'var(--text3)'};margin-top:4px;line-height:1.2;text-align:center">${escapeHtml(b.label)}</span>
+            <span style="font-size:8px;color:${earned ? r.color : 'var(--text3)'};font-weight:700">${earned ? r.label : '미획득'}</span>
+            <span style="font-size:8px;color:var(--text3);text-align:center;line-height:1.3;margin-top:2px">${escapeHtml(b.desc)}</span>
           </div>`;
         }).join('')}
       </div>

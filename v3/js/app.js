@@ -549,76 +549,186 @@ document.querySelector('#page-home .summary-grid')?.addEventListener('click', (e
 });
 
 // ══════════════════════════════════════════════════════════════
-// 인포 칩 클릭
+// 인포 칩 클릭 — 상세 시트 오픈
 // ══════════════════════════════════════════════════════════════
 document.getElementById('balance-chips-row')?.addEventListener('click', (e) => {
-  const chip = e.target.closest('.info-chip');
+  const chip = e.target.closest('.info-chip[data-chip]');
   if (!chip) return;
-  const text = chip.textContent;
-  if (text.includes('오늘')) {
-    navigate('ledger');
-  } else if (text.includes('월급')) {
-    navigate('entries');
-  } else if (text.includes('할부')) {
-    navigate('entries');
-    setTimeout(() => document.querySelector('.filter-tab[data-entry-filter="할부"]')?.click(), 100);
-  }
+  const type = chip.dataset.chip;
+  if (type === 'today') _showTodayDetailSheet();
+  else if (type === 'salary') _showSalaryDetailSheet();
+  else if (type === 'halbu') { navigate('entries'); setTimeout(() => document.querySelector('.filter-tab[data-entry-filter="할부"]')?.click(), 100); }
+  else if (type === 'space') _showSpaceDetailSheet();
 });
+
+function _showTodayDetailSheet() {
+  import('./state.js').then(({ state: s }) => {
+    import('./utils.js').then(({ fmtShort, dateKey }) => {
+      const dk = dateKey(new Date());
+      const items = s.ledgerData?.[dk] || [];
+      const totalExp = items.filter(i=>i.type==='expense').reduce((a,i)=>a+i.amount,0);
+      const totalInc = items.filter(i=>i.type==='income').reduce((a,i)=>a+i.amount,0);
+      const rows = items.length ? items.map(i=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div><div style="font-size:13px;font-weight:700;color:var(--text)">${i.memo||'(메모 없음)'}</div>
+          <div style="font-size:11px;color:var(--text3)">${i.category||''}</div></div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:${i.type==='income'?'var(--green2)':'var(--red2)'}">${i.type==='income'?'+':'-'}${fmtShort(i.amount)}</div>
+        </div>`).join('')
+        : '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">오늘 기록된 항목이 없습니다</div>';
+      const el = document.getElementById('today-detail-content');
+      if (!el) return;
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="padding:10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);text-align:center">
+            <div style="font-size:10px;color:var(--red2);font-weight:700">오늘 지출</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--text);margin-top:4px">${fmtShort(totalExp)}</div>
+          </div>
+          <div style="padding:10px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);text-align:center">
+            <div style="font-size:10px;color:var(--green2);font-weight:700">오늘 수입</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--text);margin-top:4px">${fmtShort(totalInc)}</div>
+          </div>
+        </div>
+        ${rows}
+        <button class="btn btn-ghost" onclick="window._nav?.('ledger')" style="width:100%;margin-top:12px;border-radius:10px;font-weight:700">📅 가계부로 이동 →</button>`;
+      openSheet('today-detail-sheet');
+    });
+  });
+}
+
+function _showSalaryDetailSheet() {
+  import('./state.js').then(({ state: s }) => {
+    import('./utils.js').then(({ fmtShort }) => {
+      const now = new Date();
+      const incomeEntries = (s.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월');
+      const totalMonthly = incomeEntries.reduce((a,e)=>a+e.amount,0);
+      let nextSalary = '', daysLeft = 0;
+      if (incomeEntries.length > 0) {
+        const days = incomeEntries.map(e=>e.day).filter(Boolean).sort((a,b)=>a-b);
+        const todayDay = now.getDate();
+        const nextDay = days.find(d=>d>todayDay) || days[0];
+        if (nextDay > todayDay) { daysLeft = nextDay - todayDay; nextSalary = `이번달 ${nextDay}일`; }
+        else { const nm = new Date(now.getFullYear(),now.getMonth()+1,nextDay); daysLeft=Math.ceil((nm-now)/86400000); nextSalary=`다음달 ${nextDay}일`; }
+      }
+      const rows = incomeEntries.map(e=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div><div style="font-size:13px;font-weight:700;color:var(--text)">${e.name}</div>
+          <div style="font-size:11px;color:var(--text3)">매월 ${e.day}일 · ${e.category||'수입'}</div></div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--green2)">+${fmtShort(e.amount)}</div>
+        </div>`).join('');
+      const el = document.getElementById('salary-detail-content');
+      if (!el) return;
+      el.innerHTML = `
+        <div style="text-align:center;padding:12px 0 16px">
+          <div style="font-size:40px">💰</div>
+          <div style="font-size:22px;font-weight:900;color:var(--green2);margin-top:6px">${fmtShort(totalMonthly)}</div>
+          <div style="font-size:12px;color:var(--text3)">월 총 수입</div>
+          ${nextSalary?`<div style="margin-top:10px;padding:8px 14px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);display:inline-block"><div style="font-size:11px;color:var(--text3)">다음 수입일</div><div style="font-size:15px;font-weight:900;color:var(--green2)">${nextSalary} · D-${daysLeft}</div></div>`:''}
+        </div>
+        ${rows||'<div style="text-align:center;padding:20px;color:var(--text3)">등록된 수입 항목이 없습니다</div>'}
+        <button class="btn btn-ghost" onclick="window._nav?.('entries')" style="width:100%;margin-top:12px;border-radius:10px;font-weight:700">📋 항목 관리 →</button>`;
+      openSheet('salary-detail-sheet');
+    });
+  });
+}
+
+function _showSpaceDetailSheet() {
+  import('./state.js').then(({ state: s }) => {
+    import('./utils.js').then(({ fmtShort }) => {
+      import('./forecast.js').then(({ buildForecast }) => {
+        const fc = buildForecast(60);
+        const now = new Date();
+        const monthEnd = new Date(now.getFullYear(),now.getMonth()+1,0);
+        const daysLeft = Math.ceil((monthEnd-now)/86400000);
+        const monthlyIncome=(s.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
+        const monthlyExpense=(s.entries||[]).filter(e=>e.type==='expense'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
+        const remaining=monthlyIncome-monthlyExpense;
+        const dangerDays=fc.filter(f=>f.balance<s.dangerLine).length;
+        const minBalance=Math.min(...fc.map(f=>f.balance));
+        const fcEnd=fc.find(f=>f.date.getMonth()===now.getMonth()&&f.date.getDate()===monthEnd.getDate());
+        const el=document.getElementById('space-detail-content');
+        if(!el) return;
+        el.innerHTML=`
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="padding:10px;border-radius:10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);text-align:center">
+              <div style="font-size:10px;color:var(--accent2);font-weight:700">월 순이익</div>
+              <div style="font-family:var(--mono);font-size:16px;font-weight:900;color:${remaining>=0?'var(--green2)':'var(--red2)'};margin-top:4px">${remaining>=0?'+':''}${fmtShort(remaining)}</div>
+            </div>
+            <div style="padding:10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);text-align:center">
+              <div style="font-size:10px;color:var(--red2);font-weight:700">위험 예측일</div>
+              <div style="font-family:var(--mono);font-size:16px;font-weight:900;color:var(--text);margin-top:4px">${dangerDays}일</div>
+            </div>
+            <div style="padding:10px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);text-align:center">
+              <div style="font-size:10px;color:var(--green2);font-weight:700">이달말 잔고</div>
+              <div style="font-family:var(--mono);font-size:16px;font-weight:900;color:var(--text);margin-top:4px">${fcEnd?fmtShort(fcEnd.balance):'-'}</div>
+            </div>
+            <div style="padding:10px;border-radius:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);text-align:center">
+              <div style="font-size:10px;color:var(--yellow);font-weight:700">최저 예측</div>
+              <div style="font-family:var(--mono);font-size:16px;font-weight:900;color:${minBalance<s.dangerLine?'var(--red2)':'var(--text)'};margin-top:4px">${fmtShort(minBalance)}</div>
+            </div>
+          </div>
+          <div style="padding:10px 12px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.8">
+            📅 이달 남은 기간: <strong style="color:var(--text)">${daysLeft}일</strong><br>
+            💚 월 수입: <strong style="color:var(--green2)">${fmtShort(monthlyIncome)}</strong> / 💸 월 지출: <strong style="color:var(--red2)">${fmtShort(monthlyExpense)}</strong><br>
+            ${dangerDays>0?`⚠️ <strong style="color:var(--orange)">${dangerDays}일</strong> 위험선 이하 예측`:`✅ 60일 내 위험선 이하 예측 없음`}
+          </div>
+          <button class="btn btn-ghost" onclick="window._nav?.('forecast')" style="width:100%;border-radius:10px;font-weight:700">📈 상세 예측 보기 →</button>`;
+        openSheet('space-detail-sheet');
+      });
+    });
+  });
+}
 
 // ══════════════════════════════════════════════════════════════
 // 하우스 레벨 카드 상세 팝업
 // ══════════════════════════════════════════════════════════════
 function _renderHouseDetailSheet() {
-  import('./assets.js').then(({ getTotalAssets, getHouseLevel, getAssetsByPurpose, ASSET_TYPES }) => {
-    import('./utils.js').then(({ fmtFull, fmtShort }) => {
+  import('./assets.js').then(({ getTotalAssets, getHouseLevel, HOUSE_LEVELS }) => {
+    import('./utils.js').then(({ fmtShort }) => {
       import('./state.js').then(({ state: s }) => {
         const totalAssets = getTotalAssets(s.assets);
         const level = getHouseLevel(totalAssets);
         const pct = level.next && level.next > 0
           ? Math.min(100, Math.round((totalAssets / level.next) * 100))
           : 100;
-        const byPurpose = getAssetsByPurpose(s.assets);
-
-        const assetRows = (s.assets || []).map(a =>
-          `<div class="detail-item-row">
-            <div class="detail-item-label">${a.name || a.type || '자산'}</div>
-            <div class="detail-item-value">${fmtFull(a.amount)}</div>
-          </div>`
-        ).join('');
-
-        const purposeRows = Object.entries(byPurpose).map(([p, v]) =>
-          `<div class="detail-item-row">
-            <div class="detail-item-label">${p}</div>
-            <div class="detail-item-value">${fmtShort(v)}</div>
-          </div>`
-        ).join('');
 
         const el = document.getElementById('house-detail-content');
         if (!el) return;
+
+        const allLevels = HOUSE_LEVELS.map((l, i) => {
+          const isActive = i === level.index;
+          const isPast = i < level.index;
+          const needed = l.min <= totalAssets ? '달성!' : fmtShort(l.min - totalAssets) + ' 필요';
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin-bottom:6px;
+              background:${isActive ? l.color + '18' : isPast ? 'rgba(255,255,255,0.03)' : 'transparent'};
+              border:1px solid ${isActive ? l.color + '44' : 'var(--border)'};opacity:${isPast ? 0.75 : 1}">
+              <div style="font-size:${isActive ? 30 : 20}px;line-height:1;min-width:32px;text-align:center;filter:${isPast||isActive?'none':'grayscale(1) opacity(0.35)'}">${l.icon}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;flex-wrap:wrap">
+                  <span style="font-size:${isActive?14:12}px;font-weight:${isActive?900:700};color:${isActive?l.color:isPast?'var(--text2)':'var(--text3)'}">${l.label}</span>
+                  <span style="font-size:8px;padding:1px 5px;border-radius:4px;font-weight:800;background:${l.color}22;color:${l.color}">${l.sublabel}</span>
+                  ${isPast ? '<span style="font-size:9px;color:#10b981;font-weight:700">✓ 달성</span>' : ''}
+                  ${isActive ? '<span style="font-size:9px;color:var(--accent2);font-weight:800">◀ 현재</span>' : ''}
+                </div>
+                <div style="font-size:9px;color:var(--text3)">${l.min > -Infinity ? fmtShort(l.min) : '0'}${l.max < Infinity ? ` ~ ${fmtShort(l.max)}` : '+'} · ${needed}</div>
+                ${isActive && level.next ? `<div style="margin-top:4px;height:3px;background:var(--bg3);border-radius:2px"><div style="height:3px;width:${pct}%;background:${l.color};border-radius:2px"></div></div>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+
         el.innerHTML = `
-          <div style="text-align:center;margin-bottom:16px">
-            <div style="font-size:48px">${level.icon}</div>
-            <div style="font-size:22px;font-weight:900;color:var(--text);margin-top:4px">${level.label}</div>
+          <div style="text-align:center;padding:12px 0 16px">
+            <div style="font-size:52px;filter:drop-shadow(0 4px 12px ${level.color}88)">${level.icon}</div>
+            <div style="font-size:22px;font-weight:900;color:${level.color};margin-top:6px">${level.label}</div>
+            <div style="font-size:11px;color:var(--text3)">${level.sublabel} · 순자산 ${fmtShort(totalAssets)}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.7;white-space:pre-line;word-break:keep-all">${level.desc}</div>
+            <div style="margin-top:10px;padding:8px 12px;border-radius:10px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2)">
+              <div style="font-size:10px;color:var(--accent2);font-weight:700">💡 ${level.tip}</div>
+            </div>
+            ${level.bonus !== '없음' ? `<div style="margin-top:8px;padding:7px 12px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2)"><div style="font-size:10px;color:#10b981;font-weight:700">🏆 ${level.bonus}</div></div>` : ''}
           </div>
-          <div class="detail-item-row">
-            <div class="detail-item-label">총 자산</div>
-            <div class="detail-item-value" style="color:var(--green2)">${fmtFull(totalAssets)}</div>
-          </div>
-          ${level.next ? `
-          <div class="detail-item-row">
-            <div class="detail-item-label">다음 레벨</div>
-            <div class="detail-item-value">${level.nextLabel} (${fmtShort(level.next)})</div>
-          </div>
-          <div class="detail-item-row">
-            <div class="detail-item-label">달성률</div>
-            <div class="detail-item-value">${pct}%</div>
-          </div>
-          <div style="height:8px;background:var(--bg3);border-radius:4px;margin:8px 0 16px">
-            <div style="height:8px;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width 0.5s"></div>
-          </div>
-          ` : '<div style="color:var(--yellow);text-align:center;padding:8px 0;font-weight:700">🏆 최고 레벨 달성!</div>'}
-          ${purposeRows ? `<div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 4px">용도별 자산</div>${purposeRows}` : ''}
-          ${assetRows ? `<div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 4px">자산 목록</div>${assetRows}` : ''}
+          <div style="font-size:12px;font-weight:900;color:var(--text);margin-bottom:8px;padding:0 2px">📊 전체 레벨 로드맵 (${level.index+1}/${HOUSE_LEVELS.length})</div>
+          ${allLevels}
         `;
       });
     });
@@ -756,9 +866,7 @@ document.getElementById('card-defs-list')?.addEventListener('click', (e) => {
 document.getElementById('btn-add-wish')?.addEventListener('click', () => openWishForm(null));
 document.getElementById('wish-form-save')?.addEventListener('click', saveWishItem);
 document.getElementById('wish-form-cancel')?.addEventListener('click', hideWishForm);
-document.getElementById('wish-form-overlay')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) hideWishForm();
-});
+document.getElementById('wish-form-overlay')?.addEventListener('click', (e) => closeSheetOutside(e, 'wish-form-overlay'));
 
 // 위시리스트 필터 탭
 document.querySelectorAll('[data-wish-filter]').forEach(btn => {
@@ -793,9 +901,7 @@ document.getElementById('wish-list')?.addEventListener('click', (e) => {
 document.getElementById('btn-add-watchlist')?.addEventListener('click', () => openWatchlistForm(null));
 document.getElementById('watchlist-form-save')?.addEventListener('click', saveWatchlistItem);
 document.getElementById('watchlist-form-cancel')?.addEventListener('click', hideWatchlistForm);
-document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) hideWatchlistForm();
-});
+document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => closeSheetOutside(e, 'watchlist-form-overlay'));
 
 document.getElementById('btn-finance-refresh')?.addEventListener('click', () => {
   refreshAllStocks();
@@ -808,3 +914,389 @@ document.getElementById('watchlist-container')?.addEventListener('click', (e) =>
   if (editBtn) openWatchlistForm(editBtn.dataset.symbol);
   if (delBtn) deleteWatchlistItem(delBtn.dataset.symbol);
 });
+
+// ══════════════════════════════════════════════════════════════
+// 배지 카테고리 필터
+// ══════════════════════════════════════════════════════════════
+document.getElementById('assets-page-content')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.badge-filter-btn');
+  if (!btn) return;
+  const cat = btn.dataset.cat;
+  document.querySelectorAll('.badge-filter-btn').forEach(b => {
+    const isActive = b.dataset.cat === cat;
+    b.classList.toggle('active', isActive);
+    b.style.background = isActive ? 'var(--accent)' : 'var(--bg3)';
+    b.style.color = isActive ? '#fff' : 'var(--text2)';
+  });
+  document.querySelectorAll('#badge-grid-main .badge-item').forEach(item => {
+    item.style.display = (cat === '전체' || item.dataset.badgeCat === cat) ? '' : 'none';
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// 뷰탭 — 게임화면
+// ══════════════════════════════════════════════════════════════
+let _gameAnimFrame = null;
+let _gameRunning = false;
+let _gameMonsters = [];
+let _gameParticles = [];
+let _gameTick = 0;
+let _gameCanvas = null;
+let _gameCtx = null;
+let _salaryPerSec = 0;
+let _salaryAccum = 0;
+let _salaryFloats = [];
+let _heroHp = 100;
+let _heroMaxHp = 100;
+let _heroX = 0;
+let _heroY = 0;
+let _gameW = 0;
+let _gameH = 0;
+
+function _initGame() {
+  _gameCanvas = document.getElementById('game-canvas');
+  if (!_gameCanvas) return;
+  _gameCtx = _gameCanvas.getContext('2d');
+  _resizeGame();
+
+  // 월급 → 초당 수입 계산
+  import('./state.js').then(({ state: s }) => {
+    const monthlyIncome = (s.entries || [])
+      .filter(e => e.type === 'income' && e.repeat === '매월')
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+    _salaryPerSec = monthlyIncome / (30 * 24 * 3600);
+    _salaryAccum = 0;
+
+    // 고정 지출 항목 → 몬스터 생성
+    const expenses = (s.entries || []).filter(e => e.type === 'expense' && e.repeat === '매월');
+    _gameMonsters = expenses.map((e, i) => _spawnMonster(e, i, expenses.length));
+    _heroHp = 100;
+    _heroMaxHp = 100;
+    _heroX = _gameW * 0.2;
+    _heroY = _gameH * 0.55;
+  });
+
+  if (!_gameRunning) {
+    _gameRunning = true;
+    _gameLoop();
+  }
+}
+
+function _resizeGame() {
+  if (!_gameCanvas) return;
+  const rect = _gameCanvas.parentElement.getBoundingClientRect();
+  _gameW = rect.width || 360;
+  _gameH = Math.min(rect.height || 480, window.innerHeight * 0.55);
+  _gameCanvas.width = _gameW;
+  _gameCanvas.height = _gameH;
+  _heroX = _gameW * 0.2;
+  _heroY = _gameH * 0.55;
+}
+
+function _spawnMonster(entry, idx, total) {
+  const cols = 3;
+  const col = idx % cols;
+  const row = Math.floor(idx / cols);
+  const baseX = _gameW * 0.55 + col * 90 + Math.random() * 20;
+  const baseY = _gameH * 0.2 + row * 90 + Math.random() * 20;
+  const hp = Math.max(10, Math.min(100, Math.round(entry.amount / 50000)));
+  return {
+    id: entry.id,
+    name: entry.name,
+    amount: entry.amount,
+    x: baseX,
+    y: baseY,
+    hp,
+    maxHp: hp,
+    size: 22 + Math.min(20, entry.amount / 100000),
+    wobble: Math.random() * Math.PI * 2,
+    wobbleSpeed: 0.03 + Math.random() * 0.02,
+    color: entry.category === '할부' ? '#ef4444' : '#f97316',
+    dead: false,
+    deathTimer: 0,
+  };
+}
+
+function _gameLoop() {
+  if (!_gameRunning || !_gameCtx) return;
+  _gameTick++;
+  const ctx = _gameCtx;
+  const W = _gameW, H = _gameH;
+
+  // 배경
+  ctx.clearRect(0, 0, W, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0a0f1e');
+  bg.addColorStop(1, '#0f172a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 바닥
+  ctx.fillStyle = 'rgba(30,41,59,0.8)';
+  ctx.fillRect(0, H * 0.75, W, H * 0.25);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, H * 0.75, W, 2);
+
+  // 별 배경 (5개만 단순하게)
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  [15, 80, 160, 240, 310].forEach((x, i) => {
+    const y = 20 + (i * 31) % 60;
+    const r = 0.5 + ((_gameTick * 0.02 + i) % 1) * 0.5;
+    ctx.beginPath();
+    ctx.arc(x % W, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // 몬스터 (지출 항목)
+  _gameMonsters.forEach(m => {
+    if (m.dead) {
+      m.deathTimer++;
+      return;
+    }
+    m.wobble += m.wobbleSpeed;
+    const mx = m.x + Math.sin(m.wobble) * 4;
+    const my = m.y + Math.cos(m.wobble * 0.7) * 3;
+
+    // 그림자
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(mx, my + m.size + 4, m.size * 0.7, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 몬스터 몸통
+    const monGrad = ctx.createRadialGradient(mx - 4, my - 4, 2, mx, my, m.size);
+    monGrad.addColorStop(0, m.color + 'ff');
+    monGrad.addColorStop(1, m.color + '88');
+    ctx.fillStyle = monGrad;
+    ctx.beginPath();
+    ctx.arc(mx, my, m.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = m.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 눈
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(mx - 6, my - 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 6, my - 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath(); ctx.arc(mx - 5, my - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 7, my - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // HP바
+    const bw = m.size * 2.2, bh = 5;
+    const bx = mx - bw / 2, by = my - m.size - 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx, by, bw, bh);
+    const hpPct = m.hp / m.maxHp;
+    ctx.fillStyle = hpPct > 0.5 ? '#10b981' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';
+    ctx.fillRect(bx, by, bw * hpPct, bh);
+
+    // 이름 + 금액
+    ctx.font = `bold ${Math.max(8, m.size * 0.38)}px sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    const nameShort = m.name.length > 5 ? m.name.slice(0, 5) + '..' : m.name;
+    ctx.fillText(nameShort, mx, my + m.size + 16);
+    ctx.font = `700 8px monospace`;
+    ctx.fillStyle = m.color;
+    const amt = m.amount >= 10000 ? Math.round(m.amount/10000)+'만' : m.amount+'원';
+    ctx.fillText('-' + amt, mx, my + m.size + 26);
+    ctx.textAlign = 'left';
+
+    // 60틱마다 히어로를 향해 공격 (HP 감소)
+    if (_gameTick % 180 === Math.abs(m.id?.charCodeAt(0) || 0) % 180) {
+      _heroHp = Math.max(0, _heroHp - 2);
+      _gameParticles.push({ x: _heroX, y: _heroY - 10, text: '⚡ -2', color: '#ef4444', life: 60, vy: -1.5, type: 'hit' });
+    }
+  });
+
+  // 히어로 (내 캐릭터)
+  const hx = _heroX, hy = _heroY;
+  const heroWobble = Math.sin(_gameTick * 0.05) * 2;
+
+  // 히어로 그림자
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath(); ctx.ellipse(hx, hy + 22, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // 히어로 몸 (단순 픽셀아트풍)
+  // 몸통
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillRect(hx - 10, hy - 10 + heroWobble, 20, 26);
+  // 머리
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(hx, hy - 18 + heroWobble, 14, 0, Math.PI * 2); ctx.fill();
+  // 눈
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(hx - 5, hy - 20 + heroWobble, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + 5, hy - 20 + heroWobble, 2.5, 0, Math.PI * 2); ctx.fill();
+  // 입 (미소)
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(hx, hy - 16 + heroWobble, 5, 0.2, Math.PI - 0.2); ctx.stroke();
+  // 다리
+  ctx.fillStyle = '#1e40af';
+  ctx.fillRect(hx - 9, hy + 16 + heroWobble, 7, 10);
+  ctx.fillRect(hx + 2, hy + 16 + heroWobble, 7, 10);
+  // 칼 (오른손)
+  ctx.save();
+  ctx.translate(hx + 14, hy - 5 + heroWobble);
+  ctx.rotate(-0.4 + Math.sin(_gameTick * 0.08) * 0.2);
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(-2, -18, 4, 18);
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(-6, -2, 12, 4);
+  ctx.restore();
+
+  // HP바 (히어로)
+  const hpBarW = 40;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(hx - hpBarW/2, hy - 42 + heroWobble, hpBarW, 6);
+  const hpColor = _heroHp > 50 ? '#10b981' : _heroHp > 25 ? '#f59e0b' : '#ef4444';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(hx - hpBarW/2, hy - 42 + heroWobble, hpBarW * (_heroHp/_heroMaxHp), 6);
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText('HP', hx, hy - 36 + heroWobble);
+  ctx.textAlign = 'left';
+
+  // 월급 초당 수입 적립 + 플로팅 텍스트 생성
+  if (_salaryPerSec > 0) {
+    _salaryAccum += _salaryPerSec / 60; // 60fps 가정
+    if (_salaryAccum >= 1) {
+      const earned = Math.floor(_salaryAccum);
+      _salaryAccum -= earned;
+      _heroHp = Math.min(_heroMaxHp, _heroHp + 0.1); // 힐링 효과
+      _salaryFloats.push({
+        x: hx + (Math.random() - 0.5) * 30,
+        y: hy - 50,
+        text: `+${earned >= 1000 ? Math.round(earned/1000)+'천' : earned}`,
+        life: 90,
+        vy: -1.2,
+      });
+    }
+  }
+
+  // 월급 플로팅 텍스트 (힐 효과)
+  _salaryFloats = _salaryFloats.filter(f => f.life > 0);
+  _salaryFloats.forEach(f => {
+    f.y += f.vy;
+    f.life--;
+    const alpha = Math.min(1, f.life / 30);
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#4ade80';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur = 6;
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  });
+
+  // 일반 파티클
+  _gameParticles = _gameParticles.filter(p => p.life > 0);
+  _gameParticles.forEach(p => {
+    p.y += p.vy || -1;
+    p.life--;
+    ctx.globalAlpha = Math.min(1, p.life / 20);
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillStyle = p.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  });
+
+  // 살아있는 몬스터 없으면 "승리"
+  const alive = _gameMonsters.filter(m => !m.dead);
+  if (_gameMonsters.length > 0 && alive.length === 0) {
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 20;
+    ctx.fillText('🎉 VICTORY!', W/2, H/2);
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 0;
+    ctx.fillText('고정 지출 없음! 재정 자유!', W/2, H/2 + 30);
+    ctx.textAlign = 'left';
+  } else if (_gameMonsters.length === 0) {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'center';
+    ctx.fillText('항목탭에서 고정 지출을 추가하면', W/2, H/2);
+    ctx.fillText('몬스터가 나타납니다!', W/2, H/2 + 22);
+    ctx.textAlign = 'left';
+  }
+
+  _gameAnimFrame = requestAnimationFrame(_gameLoop);
+}
+
+function _stopGame() {
+  _gameRunning = false;
+  if (_gameAnimFrame) { cancelAnimationFrame(_gameAnimFrame); _gameAnimFrame = null; }
+}
+
+// 뷰탭 진입/이탈 감지
+document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.page === 'view') {
+      setTimeout(() => { _initGame(); _updateSalaryCounter(); _updateGameStats(); }, 120);
+    } else {
+      _stopGame();
+    }
+  });
+});
+
+function _updateGameStats() {
+  import('./state.js').then(({ state: s }) => {
+    import('./utils.js').then(({ fmtShort }) => {
+      const monsters = (s.entries||[]).filter(e=>e.type==='expense'&&e.repeat==='매월');
+      const monthlyInc = (s.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
+      const monEl = document.getElementById('game-monster-count');
+      const incEl = document.getElementById('game-income-stat');
+      if (monEl) monEl.textContent = `${monsters.length}마리`;
+      if (incEl) incEl.textContent = fmtShort(monthlyInc) + '/월';
+    });
+  });
+}
+
+// 급여 카운터 업데이트
+function _updateSalaryCounter() {
+  const el = document.getElementById('salary-counter');
+  if (!el) return;
+  import('./state.js').then(({ state: s }) => {
+    const monthlyIncome = (s.entries || [])
+      .filter(e => e.type === 'income' && e.repeat === '매월')
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+    if (!monthlyIncome) { el.textContent = '월급 미설정'; return; }
+    const perSec = monthlyIncome / (30 * 24 * 3600);
+    let startTime = Date.now();
+    let accumulated = 0;
+    function tick() {
+      if (!document.getElementById('page-view')?.classList.contains('active')) return;
+      const elapsed = (Date.now() - startTime) / 1000;
+      accumulated = perSec * elapsed;
+      const fmt = n => n >= 10000 ? (n/10000).toFixed(2)+'만' : n.toFixed(0)+'원';
+      el.textContent = '+' + fmt(accumulated);
+      requestAnimationFrame(tick);
+    }
+    tick();
+  });
+}
+
+// 윈도우 리사이즈
+window.addEventListener('resize', () => {
+  if (_gameCanvas) _resizeGame();
+});
+
+// 상세 시트 닫기 버튼
+['today','salary','space'].forEach(type => {
+  document.getElementById(`btn-${type}-detail-close`)?.addEventListener('click', () => closeSheet(`${type}-detail-sheet`));
+  document.getElementById(`${type}-detail-sheet`)?.addEventListener('click', (e) => closeSheetOutside(e, `${type}-detail-sheet`));
+});
+
+// 시트 내부 navigate 버튼용 글로벌 핸들러
+window._nav = (page) => navigate(page);

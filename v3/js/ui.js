@@ -1119,11 +1119,11 @@ export function openWishForm(id) {
   document.getElementById('wf-date').value = wish?.targetDate || '';
   document.getElementById('wf-url').value = wish?.url || '';
   document.getElementById('wf-notes').value = wish?.notes || '';
-  document.getElementById('wish-form-overlay').style.display = 'flex';
+  openSheet('wish-form-overlay');
 }
 
 export function hideWishForm() {
-  document.getElementById('wish-form-overlay').style.display = 'none';
+  closeSheet('wish-form-overlay');
   _editWishId = null;
 }
 
@@ -1188,11 +1188,11 @@ export function openWatchlistForm(symbol) {
   document.getElementById('wl-buyprice').value = item?.buyPrice || '';
   document.getElementById('wl-qty').value = item?.quantity || '';
   document.getElementById('wl-note').value = item?.note || '';
-  document.getElementById('watchlist-form-overlay').style.display = 'flex';
+  openSheet('watchlist-form-overlay');
 }
 
 export function hideWatchlistForm() {
-  document.getElementById('watchlist-form-overlay').style.display = 'none';
+  closeSheet('watchlist-form-overlay');
   _editWatchSymbol = null;
 }
 
