@@ -984,13 +984,14 @@ function _initGame() {
 
 function _resizeGame() {
   if (!_gameCanvas) return;
-  const rect = _gameCanvas.parentElement.getBoundingClientRect();
-  _gameW = rect.width || 360;
-  _gameH = Math.min(rect.height || 480, window.innerHeight * 0.55);
+  const wrap = _gameCanvas.parentElement;
+  // 페이지 활성화 전에는 0일 수 있어 여러 방법으로 폭 계산
+  _gameW = wrap.offsetWidth || wrap.clientWidth || (window.innerWidth - 32) || 360;
+  _gameH = wrap.offsetHeight || 360;
   _gameCanvas.width = _gameW;
   _gameCanvas.height = _gameH;
   _heroX = _gameW * 0.2;
-  _heroY = _gameH * 0.55;
+  _heroY = _gameH * 0.58;
 }
 
 function _spawnMonster(entry, idx, total) {
@@ -1243,7 +1244,7 @@ function _stopGame() {
 document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.dataset.page === 'view') {
-      setTimeout(() => { _initGame(); _updateSalaryCounter(); _updateGameStats(); }, 120);
+      setTimeout(() => { _initGame(); _updateSalaryCounter(); _updateGameStats(); }, 200);
     } else {
       _stopGame();
     }

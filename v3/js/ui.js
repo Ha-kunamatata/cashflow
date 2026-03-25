@@ -74,6 +74,7 @@ const PAGE_MAP = {
   goals: 'page-goals',
   wishlist: 'page-wishlist',
   finance: 'page-finance',
+  view: 'page-view',
   settings: 'page-settings',
 };
 
