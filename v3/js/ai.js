@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 
 const GEMINI_KEY_STORAGE = 'gemini_api_key';
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 // ── API 키 관리 ───────────────────────────────────────
 export function getGeminiKey() {
@@ -28,7 +28,9 @@ async function callGemini(prompt) {
   const key = getGeminiKey();
   if (!key) throw new Error('API 키가 없습니다');
 
-  const res = await fetch(`${GEMINI_API_BASE}?key=${key}`, {
+  let res;
+  try {
+    res = await fetch(`${GEMINI_API_BASE}?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -36,11 +38,25 @@ async function callGemini(prompt) {
       generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
     }),
   });
+  } catch (_) {
+    throw new Error('네트워크 연결을 확인해주세요.');
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = err?.error?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
+    const status = res.status;
+    const rawMsg = err?.error?.message || '';
+    let userMsg;
+    if (status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+      userMsg = 'API 사용량 한도에 도달했어요. 잠시 후 다시 시도해주세요.';
+    } else if (status === 400 && rawMsg.toLowerCase().includes('api key')) {
+      userMsg = 'API 키가 올바르지 않아요. 설정에서 키를 확인해주세요.';
+    } else if (status === 401 || status === 403) {
+      userMsg = 'API 키가 올바르지 않아요. 설정에서 키를 확인해주세요.';
+    } else {
+      userMsg = rawMsg || `오류가 발생했어요. (HTTP ${status})`;
+    }
+    throw new Error(userMsg);
   }
 
   const data = await res.json();
