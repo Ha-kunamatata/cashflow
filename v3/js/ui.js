@@ -6,7 +6,7 @@ import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadg
 import { publishSharedGoal, fetchSharedGoalByCode } from './firebase.js';
 import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state.js';
 import * as renderModule from './render.js';
-import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI } from './ai.js';
+import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI, renderMarkdown } from './ai.js';
 import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets.js';
 import { setMonthBudget, getMonthBudget } from './budget.js';
 import { computeStreak, checkBadges, BADGE_DEFS } from './streak.js';
@@ -703,43 +703,88 @@ export function saveGeminiKey() {
 export async function refreshHomeInsight() {
   if (!hasGeminiKey()) return;
   const content = document.getElementById('ai-insight-content');
+  const refreshBtn = document.getElementById('btn-ai-insight-refresh');
   if (!content) return;
-  content.textContent = '분석 중…';
+
+  // 스켈레톤 로딩
+  content.innerHTML = `<div class="ai-skeleton-wrap">
+    <div class="ai-skeleton" style="width:88%"></div>
+    <div class="ai-skeleton" style="width:70%"></div>
+    <div class="ai-skeleton" style="width:80%"></div>
+    <div class="ai-skeleton" style="width:62%"></div>
+    <div class="ai-skeleton" style="width:75%"></div>
+  </div>`;
+  if (refreshBtn) refreshBtn.classList.add('spinning');
+
   try {
     const text = await getHomeInsight(state);
-    content.textContent = text;
+    content.innerHTML = `<div class="ai-content">${renderMarkdown(text)}</div>`;
+    // 업데이트 시간 표시
+    const timeEl = document.getElementById('ai-insight-time');
+    if (timeEl) {
+      const now = new Date();
+      timeEl.textContent = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트`;
+    }
   } catch (e) {
-    content.textContent = `⚠️ 오류: ${e.message}`;
+    content.innerHTML = `<div class="ai-error"><span>⚠️</span><span>${e.message}</span></div>`;
+  } finally {
+    if (refreshBtn) refreshBtn.classList.remove('spinning');
   }
 }
 
-// ── 통계 탭 AI 분석 ───────────────────────────────────
+// ── 가계부탭 AI 소비 분석 ─────────────────────────────
 export async function runLedgerAIAnalysis() {
+  const { currentLedgerYear: year, currentLedgerMonth: month } = renderModule;
+
   if (!hasGeminiKey()) {
     openSheet('ai-analysis-sheet');
     const content = document.getElementById('ai-analysis-content');
-    if (content) content.innerHTML = `🤖 AI 분석을 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료)<br><br><button class="btn btn-ghost" id="btn-goto-settings-from-ai" style="font-size:12px;padding:6px 14px"><div class="ripple-container"></div>설정으로 →</button>`;
+    if (content) content.innerHTML = `
+      <div style="text-align:center;padding:32px 20px">
+        <div style="font-size:40px;margin-bottom:16px">🔑</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">API 키가 필요해요</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px">Google AI Studio에서 무료로 Gemini API 키를<br>발급받고 설정에서 입력하면 AI 분석을 사용할 수 있어요.</div>
+        <button class="btn btn-primary" id="btn-goto-settings-from-ai" style="font-size:13px;padding:10px 22px"><div class="ripple-container"></div>⚙️ 설정에서 키 입력하기</button>
+      </div>`;
     document.getElementById('btn-goto-settings-from-ai')?.addEventListener('click', () => {
       closeSheet('ai-analysis-sheet');
       navigate('settings');
     });
     return;
   }
-  const { currentLedgerYear: year, currentLedgerMonth: month } = renderModule;
+
   const btn = document.getElementById('btn-ledger-ai');
-  if (btn) btn.textContent = '🤖 분석 중…';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="ripple-container"></div><span class="ai-btn-spinner"></span> 분석 중…'; }
+
+  // 월 라벨 업데이트
+  const monthLabel = document.getElementById('ai-analysis-month-label');
+  if (monthLabel) monthLabel.textContent = `${year}년 ${month + 1}월`;
 
   openSheet('ai-analysis-sheet');
   const content = document.getElementById('ai-analysis-content');
-  if (content) content.textContent = '분석 중…';
+
+  if (content) content.innerHTML = `
+    <div class="ai-skeleton-wrap" style="padding:4px 0">
+      <div class="ai-skeleton" style="width:55%;height:18px;margin-bottom:16px"></div>
+      <div class="ai-skeleton" style="width:92%"></div>
+      <div class="ai-skeleton" style="width:78%"></div>
+      <div class="ai-skeleton" style="width:86%;margin-bottom:16px"></div>
+      <div class="ai-skeleton" style="width:50%;height:16px;margin-bottom:10px"></div>
+      <div class="ai-skeleton" style="width:88%"></div>
+      <div class="ai-skeleton" style="width:73%"></div>
+      <div class="ai-skeleton" style="width:81%;margin-bottom:16px"></div>
+      <div class="ai-skeleton" style="width:50%;height:16px;margin-bottom:10px"></div>
+      <div class="ai-skeleton" style="width:66%"></div>
+      <div class="ai-skeleton" style="width:74%"></div>
+    </div>`;
 
   try {
     const text = await getLedgerAnalysis(state, year, month);
-    if (content) content.textContent = text;
+    if (content) content.innerHTML = `<div class="ai-content ai-analysis-content-inner">${renderMarkdown(text)}</div>`;
   } catch (e) {
-    if (content) content.textContent = `⚠️ 오류: ${e.message}`;
+    if (content) content.innerHTML = `<div class="ai-error"><span>⚠️</span><span>${e.message}</span></div>`;
   } finally {
-    if (btn) btn.innerHTML = '<div class="ripple-container"></div>🤖 AI로 이번달 소비 분석하기';
+    if (btn) { btn.disabled = false; btn.innerHTML = '<div class="ripple-container"></div>🤖 AI 소비 분석'; }
   }
 }
 
@@ -767,14 +812,28 @@ function _renderChatMessages() {
   const container = document.getElementById('ai-chat-messages');
   if (!container) return;
   if (_chatMessages.length === 0) {
-    container.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">안녕하세요! 재무 관련 궁금한 점을 물어보세요 😊</div>`;
+    container.innerHTML = `
+      <div class="ai-chat-empty">
+        <div style="font-size:36px;margin-bottom:10px">🤖</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">AI 재무 도우미</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.7">재무 관련 궁금한 점을 물어보세요.<br>지출 패턴, 저축 방법, 예산 조언 등<br>무엇이든 도와드려요 😊</div>
+      </div>`;
     return;
   }
-  container.innerHTML = _chatMessages.map(msg => `
-    <div style="display:flex;justify-content:${msg.role === 'user' ? 'flex-end' : 'flex-start'}">
-      <div style="max-width:80%;padding:10px 14px;border-radius:${msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};background:${msg.role === 'user' ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'var(--bg3)'};color:${msg.role === 'user' ? '#fff' : 'var(--text)'};font-size:13px;line-height:1.6;white-space:pre-wrap">${escapeHtml(msg.content)}</div>
-    </div>
-  `).join('');
+  container.innerHTML = _chatMessages.map(msg => {
+    const isUser = msg.role === 'user';
+    const isTyping = msg.content === '답변을 생성하는 중…';
+    const bodyContent = isTyping
+      ? `<div class="ai-typing-dots"><span></span><span></span><span></span></div>`
+      : isUser
+        ? `<span>${escapeHtml(msg.content)}</span>`
+        : `<div class="ai-content">${renderMarkdown(msg.content)}</div>`;
+    return `
+      <div class="ai-chat-row ${isUser ? 'user' : 'ai'}">
+        ${!isUser ? `<div class="ai-chat-avatar">🤖</div>` : ''}
+        <div class="ai-chat-bubble ${isUser ? 'user' : 'ai'}">${bodyContent}</div>
+      </div>`;
+  }).join('');
   container.scrollTop = container.scrollHeight;
 }
 
