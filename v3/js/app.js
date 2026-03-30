@@ -529,6 +529,9 @@ document.getElementById('budget-page-content')?.addEventListener('click', (e) =>
 // AI 기능
 document.getElementById('btn-save-gemini-key')?.addEventListener('click', saveGeminiKey);
 document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);
+document.getElementById('btn-ai-insight-expand')?.addEventListener('click', () => openSheet('ai-insight-full-sheet'));
+document.getElementById('btn-ai-insight-full-close')?.addEventListener('click', () => closeSheet('ai-insight-full-sheet'));
+document.getElementById('ai-insight-full-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-insight-full-sheet'));
 document.getElementById('btn-ledger-ai')?.addEventListener('click', runLedgerAIAnalysis);
 document.getElementById('btn-ai-analysis-close')?.addEventListener('click', () => closeSheet('ai-analysis-sheet'));
 document.getElementById('ai-analysis-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-analysis-sheet'));

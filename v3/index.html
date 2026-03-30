@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
 <title>💰 내 자금 흐름</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -144,6 +145,7 @@
     </div>
     <div class="ai-card-footer">
       <span class="ai-updated-at" id="ai-insight-time"></span>
+      <button class="ai-insight-expand-btn" id="btn-ai-insight-expand">전체 보기 →</button>
     </div>
   </div>
 
@@ -866,6 +868,22 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ── AI 인사이트 전체 보기 시트 ── -->
+<div class="sheet-overlay" id="ai-insight-full-sheet">
+  <div class="ai-analysis-panel">
+    <div class="ai-analysis-drag-bar"></div>
+    <div class="ai-analysis-header">
+      <div class="ai-analysis-header-icon">🤖</div>
+      <div style="flex:1">
+        <div class="ai-analysis-title">AI 재무 인사이트</div>
+        <div class="ai-analysis-sub" id="ai-insight-full-time">전체 내용</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-ai-insight-full-close" style="padding:6px 14px;font-size:13px;flex-shrink:0"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div class="ai-analysis-body" id="ai-insight-full-content"></div>
   </div>
 </div>
 
