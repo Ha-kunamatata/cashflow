@@ -17,6 +17,7 @@ import {
   migrateLedger,
   initDefaultData,
   ensureStateFields,
+  resetState,
 } from './state.js';
 
 import {
@@ -179,9 +180,11 @@ initAuth(
     // 데이터 로드 (사용자 격리: 다른 계정이면 로컬 데이터 초기화)
     const prevUid = localStorage.getItem('cashflow_uid');
     if (prevUid !== user.uid) {
-      // 다른 계정 → 이전 사용자 데이터 삭제
+      // 다른 계정 → 이전 사용자의 로컬 데이터 + 메모리 상태 완전 초기화
       localStorage.removeItem('cashflow_v21');
+      localStorage.removeItem('gemini_api_key');
       localStorage.setItem('cashflow_uid', user.uid);
+      resetState();  // 메모리 상태도 빈 값으로 리셋
     }
     load();
     const cloud = await loadFromFirebase();
