@@ -1156,6 +1156,40 @@ body.light-theme .btn-nav-arrow:hover { background: rgba(37,99,235,0.08); color:
   transition: all 0.15s; min-width: 60px;
 }
 .ledger-toolbar .btn:not(.btn-nav-arrow):hover { background: var(--bg2); border-color: var(--accent2); color: var(--accent2); }
+/* ── 통계 뷰 통합 월 네비 카드 ── */
+.ledger-month-nav {
+  display: flex; align-items: stretch;
+  background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(37,99,235,0.06));
+  border: 1px solid rgba(96,165,250,0.28);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 18px rgba(37,99,235,0.12);
+  flex-shrink: 0;
+}
+.ledger-month-nav-arrow {
+  width: 44px; flex-shrink: 0;
+  background: none; border: none; padding: 0;
+  color: var(--accent2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s; position: relative; overflow: hidden;
+}
+.ledger-month-nav-arrow:hover { background: rgba(96,165,250,0.14); }
+.ledger-month-nav-arrow:active { background: rgba(96,165,250,0.24); }
+.ledger-month-nav-label {
+  flex: 1; text-align: center; white-space: nowrap;
+  font-size: 15px; font-weight: 900; color: var(--text); letter-spacing: 0.3px;
+  padding: 11px 14px; min-width: 130px;
+  border-left: 1px solid rgba(96,165,250,0.2);
+  border-right: 1px solid rgba(96,165,250,0.2);
+}
+body.light-theme .ledger-month-nav {
+  background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(37,99,235,0.04));
+  border-color: rgba(37,99,235,0.22);
+}
+body.light-theme .ledger-month-nav-label {
+  border-left-color: rgba(37,99,235,0.15);
+  border-right-color: rgba(37,99,235,0.15);
+}
+
 .ledger-month-chip {
   font-size: 15px; font-weight: 900; color: var(--text);
   padding: 8px 16px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border);
