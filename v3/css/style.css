@@ -1130,17 +1130,32 @@ body.light-theme .watchlist-card { background: var(--bg2); }
   background: var(--bg2); border-color: var(--accent2); color: var(--text2);
 }
 
+/* ── 네비게이션 화살표 버튼 (월 이동 등) ── */
+.btn-nav-arrow {
+  width: 36px; height: 36px; border-radius: 50%; padding: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text2); cursor: pointer; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
+  position: relative; overflow: hidden;
+}
+.btn-nav-arrow:hover { background: rgba(96,165,250,0.14); color: var(--accent2); border-color: rgba(96,165,250,0.28); }
+.btn-nav-arrow:active { transform: scale(0.88); }
+body.light-theme .btn-nav-arrow { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.12); }
+body.light-theme .btn-nav-arrow:hover { background: rgba(37,99,235,0.08); color: var(--accent); border-color: rgba(37,99,235,0.2); }
+
 /* 달력 툴바 */
 .ledger-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 14px; gap: 8px;
 }
-.ledger-toolbar .btn {
+.ledger-toolbar .btn:not(.btn-nav-arrow) {
   padding: 8px 14px; border-radius: 12px; font-size: 13px; font-weight: 700;
   background: var(--bg3); border: 1px solid var(--border);
   transition: all 0.15s; min-width: 60px;
 }
-.ledger-toolbar .btn:hover { background: var(--bg2); border-color: var(--accent2); color: var(--accent2); }
+.ledger-toolbar .btn:not(.btn-nav-arrow):hover { background: var(--bg2); border-color: var(--accent2); color: var(--accent2); }
 .ledger-month-chip {
   font-size: 15px; font-weight: 900; color: var(--text);
   padding: 8px 16px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border);
@@ -1342,21 +1357,14 @@ body.light-theme .bottom-nav::after {
 .ai-refresh-btn:hover { background: rgba(99,102,241,0.28); transform: rotate(30deg); }
 .ai-refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
 .ai-card-body {
-  padding: 14px 16px 0; min-height: 72px;
-  /* 미리보기 높이 — 하단 그라디언트로 더 있음을 표시 */
-  max-height: 180px; overflow: hidden; position: relative;
-  cursor: pointer;
+  padding: 14px 16px 8px; min-height: 72px;
+  max-height: 220px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.25) transparent;
 }
-/* 하단 그라디언트 페이드 — "더 보기" 시각 힌트 */
-.ai-card-body::after {
-  content: '';
-  position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
-  background: linear-gradient(to bottom, transparent, rgba(10,12,28,0.95));
-  pointer-events: none;
-}
-/* 로딩/에러 상태에서는 페이드 숨김 */
-.ai-card-body:has(.ai-skeleton-wrap)::after,
-.ai-card-body:has(.ai-error)::after { display: none; }
+.ai-card-body::-webkit-scrollbar { width: 3px; }
+.ai-card-body::-webkit-scrollbar-track { background: transparent; }
+.ai-card-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
 .ai-card-footer {
   padding: 6px 16px 12px; display: flex; justify-content: flex-end; align-items: center;
 }
@@ -1413,9 +1421,12 @@ body.light-theme .bottom-nav::after {
   /* 거의 전체화면 — 상단 상태바만 제외 */
   height: calc(100dvh - env(safe-area-inset-top) - 8px);
   max-height: calc(100dvh - env(safe-area-inset-top) - 8px);
-  display: flex; flex-direction: column;
-  animation: slideUp 0.3s ease; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden;
+  /* sheet-panel과 동일한 transform 패턴 — animation이 아닌 transition으로 재진입 시에도 정상 동작 */
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+.sheet-overlay.show .ai-analysis-panel { transform: translateY(0); }
 .ai-analysis-drag-bar {
   width: 36px; height: 4px; background: rgba(255,255,255,0.12);
   border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
@@ -1432,8 +1443,9 @@ body.light-theme .bottom-nav::after {
 .ai-analysis-body {
   flex: 1;
   min-height: 0; /* flex child가 콘텐츠 크기 이하로 줄어들 수 있도록 — 스크롤의 핵심 */
-  overflow-y: scroll;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
   font-size: 14px; color: var(--text2); line-height: 1.8;
 }
