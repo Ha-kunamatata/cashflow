@@ -324,10 +324,16 @@
   <!-- ── 달력 뷰 ── -->
   <div id="ledger-view-calendar">
     <div class="card">
-      <div class="ledger-toolbar">
-        <button class="btn-nav-arrow" id="btn-ledger-prev" title="이전 달"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <div id="btn-ledger-month-label" class="ledger-month-chip" style="cursor:pointer"></div>
-        <button class="btn-nav-arrow" id="btn-ledger-next" title="다음 달"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div class="ledger-month-nav" style="margin-bottom:14px">
+        <button class="ledger-month-nav-arrow" id="btn-ledger-prev" title="이전 달">
+          <div class="ripple-container"></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div id="btn-ledger-month-label" class="ledger-month-nav-label"></div>
+        <button class="ledger-month-nav-arrow" id="btn-ledger-next" title="다음 달">
+          <div class="ripple-container"></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
       <div class="ledger-cal-summary">
         <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">지출</span><span class="ledger-cal-sum-val red" id="ledger-total-spend">-</span></div>
