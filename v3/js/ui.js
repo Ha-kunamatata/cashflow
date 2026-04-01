@@ -723,9 +723,8 @@ export async function refreshHomeInsight() {
     // 전체 보기 시트에도 동일 내용 채워두기
     const fullContent = document.getElementById('ai-insight-full-content');
     if (fullContent) fullContent.innerHTML = rendered;
-    // 전체 보기 버튼 표시
-    const expandBtn = document.getElementById('btn-ai-insight-expand');
-    if (expandBtn) expandBtn.style.display = 'block';
+    // 카드 바디 클릭 시 전체 보기 시트 오픈
+    content.onclick = () => openSheet('ai-insight-full-sheet');
     // 업데이트 시간 표시
     const timeEl = document.getElementById('ai-insight-time');
     if (timeEl) {
