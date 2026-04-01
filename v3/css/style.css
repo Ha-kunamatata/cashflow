@@ -1196,9 +1196,9 @@ body.light-theme .ledger-month-nav-label {
   letter-spacing: 0.5px;
 }
 #btn-ledger-month-label {
-  cursor: pointer; user-select: none; transition: background 0.15s;
+  cursor: pointer; user-select: none;
 }
-#btn-ledger-month-label:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3); }
+#btn-ledger-month-label:hover { background: rgba(96,165,250,0.18); }
 #btn-ledger-month-label::after { content: ' ▾'; font-size: 10px; opacity: 0.5; }
 
 /* 달력 그리드 */
@@ -1447,18 +1447,25 @@ body.light-theme .bottom-nav::after {
   margin: 16px 0 8px -4px;
 }
 
-/* ── AI 소비 분석 시트 ── */
+/* ── AI 소비 분석 / 인사이트 전체보기 시트 ── */
 .ai-analysis-panel {
-  width: 100%; max-width: 640px; margin: 0 auto;
-  background: var(--bg2); border-radius: 20px 20px 0 0;
+  /* position: fixed 사용 이유:
+     openSheet()가 body.overflow='hidden'을 설정하면 iOS Safari에서
+     flex 자식의 overflow-y:scroll이 작동 안 함.
+     fixed 요소는 body overflow에 영향을 받지 않으므로 스크롤 보장. */
+  position: fixed;
+  bottom: 0;
+  left: max(0px, calc(50% - 320px));
+  right: max(0px, calc(50% - 320px));
+  top: max(env(safe-area-inset-top, 0px), 8px);
+  background: var(--bg2);
+  border-radius: 20px 20px 0 0;
   border-top: 1px solid rgba(99,102,241,0.3);
-  /* 거의 전체화면 — 상단 상태바만 제외 */
-  height: calc(100dvh - env(safe-area-inset-top) - 8px);
-  max-height: calc(100dvh - env(safe-area-inset-top) - 8px);
-  display: flex; flex-direction: column; overflow: hidden;
-  /* sheet-panel과 동일한 transform 패턴 — animation이 아닌 transition으로 재진입 시에도 정상 동작 */
-  transform: translateY(100%);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transform: translateY(110%);
   transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 3001;
 }
 .sheet-overlay.show .ai-analysis-panel { transform: translateY(0); }
 .ai-analysis-drag-bar {
@@ -1476,9 +1483,10 @@ body.light-theme .bottom-nav::after {
 .ai-analysis-sub { font-size: 12px; color: rgba(139,92,246,0.9); margin-top: 2px; }
 .ai-analysis-body {
   flex: 1;
-  min-height: 0; /* flex child가 콘텐츠 크기 이하로 줄어들 수 있도록 — 스크롤의 핵심 */
-  overflow-y: auto;
+  min-height: 0;
+  overflow-y: scroll;           /* auto 아닌 scroll — 스크롤바 항상 활성화 */
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;          /* iOS에서 수직 스크롤 명시적 허용 */
   overscroll-behavior: contain;
   padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
   font-size: 14px; color: var(--text2); line-height: 1.8;
