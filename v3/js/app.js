@@ -392,17 +392,9 @@ document.getElementById('btn-lf-month-next')?.addEventListener('click', () => sh
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
 document.getElementById('btn-ledger-next')?.addEventListener('click', () => changeLedgerMonth(1));
 
-// 가계부 통계 월 이동
-document.getElementById('btn-ledger-stats-prev')?.addEventListener('click', () => {
-  changeLedgerMonth(-1);
-  const lbl = document.getElementById('ledger-month-label-stats');
-  import('./render.js').then(m => { if(lbl) lbl.textContent = document.getElementById('ledger-month-label')?.textContent || ''; });
-});
-document.getElementById('btn-ledger-stats-next')?.addEventListener('click', () => {
-  changeLedgerMonth(1);
-  const lbl = document.getElementById('ledger-month-label-stats');
-  import('./render.js').then(m => { if(lbl) lbl.textContent = document.getElementById('ledger-month-label')?.textContent || ''; });
-});
+// 가계부 통계 월 이동 — renderLedgerStats() 가 내부에서 레이블을 직접 업데이트하므로 별도 조작 불필요
+document.getElementById('btn-ledger-stats-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
+document.getElementById('btn-ledger-stats-next')?.addEventListener('click', () => changeLedgerMonth(1));
 document.querySelectorAll('.ledger-stats-tab').forEach(btn =>
   btn.addEventListener('click', () => setLedgerStatsTab(btn.dataset.tab))
 );
