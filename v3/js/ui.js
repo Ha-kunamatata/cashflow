@@ -718,12 +718,22 @@ export async function refreshHomeInsight() {
 
   try {
     const text = await getHomeInsight(state);
-    content.innerHTML = `<div class="ai-content">${renderMarkdown(text)}</div>`;
+    const rendered = `<div class="ai-content">${renderMarkdown(text)}</div>`;
+    content.innerHTML = rendered;
+    // 전체 보기 시트에도 동일 내용 채워두기
+    const fullContent = document.getElementById('ai-insight-full-content');
+    if (fullContent) fullContent.innerHTML = rendered;
+    // 전체 보기 버튼 표시
+    const expandBtn = document.getElementById('btn-ai-insight-expand');
+    if (expandBtn) expandBtn.style.display = 'block';
     // 업데이트 시간 표시
     const timeEl = document.getElementById('ai-insight-time');
     if (timeEl) {
       const now = new Date();
-      timeEl.textContent = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트`;
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트`;
+      timeEl.textContent = timeStr;
+      const fullTimeEl = document.getElementById('ai-insight-full-time');
+      if (fullTimeEl) fullTimeEl.textContent = timeStr;
     }
   } catch (e) {
     content.innerHTML = `<div class="ai-error"><span>⚠️</span><span>${e.message}</span></div>`;

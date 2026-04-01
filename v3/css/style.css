@@ -55,7 +55,7 @@ body.light-theme {
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; background: #050b19; color-scheme: dark; }
 
 body {
   background:
@@ -75,7 +75,7 @@ body::before {
   content: '';
   position: fixed; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 120px);
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 85%);
+  opacity: 0.7;
   z-index: 0;
 }
 
@@ -123,8 +123,8 @@ body::before {
 .topbar {
   position: sticky; top: 0; z-index: 100;
   background: rgba(5,11,25,0.72);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(96,165,250,0.12);
   box-shadow: 0 10px 30px rgba(0,0,0,0.16);
   padding: 12px 20px;
@@ -150,8 +150,8 @@ body::before {
 /* ── 바텀 탭 ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 120;
-  background: rgba(10,15,30,0.95); backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(10,15,30,0.97); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(30,58,95,0.5);
   display: flex;
   overflow-x: auto; overflow-y: hidden;
@@ -185,7 +185,7 @@ body::before {
 /* ── 카드 ── */
 .card {
   background: var(--card-grad), rgba(15,23,42,0.70);
-  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(255,255,255,0.07); border-radius:24px;
   box-shadow: var(--soft-glow); padding:18px; margin-bottom:12px;
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
@@ -217,7 +217,7 @@ body::before {
 
 /* ── 요약 그리드 ── */
 .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-.summary-item { background:var(--card-grad),rgba(15,23,42,0.70); border:1px solid rgba(255,255,255,0.07); backdrop-filter:blur(18px) saturate(140%); border-radius:22px; padding:18px 18px 16px; min-height:124px; position:relative; overflow:hidden; transition:border-color 0.2s, transform 0.2s, box-shadow 0.2s; }
+.summary-item { background:var(--card-grad),rgba(15,23,42,0.70); border:1px solid rgba(255,255,255,0.07); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border-radius:22px; padding:18px 18px 16px; min-height:124px; position:relative; overflow:hidden; transition:border-color 0.2s, transform 0.2s, box-shadow 0.2s; }
 .summary-item::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg, rgba(255,255,255,0.06), transparent 36%); }
 .summary-item:hover { transform:translateY(-2px); border-color:rgba(96,165,250,0.18); box-shadow:0 16px 36px rgba(2,8,23,0.30); }
 .summary-item-label { font-size:12px; font-weight:700; letter-spacing:0.4px; color:rgba(148,163,184,0.88); margin-bottom:14px; }
@@ -241,7 +241,7 @@ body::before {
 .money-strong { font-variant-numeric:tabular-nums; letter-spacing:-0.4px; }
 
 /* ── 차트 ── */
-.chart-container { background:var(--card-grad),rgba(15,23,42,0.70); backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,0.07); border-radius:24px; padding:18px; margin-bottom:12px; box-shadow:var(--soft-glow); }
+.chart-container { background:var(--card-grad),rgba(15,23,42,0.70); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.07); border-radius:24px; padding:18px; margin-bottom:12px; box-shadow:var(--soft-glow); }
 .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:10px; }
 .chart-title { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; }
 .chart-period-btns { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
@@ -1339,7 +1339,10 @@ body.light-theme .bottom-nav::after {
 }
 .ai-refresh-btn:hover { background: rgba(99,102,241,0.28); transform: rotate(30deg); }
 .ai-refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
-.ai-card-body { padding: 14px 16px 8px; min-height: 72px; }
+.ai-card-body { padding: 14px 16px 8px; min-height: 72px; max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.3) transparent; }
+.ai-card-body::-webkit-scrollbar { width: 4px; }
+.ai-card-body::-webkit-scrollbar-track { background: transparent; }
+.ai-card-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 2px; }
 .ai-card-footer {
   padding: 6px 16px 12px; display: flex; justify-content: flex-end; align-items: center;
 }
@@ -1413,6 +1416,18 @@ body.light-theme .bottom-nav::after {
   flex: 1; overflow-y: auto; padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
   font-size: 14px; color: var(--text2); line-height: 1.8;
 }
+
+/* ── AI 인사이트 푸터 ── */
+.ai-card-footer { justify-content: space-between; }
+.ai-insight-expand-btn {
+  font-size: 11px; padding: 3px 10px; border-radius: 10px;
+  color: rgba(139,92,246,0.9); background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  cursor: pointer; font-family: var(--font); font-weight: 600;
+  transition: background 0.15s;
+  display: none;
+}
+.ai-insight-expand-btn:hover { background: rgba(99,102,241,0.2); }
 
 /* ── 가계부탭 AI 버튼 ── */
 .ai-ledger-btn {
