@@ -63,7 +63,7 @@ body {
   font-family: var(--font);
   font-size: 15px;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip ≠ hidden: 스크롤 컨테이너를 만들지 않아 컴포지터 스크롤 유지 */
   padding-bottom: calc(90px + env(safe-area-inset-bottom));
 }
 
@@ -109,12 +109,11 @@ body {
 
 /* ── 탑바 ── */
 .topbar {
-  position: sticky; top: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   background: rgba(5,11,25,0.97);
   border-bottom: 1px solid rgba(96,165,250,0.12);
   box-shadow: 0 10px 30px rgba(0,0,0,0.16);
-  /* PWA standalone 모드에서 상단 상태바와 겹침 방지 */
-  padding: calc(env(safe-area-inset-top) + 10px) 20px 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 12px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .topbar-left { display:flex; flex-direction:column; }
@@ -158,7 +157,8 @@ body {
 .nav-btn.active .nav-indicator { opacity:1; }
 
 /* ── 페이지 ── */
-.page { display:none; padding:16px 16px 0; max-width:var(--app-max); margin:0 auto; position:relative; z-index:1; }
+/* fixed topbar 높이 보정: 탑바(~66px) + safe-area */
+.page { display:none; padding:calc(66px + env(safe-area-inset-top, 0px)) 16px 0; max-width:var(--app-max); margin:0 auto; position:relative; z-index:1; }
 .page.active { display:block; animation: premiumPageIn .30s cubic-bezier(.2,.8,.2,1); }
 
 /* ── 버튼 ── */
@@ -470,7 +470,7 @@ body {
 
 /* ── 라이트 모드 ── */
 body.light-theme { background: #edf3fa; }
-body.light-theme .topbar { background:rgba(240,246,252,0.99); }
+body.light-theme .topbar { background:#edf3fa; border-bottom-color:rgba(37,99,235,0.12); }
 body.light-theme .card, body.light-theme .chart-container, body.light-theme .summary-item, body.light-theme .balance-card, body.light-theme .card-month-item { background:#ffffff; }
 
 /* ── 라이트모드 추가 픽스 ── */
