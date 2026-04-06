@@ -58,25 +58,13 @@ body.light-theme {
 html { scroll-behavior: smooth; background: #050b19; color-scheme: dark; }
 
 body {
-  background:
-    radial-gradient(circle at 15% 20%, rgba(59,130,246,0.16), transparent 30%),
-    radial-gradient(circle at 85% 10%, rgba(14,165,233,0.12), transparent 28%),
-    radial-gradient(circle at 50% 120%, rgba(37,99,235,0.18), transparent 35%),
-    linear-gradient(180deg, #050b19 0%, #081224 35%, #07101d 100%);
+  background: linear-gradient(180deg, #050b19 0%, #081224 40%, #07101d 100%);
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
   min-height: 100dvh;
   overflow-x: hidden;
   padding-bottom: calc(90px + env(safe-area-inset-bottom));
-}
-
-body::before {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 120px);
-  opacity: 0.7;
-  z-index: 0;
 }
 
 /* ── 전역 애니메이션 ── */
@@ -122,9 +110,7 @@ body::before {
 /* ── 탑바 ── */
 .topbar {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(5,11,25,0.72);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(5,11,25,0.97);
   border-bottom: 1px solid rgba(96,165,250,0.12);
   box-shadow: 0 10px 30px rgba(0,0,0,0.16);
   /* PWA standalone 모드에서 상단 상태바와 겹침 방지 */
@@ -150,8 +136,7 @@ body::before {
 /* ── 바텀 탭 ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 120;
-  background: rgba(10,15,30,0.97); backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(10,15,30,0.99);
   border-top: 1px solid rgba(30,58,95,0.5);
   display: flex;
   overflow-x: auto; overflow-y: hidden;
@@ -174,7 +159,7 @@ body::before {
 
 /* ── 페이지 ── */
 .page { display:none; padding:16px 16px 0; max-width:var(--app-max); margin:0 auto; position:relative; z-index:1; }
-.page.active { display:block; animation: premiumPageIn .30s cubic-bezier(.2,.8,.2,1); will-change: opacity, transform; }
+.page.active { display:block; animation: premiumPageIn .30s cubic-bezier(.2,.8,.2,1); }
 
 /* ── 버튼 ── */
 .btn { position:relative; overflow:hidden; border:none; cursor:pointer; font-family:var(--font); transition:transform 0.15s, box-shadow 0.15s; user-select:none; }
@@ -184,13 +169,12 @@ body::before {
 
 /* ── 카드 ── */
 .card {
-  background: var(--card-grad), rgba(15,23,42,0.70);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: rgba(17,24,39,0.95);
   border: 1px solid rgba(255,255,255,0.07); border-radius:24px;
   box-shadow: var(--soft-glow); padding:18px; margin-bottom:12px;
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
-.card:hover { transform:translateY(-2px); border-color:rgba(96,165,250,0.18); box-shadow:0 16px 36px rgba(2,8,23,0.30); }
+.card:hover { border-color:rgba(96,165,250,0.18); }
 .card-title { font-size:12px; font-weight:800; color:#cbd5e1; letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
 
 /* ── 잔고 카드 ── */
@@ -217,9 +201,9 @@ body::before {
 
 /* ── 요약 그리드 ── */
 .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-.summary-item { background:var(--card-grad),rgba(15,23,42,0.70); border:1px solid rgba(255,255,255,0.07); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border-radius:22px; padding:18px 18px 16px; min-height:124px; position:relative; overflow:hidden; transition:border-color 0.2s, transform 0.2s, box-shadow 0.2s; }
+.summary-item { background:rgba(17,24,39,0.95); border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:18px 18px 16px; min-height:124px; position:relative; overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s; }
 .summary-item::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg, rgba(255,255,255,0.06), transparent 36%); }
-.summary-item:hover { transform:translateY(-2px); border-color:rgba(96,165,250,0.18); box-shadow:0 16px 36px rgba(2,8,23,0.30); }
+.summary-item:hover { border-color:rgba(96,165,250,0.18); }
 .summary-item-label { font-size:12px; font-weight:700; letter-spacing:0.4px; color:rgba(148,163,184,0.88); margin-bottom:14px; }
 .summary-item-value { font-family:var(--mono); font-size:clamp(20px,4.5vw,30px); font-weight:900; letter-spacing:-0.8px; transition:color 0.3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .summary-item-value.green { color:var(--green2); }
@@ -241,7 +225,7 @@ body::before {
 .money-strong { font-variant-numeric:tabular-nums; letter-spacing:-0.4px; }
 
 /* ── 차트 ── */
-.chart-container { background:var(--card-grad),rgba(15,23,42,0.70); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.07); border-radius:24px; padding:18px; margin-bottom:12px; box-shadow:var(--soft-glow); }
+.chart-container { background:rgba(17,24,39,0.95); border:1px solid rgba(255,255,255,0.07); border-radius:24px; padding:18px; margin-bottom:12px; box-shadow:var(--soft-glow); }
 .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:10px; }
 .chart-title { font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; text-transform:uppercase; }
 .chart-period-btns { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
@@ -302,7 +286,7 @@ body::before {
 .badge.ended { background:var(--bg3); color:var(--text3); text-decoration:line-through; }
 
 /* ── 폼 오버레이 ── */
-.form-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:flex-end; animation:fadeIn 0.2s ease; }
+.form-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.75); display:flex; align-items:flex-end; animation:fadeIn 0.2s ease; }
 .form-sheet { width:100%; max-width:640px; margin:0 auto; background:linear-gradient(180deg,rgba(17,24,39,0.98),rgba(15,23,42,0.98)); border-radius:24px 24px 0 0; border:1px solid rgba(255,255,255,0.08); padding:24px 20px calc(20px + env(safe-area-inset-bottom)); animation:slideUp 0.3s ease; max-height:90dvh; overflow-y:auto; box-shadow:0 -10px 40px rgba(0,0,0,0.25); }
 .form-handle { width:40px; height:4px; border-radius:2px; background:var(--border2); margin:0 auto 20px; }
 .form-sheet-title { font-size:18px; font-weight:800; margin-bottom:20px; }
@@ -411,12 +395,12 @@ body::before {
 .empty-state { text-align:center; padding:40px 20px; color:var(--text3); font-size:13px; line-height:2; }
 
 /* ── 시트들 ── */
-.app-loading-overlay { position:fixed; inset:0; background:rgba(2,6,23,.55); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:5000; opacity:0; pointer-events:none; transition:opacity .25s ease; }
+.app-loading-overlay { position:fixed; inset:0; background:rgba(2,6,23,.80); display:flex; align-items:center; justify-content:center; z-index:5000; opacity:0; pointer-events:none; transition:opacity .25s ease; }
 .app-loading-overlay.show { opacity:1; pointer-events:auto; }
 .app-loading-box { min-width:160px; padding:22px 20px; border-radius:24px; background:rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.08); color:#fff; display:flex; flex-direction:column; align-items:center; gap:12px; box-shadow:0 20px 50px rgba(0,0,0,.35); }
 .app-loading-spinner { width:28px; height:28px; border-radius:50%; border:3px solid rgba(255,255,255,.18); border-top-color:#60a5fa; animation:spin .8s linear infinite; }
 
-.sheet-overlay { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,.45); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .24s ease; }
+.sheet-overlay { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,.65); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .24s ease; }
 .sheet-overlay.show { opacity:1; pointer-events:auto; }
 /* AI 전체화면 시트 — 하단에서 전체 높이까지 올라옴 */
 .sheet-overlay.ai-fullscreen { align-items: flex-end; padding-top: env(safe-area-inset-top); }
@@ -487,7 +471,7 @@ body::before {
 /* ── 라이트 모드 ── */
 body.light-theme { background: radial-gradient(circle at 10% 10%, rgba(59,130,246,0.10), transparent 28%), linear-gradient(180deg, #eff5fb 0%, #edf3fa 100%); }
 body.light-theme .topbar { background:rgba(255,255,255,0.72); }
-body.light-theme .card, body.light-theme .chart-container, body.light-theme .summary-item, body.light-theme .balance-card, body.light-theme .card-month-item { background:linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82)); }
+body.light-theme .card, body.light-theme .chart-container, body.light-theme .summary-item, body.light-theme .balance-card, body.light-theme .card-month-item { background:#ffffff; }
 
 /* ── 라이트모드 추가 픽스 ── */
 body.light-theme .entry-item { background:rgba(255,255,255,0.85); border-color:rgba(0,0,0,0.08); }
@@ -816,7 +800,7 @@ body.light-theme .balance-eye-btn:hover { background:rgba(0,0,0,0.06); }
 .report-cat-card-hint { font-size:10px; color:var(--text3); margin-top:8px; text-align:center; }
 
 /* 리포트 카테고리 모달 */
-.report-cat-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); z-index:9000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.report-cat-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:9000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
 .report-cat-modal-overlay.open { opacity:1; pointer-events:all; }
 .report-cat-modal-panel { width:100%; max-width:520px; max-height:88vh; overflow-y:auto; background:var(--bg2); border-radius:28px 28px 0 0; padding:24px 20px calc(28px + env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,0.08); transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
 .report-cat-modal-overlay.open .report-cat-modal-panel { transform:translateY(0); }
@@ -1228,7 +1212,7 @@ body.light-theme .ledger-month-nav-label {
 
 /* 급여 카운터 */
 #salary-counter-wrap {
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  background: rgba(15,23,42,0.92);
   border-radius: 12px; padding: 6px 10px; border: 1px solid rgba(74,222,128,0.25);
 }
 
