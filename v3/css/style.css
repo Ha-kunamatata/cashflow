@@ -55,10 +55,10 @@ body.light-theme {
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { scroll-behavior: smooth; background: #050b19; color-scheme: dark; }
+html { scroll-behavior: smooth; background: #070e1c; color-scheme: dark; }
 
 body {
-  background: linear-gradient(180deg, #050b19 0%, #081224 40%, #07101d 100%);
+  background: #070e1c;
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
@@ -469,8 +469,8 @@ body {
 }
 
 /* ── 라이트 모드 ── */
-body.light-theme { background: radial-gradient(circle at 10% 10%, rgba(59,130,246,0.10), transparent 28%), linear-gradient(180deg, #eff5fb 0%, #edf3fa 100%); }
-body.light-theme .topbar { background:rgba(255,255,255,0.72); }
+body.light-theme { background: #edf3fa; }
+body.light-theme .topbar { background:rgba(240,246,252,0.99); }
 body.light-theme .card, body.light-theme .chart-container, body.light-theme .summary-item, body.light-theme .balance-card, body.light-theme .card-month-item { background:#ffffff; }
 
 /* ── 라이트모드 추가 픽스 ── */
@@ -535,8 +535,7 @@ body.light-theme .ledger-day.heat-4 { background:rgba(185,28,28,.24); border-col
 /* 카드 입력창 라이트모드 */
 body.light-theme .card { background:rgba(255,255,255,0.92); border-color:rgba(0,0,0,0.07); }
 body.light-theme .form-sheet { background:linear-gradient(180deg,#ffffff,#f5f8ff); }
-/* body 그라디언트 */
-body.light-theme { background: radial-gradient(circle at 10% 10%, rgba(59,130,246,0.10), transparent 28%), linear-gradient(180deg, #eef4fb 0%, #e8f0fa 100%); }
+/* (light-theme body background set above) */
 
 /* ── 가계부 신규 스타일 ── */
 
