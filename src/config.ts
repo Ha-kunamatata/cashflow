@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════
-// config.js — Firebase 설정 & 앱 상수
+// config.ts — Firebase 설정 & 앱 상수
 // ════════════════════════════════════════════════════════
 
 export const FIREBASE_CONFIG = {
@@ -9,11 +9,11 @@ export const FIREBASE_CONFIG = {
   storageBucket: 'cashflow-37c61.firebasestorage.app',
   messagingSenderId: '166803006858',
   appId: '1:166803006858:web:0ac904e24edc517a499473',
-};
+} as const;
 
 export const STORAGE_KEY = 'cashflow_v21';
 
-export const CAT_COLORS = {
+export const CAT_COLORS: Readonly<Record<string, string>> = {
   '월급': '#10b981',
   '수당': '#34d399',
   '기타수입': '#6ee7b7',
@@ -24,12 +24,12 @@ export const CAT_COLORS = {
   '기타지출': '#94a3b8',
 };
 
-export const INCOME_CATS = ['월급', '수당', '기타수입'];
-export const EXPENSE_CATS = ['카드', '할부', '공과금', '보험', '기타지출'];
-export const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];
+export const INCOME_CATS = ['월급', '수당', '기타수입'] as const;
+export const EXPENSE_CATS = ['카드', '할부', '공과금', '보험', '기타지출'] as const;
+export const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
-export const LEDGER_CATS = ['식비', '교통', '쇼핑', '의료', '문화', '기타'];
-export const LEDGER_CAT_COLORS = {
+export const LEDGER_CATS = ['식비', '교통', '쇼핑', '의료', '문화', '기타'] as const;
+export const LEDGER_CAT_COLORS: Readonly<Record<string, string>> = {
   '식료품':'#ef4444','외식':'#f87171','배달':'#ff7043','카페':'#fb923c','술':'#f59e0b','담배':'#a78bfa',
   '대중교통':'#60a5fa','주유':'#3b82f6','주차':'#6366f1','택시':'#8b5cf6','항공·기차':'#a855f7',
   '쇼핑':'#ec4899','의류·잡화':'#f472b6','생활용품':'#14b8a6','가전·가구':'#06b6d4','도서':'#0ea5e9','구독':'#10b981',
@@ -41,7 +41,7 @@ export const LEDGER_CAT_COLORS = {
   '기타':'#94a3b8',
 };
 
-export const LEDGER_CATEGORIES = {
+export const LEDGER_CATEGORIES: Readonly<Record<string, readonly string[]>> = {
   '식비/음료': ['식료품','외식','배달','카페','술','담배'],
   '교통/이동': ['대중교통','주유','주차','택시','항공·기차'],
   '쇼핑/생활': ['쇼핑','의류·잡화','생활용품','가전·가구','도서','구독'],
@@ -53,4 +53,4 @@ export const LEDGER_CATEGORIES = {
   '기타':      ['기타'],
 };
 
-export const LEDGER_INCOME_CATEGORIES = ['월급','부수입','용돈','환급','이자','투자수익','기타수입'];
+export const LEDGER_INCOME_CATEGORIES = ['월급','부수입','용돈','환급','이자','투자수익','기타수입'] as const;

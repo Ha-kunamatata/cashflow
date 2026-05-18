@@ -1,13 +1,15 @@
 // ════════════════════════════════════════════════════════
 // app.js — 진입점. 이벤트 바인딩 & Firebase 초기화
 // ════════════════════════════════════════════════════════
+import './styles/style.css';
+
 import {
   initAuth,
   signInWithGoogle,
   signOutUser,
   loadFromFirebase,
   startSync
-} from './firebase.js';
+} from './firebase';
 
 import {
   state,
@@ -18,7 +20,7 @@ import {
   initDefaultData,
   ensureStateFields,
   resetState,
-} from './state.js';
+} from './state';
 
 import {
   renderAll,
@@ -58,7 +60,7 @@ import {
   saveReportCard,
   renderHomeBudgetBars,
   renderHomeForecastWidget,
-} from './render.js';
+} from './render';
 
 import {
   navigate,
@@ -144,7 +146,7 @@ import {
   saveCurrentAsTemplate,
   handleReceiptOCR,
   applyMemoSuggestion,
-} from './ui.js';
+} from './ui';
 
 import {
   initRipple,
@@ -156,9 +158,9 @@ import {
   hideLoading,
   fmtShort,
   escapeHtml,
-} from './utils.js';
+} from './utils';
 
-import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
+import { BADGE_DEFS, RARITY_CONFIG } from './streak';
 
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
@@ -265,7 +267,7 @@ async function _checkNotifications() {
   const now = new Date();
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
 
-  import('./utils.js').then(({ fmtShort }) => {
+  import('./utils').then(({ fmtShort }) => {
     const salaryEntry = state.entries.find(e => e.type === 'income' && e.repeat === '매월' && e.day);
     if (salaryEntry && tomorrow.getDate() === salaryEntry.day) {
       new Notification('💰 내일 월급날!', {
@@ -861,8 +863,8 @@ document.getElementById('balance-chips-row')?.addEventListener('click', (e) => {
 });
 
 function _showTodayDetailSheet() {
-  import('./state.js').then(({ state: s }) => {
-    import('./utils.js').then(({ fmtShort, dateKey }) => {
+  import('./state').then(({ state: s }) => {
+    import('./utils').then(({ fmtShort, dateKey }) => {
       const dk = dateKey(new Date());
       const items = s.ledgerData?.[dk] || [];
       const totalExp = items.filter(i=>i.type==='expense').reduce((a,i)=>a+i.amount,0);
@@ -895,8 +897,8 @@ function _showTodayDetailSheet() {
 }
 
 function _showSalaryDetailSheet() {
-  import('./state.js').then(({ state: s }) => {
-    import('./utils.js').then(({ fmtShort }) => {
+  import('./state').then(({ state: s }) => {
+    import('./utils').then(({ fmtShort }) => {
       const now = new Date();
       const incomeEntries = (s.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월');
       const totalMonthly = incomeEntries.reduce((a,e)=>a+e.amount,0);
@@ -931,9 +933,9 @@ function _showSalaryDetailSheet() {
 }
 
 function _showSpaceDetailSheet() {
-  import('./state.js').then(({ state: s }) => {
-    import('./utils.js').then(({ fmtShort }) => {
-      import('./forecast.js').then(({ buildForecast }) => {
+  import('./state').then(({ state: s }) => {
+    import('./utils').then(({ fmtShort }) => {
+      import('./forecast').then(({ buildForecast }) => {
         const fc = buildForecast(60);
         const now = new Date();
         const monthEnd = new Date(now.getFullYear(),now.getMonth()+1,0);
@@ -981,9 +983,9 @@ function _showSpaceDetailSheet() {
 // 하우스 레벨 카드 상세 팝업
 // ══════════════════════════════════════════════════════════════
 function _renderHouseDetailSheet() {
-  import('./assets.js').then(({ getTotalAssets, getHouseLevel, HOUSE_LEVELS }) => {
-    import('./utils.js').then(({ fmtShort }) => {
-      import('./state.js').then(({ state: s }) => {
+  import('./assets').then(({ getTotalAssets, getHouseLevel, HOUSE_LEVELS }) => {
+    import('./utils').then(({ fmtShort }) => {
+      import('./state').then(({ state: s }) => {
         const totalAssets = getTotalAssets(s.assets);
         const level = getHouseLevel(totalAssets);
         const pct = level.next && level.next > 0
@@ -1047,9 +1049,9 @@ document.getElementById('house-detail-sheet')?.addEventListener('click', (e) => 
 // 다가오는 입출금 행 클릭 → 상세 팝업
 // ══════════════════════════════════════════════════════════════
 function _showUpcomingDetail(row) {
-  import('./forecast.js').then(({ buildForecast }) => {
-    import('./state.js').then(({ state: s }) => {
-      import('./utils.js').then(({ fmtFull, fmtShort, fmtSigned, p2, escapeHtml }) => {
+  import('./forecast').then(({ buildForecast }) => {
+    import('./state').then(({ state: s }) => {
+      import('./utils').then(({ fmtFull, fmtShort, fmtSigned, p2, escapeHtml }) => {
         const fc = buildForecast(s);
         const upcoming = fc.slice(0, 30).filter(f => f.income > 0 || f.expense > 0);
         const idx = parseInt(row.dataset.forecastIdx, 10);
@@ -1111,7 +1113,7 @@ function _renderMonthPicker() {
     btn.addEventListener('click', () => {
       const m = parseInt(btn.dataset.month, 10);
       // Navigate to chosen month in ledger
-      import('./render.js').then(mod => {
+      import('./render').then(mod => {
         const diff = (_pickerYear - mod.currentLedgerYear) * 12 + (m - mod.currentLedgerMonth);
         changeLedgerMonth(diff);
       });
@@ -1121,7 +1123,7 @@ function _renderMonthPicker() {
 }
 
 function _openMonthPicker() {
-  import('./render.js').then(mod => {
+  import('./render').then(mod => {
     _pickerYear = mod.currentLedgerYear;
     _renderMonthPicker();
     openSheet('month-picker-sheet');
@@ -1257,8 +1259,8 @@ document.getElementById('btn-wish-multianalyze')?.addEventListener('click', asyn
   const checked = [...document.querySelectorAll('.wish-checkbox:checked')].map(cb => cb.dataset.id);
   if (!checked.length) return;
 
-  const { escapeHtml, fmtShort } = await import('./utils.js');
-  const { buildForecast } = await import('./forecast.js');
+  const { escapeHtml, fmtShort } = await import('./utils');
+  const { buildForecast } = await import('./forecast');
 
   const items = (state.wishlist || []).filter(w => checked.includes(w.id));
   const totalPrice = items.reduce((s, w) => s + Number(w.price || 0), 0);

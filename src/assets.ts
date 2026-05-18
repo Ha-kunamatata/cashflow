@@ -1,8 +1,36 @@
 // ════════════════════════════════════════════════════════
-// assets.js — 자산 관리 헬퍼
+// assets.ts — 자산 관리 헬퍼
 // ════════════════════════════════════════════════════════
+import type { Asset } from './types';
 
-export const ASSET_TYPES = {
+export interface AssetTypeDef {
+  icon: string;
+  label: string;
+}
+
+export interface HouseLevel {
+  id: string;
+  icon: string;
+  bigIcon: string;
+  label: string;
+  sublabel: string;
+  desc: string;
+  color: string;
+  min: number;
+  max: number;
+  tip: string;
+  bonus: string;
+}
+
+export interface HouseLevelInfo extends HouseLevel {
+  index: number;
+  totalLevels: number;
+  next: number | null;
+  nextLabel: string | null;
+  nextIcon: string | null;
+}
+
+export const ASSET_TYPES: Readonly<Record<string, AssetTypeDef>> = {
   bank:        { icon: '🏦', label: '은행 통장' },
   savings:     { icon: '💰', label: '적금/예금' },
   investment:  { icon: '📈', label: '주식/ETF' },
@@ -12,9 +40,9 @@ export const ASSET_TYPES = {
   other:       { icon: '📦', label: '기타' },
 };
 
-export const ASSET_PURPOSES = ['생활비', '비상금', '투자금', '저축', '자유'];
+export const ASSET_PURPOSES = ['생활비', '비상금', '투자금', '저축', '자유'] as const;
 
-export const PURPOSE_COLORS = {
+export const PURPOSE_COLORS: Readonly<Record<string, string>> = {
   생활비: '#3b82f6',
   비상금: '#10b981',
   투자금: '#f59e0b',
@@ -22,26 +50,26 @@ export const PURPOSE_COLORS = {
   자유:   '#64748b',
 };
 
-export function getTotalAssets(assets) {
+export function getTotalAssets(assets: Asset[] | null | undefined): number {
   return (assets || []).reduce((s, a) => s + a.amount, 0);
 }
 
-export function getUsableMoney(assets) {
+export function getUsableMoney(assets: Asset[] | null | undefined): number {
   return (assets || [])
-    .filter(a => !['비상금', '투자금'].includes(a.purpose))
+    .filter((a) => !['비상금', '투자금'].includes(a.purpose))
     .reduce((s, a) => s + a.amount, 0);
 }
 
-export function getAssetsByPurpose(assets) {
-  const map = {};
-  for (const a of (assets || [])) {
+export function getAssetsByPurpose(assets: Asset[] | null | undefined): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const a of assets || []) {
     map[a.purpose] = (map[a.purpose] || 0) + a.amount;
   }
   return map;
 }
 
 // ── 자산 레벨 시스템 (10단계 + 상세 스토리) ─────────────
-export const HOUSE_LEVELS = [
+export const HOUSE_LEVELS: HouseLevel[] = [
   {
     id: 'ruin',
     icon: '🏚️', bigIcon: '🏚️',
@@ -164,9 +192,10 @@ export const HOUSE_LEVELS = [
   },
 ];
 
-export function getHouseLevel(netWorth) {
-  const level = HOUSE_LEVELS.find(l => netWorth >= l.min && netWorth < l.max)
-    || HOUSE_LEVELS[HOUSE_LEVELS.length - 1];
+export function getHouseLevel(netWorth: number): HouseLevelInfo {
+  const level =
+    HOUSE_LEVELS.find((l) => netWorth >= l.min && netWorth < l.max) ||
+    HOUSE_LEVELS[HOUSE_LEVELS.length - 1];
   const idx = HOUSE_LEVELS.indexOf(level);
   const nextLevel = HOUSE_LEVELS[idx + 1] || null;
   return {

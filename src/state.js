@@ -1,8 +1,8 @@
 // ════════════════════════════════════════════════════════
 // state.js — 앱 상태 관리 / 저장 / 로드
 // ════════════════════════════════════════════════════════
-import { STORAGE_KEY } from './config.js';
-import { uid, isPastOrToday } from './utils.js';
+import { STORAGE_KEY } from './config';
+import { uid, isPastOrToday } from './utils';
 
 // 기본 카드 정의 (커스터마이즈 가능)
 export const DEFAULT_CARDS = [
