@@ -1,0 +1,8 @@
+node_modules
+dist
+.vite
+v3
+v2
+package-lock.json
+*.min.js
+*.min.css

@@ -2,10 +2,10 @@
 // sw.js — Cash Flow PWA Service Worker
 // 버전을 바꾸면 새 캐시 생성 → 구 캐시 삭제 → 페이지 자동 리로드
 // ════════════════════════════════════════════════
-const CACHE = 'cashflow-v6';
+const CACHE = 'cashflow-v14';
 
 const APP_SHELL = [
-  './css/style.css?v=6',
+  './css/style.css?v=12',
   './js/app.js',
   './js/render.js',
   './js/ai.js',
