@@ -337,6 +337,7 @@ let _ledgerItemId    = null; // 수정 중인 항목 id (null이면 신규)
 let _ledgerItemType  = 'expense';
 let _ledgerCatGroup  = Object.keys(LEDGER_CATEGORIES)[0];
 let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
+let _ledgerItemTag   = null; // 소비 유형 태그
 
 // 날짜 셀 클릭 → 날짜 시트 열기
 export function openLedgerDaySheet(dateStr) {
@@ -388,12 +389,14 @@ function _renderDaySheet() {
     const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
     const sign = item.type === 'expense' ? '-' : '+';
     const cls  = item.type === 'expense' ? 'red' : 'green';
+    const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
     return `
       <div class="lday-item" data-id="${item.id}">
         <span class="lday-item-dot" style="background:${col}"></span>
         <div class="lday-item-info">
           <span class="lday-item-cat">${escapeHtml(item.category)}</span>
           ${item.memo ? `<span class="lday-item-memo">${escapeHtml(item.memo)}</span>` : ''}
+          ${item.tag ? `<span class="lday-item-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
         </div>
         <span class="lday-item-amt ${cls}">${sign}${fmtShort(item.amount)}</span>
         <button class="icon-btn edit lday-edit-btn" data-id="${item.id}">
@@ -433,6 +436,9 @@ export function openLedgerItemForm(dateStr, itemId) {
   const memoEl = document.getElementById('ledger-item-memo');
   if (amtEl)  amtEl.value  = existing?.amount || '';
   if (memoEl) memoEl.value = existing?.memo   || '';
+
+  _ledgerItemTag = existing?.tag || null;
+  _renderTagButtons();
 
   _renderItemFormType();
   openSheet('ledger-item-sheet');
@@ -506,6 +512,19 @@ function _renderCatChips() {
   }).join('');
 }
 
+export function selectLedgerTag(tag) {
+  _ledgerItemTag = _ledgerItemTag === tag ? null : tag;
+  _renderTagButtons();
+}
+
+function _renderTagButtons() {
+  const row = document.getElementById('ledger-tag-row');
+  if (!row) return;
+  row.querySelectorAll('.ledger-tag-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tag === _ledgerItemTag);
+  });
+}
+
 export function saveLedgerItem() {
   const amt  = Number(document.getElementById('ledger-item-amount')?.value) || 0;
   const memo = document.getElementById('ledger-item-memo')?.value.trim() || '';
@@ -522,6 +541,7 @@ export function saveLedgerItem() {
     category: _ledgerCategory,
     amount:   amt,
     memo,
+    ..._ledgerItemTag ? { tag: _ledgerItemTag } : {},
   };
 
   if (_ledgerItemId) {

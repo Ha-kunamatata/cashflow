@@ -76,6 +76,7 @@ import {
   setLedgerItemType,
   selectLedgerCatGroup,
   selectLedgerCat,
+  selectLedgerTag,
   saveLedgerItem,
   deleteLedgerItem,
   deleteLedgerCurrentDayItem,
@@ -424,6 +425,10 @@ document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.ledger-cat-chip');
   if (btn) selectLedgerCat(btn.dataset.cat);
 });
+document.getElementById('ledger-tag-row')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.ledger-tag-btn');
+  if (btn) selectLedgerTag(btn.dataset.tag);
+});
 document.getElementById('btn-ledger-item-save')?.addEventListener('click', saveLedgerItem);
 document.getElementById('btn-ledger-item-cancel')?.addEventListener('click', closeLedgerItemForm);
 document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
@@ -534,6 +539,12 @@ document.getElementById('ai-chat-sheet')?.addEventListener('click', (e) => close
 document.getElementById('btn-ai-chat-send')?.addEventListener('click', sendAIChatMessage);
 document.getElementById('ai-chat-input')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendAIChatMessage();
+});
+
+// ── 재정 건강 점수 카드 → 분석 탭 이동 ──────────────────────
+document.getElementById('health-score-mini')?.addEventListener('click', () => {
+  const btn = document.querySelector('.nav-btn[data-page="report"]');
+  navigate('report', btn);
 });
 
 // ══════════════════════════════════════════════════════════════
