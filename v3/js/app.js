@@ -672,8 +672,7 @@ document.getElementById('btn-ledger-ai')?.addEventListener('click', runLedgerAIA
 document.getElementById('btn-ai-analysis-close')?.addEventListener('click', () => closeSheet('ai-analysis-sheet'));
 document.getElementById('ai-analysis-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-analysis-sheet'));
 
-// 플로팅 채팅
-document.getElementById('btn-ai-chat-fab')?.addEventListener('click', openAIChat);
+// 플로팅 채팅 (구 btn-ai-chat-fab → 스피드 다이얼로 이동)
 document.getElementById('btn-ai-chat-close')?.addEventListener('click', () => closeSheet('ai-chat-sheet'));
 document.getElementById('ai-chat-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-chat-sheet'));
 document.getElementById('btn-ai-chat-send')?.addEventListener('click', sendAIChatMessage);
@@ -1305,16 +1304,40 @@ window.closeBadgeDetail = function() {
 window._nav = (page) => navigate(page);
 
 // ══════════════════════════════════════════════════════════════
-// 빠른 입력 FAB
+// 스피드 다이얼 FAB
 // ══════════════════════════════════════════════════════════════
-document.getElementById('btn-quick-add-fab')?.addEventListener('click', () => {
-  const todayKey = (() => {
+(function _setupSpeedDial() {
+  const dial     = document.getElementById('fab-speed-dial');
+  const backdrop = document.getElementById('fab-backdrop');
+  if (!dial) return;
+
+  function _todayKey() {
     const d = new Date();
-    const p2 = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
-  })();
-  openLedgerItemForm(null, todayKey);
-});
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function openDial()  { dial.classList.add('open');    backdrop.style.display = 'block'; }
+  function closeDial() { dial.classList.remove('open'); backdrop.style.display = 'none'; }
+  function toggleDial() { dial.classList.contains('open') ? closeDial() : openDial(); }
+
+  document.getElementById('btn-fab-main')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleDial();
+  });
+
+  document.getElementById('btn-fab-ledger')?.addEventListener('click', () => {
+    closeDial();
+    openLedgerItemForm(_todayKey(), null);
+  });
+
+  document.getElementById('btn-fab-chat')?.addEventListener('click', () => {
+    closeDial();
+    openAIChat();
+  });
+
+  backdrop.addEventListener('click', closeDial);
+})();
 
 // ══════════════════════════════════════════════════════════════
 // 가계부 항목 폼 — 템플릿 · 저장 · OCR

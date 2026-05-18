@@ -916,17 +916,24 @@
   </div>
 </div>
 
-<!-- ── 빠른 가계부 입력 FAB ── -->
-<button class="btn quick-add-fab" id="btn-quick-add-fab" title="빠른 지출 입력">
-  <div class="ripple-container"></div>
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-</button>
+<!-- ── FAB 뒷배경 ── -->
+<div id="fab-backdrop"></div>
 
-<!-- ── 플로팅 AI 채팅 버튼 ── -->
-<button class="btn ai-chat-fab" id="btn-ai-chat-fab" style="display:flex">
-  <div class="ripple-container"></div>
-  <span style="font-size:20px">🤖</span>
-</button>
+<!-- ── 스피드 다이얼 FAB ── -->
+<div id="fab-speed-dial">
+  <div class="fab-sub" id="fab-sub-chat">
+    <span class="fab-sub-label">AI 도우미</span>
+    <button class="fab-sub-btn" id="btn-fab-chat" title="AI 재무 도우미">🤖</button>
+  </div>
+  <div class="fab-sub" id="fab-sub-ledger">
+    <span class="fab-sub-label">가계부 추가</span>
+    <button class="fab-sub-btn" id="btn-fab-ledger" title="가계부 빠른 입력">📒</button>
+  </div>
+  <button class="fab-main-btn" id="btn-fab-main" title="빠른 메뉴">
+    <div class="ripple-container"></div>
+    <span class="fab-main-icon">+</span>
+  </button>
+</div>
 
 <!-- ── AI 채팅 시트 ── -->
 <div class="sheet-overlay" id="ai-chat-sheet">
