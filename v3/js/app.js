@@ -137,7 +137,6 @@ import {
   hideLoading
 } from './utils.js';
 
-import { FinanceGame } from './game.js';
 import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
 
 // ── 리플 초기화 ────────────────────────────────────────
@@ -1144,75 +1143,6 @@ function _spawnBadgeParticles(container, color) {
 window.closeBadgeDetail = function() {
   closeSheet('badge-detail-overlay');
 };
-
-// ══════════════════════════════════════════════════════════════
-// 뷰탭 — 재정 배틀 RPG
-// ══════════════════════════════════════════════════════════════
-let _game = null;
-
-function _initGame() {
-  const canvas = document.getElementById('game-canvas');
-  if (!canvas) return;
-  if (_game) { _game.destroy(); _game = null; }
-  _game = new FinanceGame(canvas, state);
-  _game.init();
-  _updateSalaryCounter();
-  _updateGameStats();
-}
-
-function _stopGame() {
-  if (_game) { _game.destroy(); _game = null; }
-}
-
-
-// 뷰탭 진입/이탈 감지
-document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.dataset.page === 'view') {
-      setTimeout(() => _initGame(), 200);
-    } else {
-      _stopGame();
-    }
-  });
-});
-
-function _updateGameStats() {
-  const monsters = (state.entries||[]).filter(e=>e.type==='expense'&&e.repeat==='매월');
-  const monthlyInc = (state.entries||[]).filter(e=>e.type==='income'&&e.repeat==='매월').reduce((a,e)=>a+e.amount,0);
-  const monEl = document.getElementById('game-monster-count');
-  const incEl = document.getElementById('game-income-stat');
-  if (monEl) monEl.textContent = `${monsters.length}마리`;
-  if (incEl) {
-    const m = monthlyInc;
-    incEl.textContent = (m >= 10000 ? Math.round(m/10000)+'만' : m.toLocaleString()) + '원/월';
-  }
-}
-
-// 급여 카운터 업데이트
-function _updateSalaryCounter() {
-  const el = document.getElementById('salary-counter');
-  if (!el) return;
-  const monthlyIncome = (state.entries || [])
-    .filter(e => e.type === 'income' && e.repeat === '매월')
-    .reduce((sum, e) => sum + (e.amount || 0), 0);
-  if (!monthlyIncome) { el.textContent = '월급 미설정'; return; }
-  const perSec = monthlyIncome / (30 * 24 * 3600);
-  const startTime = Date.now();
-  function tick() {
-    if (!document.getElementById('page-view')?.classList.contains('active')) return;
-    const elapsed = (Date.now() - startTime) / 1000;
-    const accumulated = perSec * elapsed;
-    const fmt = n => n >= 10000 ? (n/10000).toFixed(2)+'만' : n.toFixed(0)+'원';
-    el.textContent = '+' + fmt(accumulated);
-    requestAnimationFrame(tick);
-  }
-  tick();
-}
-
-// 윈도우 리사이즈
-window.addEventListener('resize', () => {
-  if (_game) _game.resize();
-});
 
 // 상세 시트 닫기 버튼
 ['today','salary','space'].forEach(type => {

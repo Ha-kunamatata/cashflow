@@ -392,7 +392,19 @@ body {
 .skeleton { background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:8px; }
 
 /* ── 빈 상태 ── */
-.empty-state { text-align:center; padding:40px 20px; color:var(--text3); font-size:13px; line-height:2; }
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--text3);
+  font-size: 13px; line-height: 1.7;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.empty-state-icon { font-size: 44px; opacity: 0.7; }
+.empty-state-title { font-size: 15px; font-weight: 800; color: var(--text2); }
+.empty-state-desc { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 220px; }
+.empty-state-hint {
+  margin-top: 4px; padding: 7px 14px; border-radius: 999px;
+  background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2);
+  font-size: 12px; font-weight: 700; color: var(--accent2);
+}
 
 /* ── 시트들 ── */
 .app-loading-overlay { position:fixed; inset:0; background:rgba(2,6,23,.80); display:flex; align-items:center; justify-content:center; z-index:5000; opacity:0; pointer-events:none; transition:opacity .25s ease; }
@@ -1199,28 +1211,6 @@ body.light-theme .ledger-month-nav-label {
 }
 
 /* ════════════════════════════════════════════════════════
-   게임 뷰탭
-   ════════════════════════════════════════════════════════ */
-#page-view {
-  position: relative; padding-bottom: 80px;
-}
-#game-wrap {
-  height: 360px; min-height: 280px; max-height: 420px;
-}
-#game-canvas { display: block; width: 100%; height: 100%; }
-
-/* 급여 카운터 */
-#salary-counter-wrap {
-  background: rgba(15,23,42,0.92);
-  border-radius: 12px; padding: 6px 10px; border: 1px solid rgba(74,222,128,0.25);
-}
-
-/* 게임 스탯 */
-#game-stats-grid .stat-val {
-  font-family: var(--mono); font-size: 18px; font-weight: 900; color: var(--text);
-}
-
-/* ════════════════════════════════════════════════════════
    항목탭 카드 배지 스타일 강화
    ════════════════════════════════════════════════════════ */
 .badge.hyundai {
@@ -1268,17 +1258,10 @@ body.light-theme .ledger-month-nav-label {
 }
 
 /* ════════════════════════════════════════════════════════
-   뷰탭 아이콘 (칼 엑스자)
-   ════════════════════════════════════════════════════════ */
-.nav-btn[data-page="view"] svg { stroke-width: 2.5; }
-.nav-btn[data-page="view"].active svg { stroke: var(--accent2); }
-
-/* ════════════════════════════════════════════════════════
    라이트 테마 추가 오버라이드
    ════════════════════════════════════════════════════════ */
 body.light-theme .ledger-sub-tab { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
 body.light-theme .ledger-sub-tab.active { background: linear-gradient(135deg,var(--accent),var(--accent2)); color: #fff; border-color: transparent; }
-body.light-theme #game-wrap { background: #f8fafc; }
 body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
 
 /* ════════════════════════════════════════════════════════
