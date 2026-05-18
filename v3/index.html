@@ -11,7 +11,7 @@
 <title>💰 내 자금 흐름</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=11">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -119,10 +119,8 @@
   <!-- 재정 건강 점수 -->
   <div class="card health-score-mini" id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
 
-  <!-- 예측/설정 빠른 링크 -->
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="btn btn-ghost" id="btn-home-forecast-link" style="flex:1;padding:10px;font-size:12px;border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center"><div class="ripple-container"></div>📈 잔고 예측 보기 →</button>
-  </div>
+  <!-- 홈 예측 미니 위젯 -->
+  <div id="home-forecast-widget" style="margin-bottom:12px"></div>
 
   <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
     <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
@@ -637,6 +635,10 @@
           <div><div class="setting-label">테마 모드</div><div class="setting-sub">다크 / 라이트 화면 전환</div></div>
           <button class="btn btn-ghost" id="theme-toggle-btn"><div class="ripple-container"></div>다크 모드</button>
         </div>
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+          <div><div class="setting-label">🎨 테마 컬러</div><div class="setting-sub">앱 전체 강조 색상 변경</div></div>
+          <div id="accent-swatch-row" class="accent-swatch-row"></div>
+        </div>
       </div>
       <div class="card">
         <div class="card-title">☁️ 동기화</div>
@@ -913,7 +915,8 @@
       </div>
       <div>
         <div class="form-label">메모 (선택)</div>
-        <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모">
+        <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모" autocomplete="off">
+        <div id="memo-suggestions" class="memo-suggestions"></div>
       </div>
     </div>
     <div style="margin-top:12px">

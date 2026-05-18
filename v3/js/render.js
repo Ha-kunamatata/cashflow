@@ -481,6 +481,7 @@ export function renderHome() {
   _renderSparkline();
   _renderTodayTimeline();
   renderHomeBudgetBars();
+  renderHomeForecastWidget();
   renderWeeklyCard();
 
   // ── 재정 건강 점수 미니 카드 (SVG 링 + 카운트업) ─────
@@ -3341,6 +3342,64 @@ export function renderHomeBudgetBars() {
   document.getElementById('home-budget-widget-card')?.addEventListener('click', () => {
     document.querySelector('.nav-btn[data-page="ledger"]')?.click();
     setTimeout(() => document.querySelector('.ledger-sub-tab[data-tab="budget"]')?.click(), 200);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// 홈 예측 미니 위젯
+// ════════════════════════════════════════════════════════
+export function renderHomeForecastWidget() {
+  const el = document.getElementById('home-forecast-widget');
+  if (!el) return;
+
+  const now = today();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = lastDay - now.getDate();
+
+  if (daysLeft <= 0) { el.innerHTML = ''; return; }
+
+  const fc = buildForecast(daysLeft + 1);
+  const endBalance = fc.length ? fc[fc.length - 1].balance : state.balance;
+  const projExpense = fc.reduce((s, f) => s + f.expense, 0);
+  const expenseEvents = fc.filter(f => f.expense > 0);
+  const nextBig = expenseEvents.length
+    ? expenseEvents.reduce((a, b) => b.expense > a.expense ? b : a)
+    : null;
+
+  const isDanger = endBalance < state.dangerLine;
+  const isWarn   = endBalance < state.dangerLine * 2 && !isDanger;
+  const statusColor = isDanger ? 'var(--red2)' : isWarn ? 'var(--yellow)' : 'var(--green2)';
+  const statusIcon  = isDanger ? '🚨' : isWarn ? '⚠️' : '✅';
+  const statusLabel = isDanger ? '위험' : isWarn ? '주의' : '안전';
+
+  el.innerHTML = `
+    <div class="card home-forecast-card" id="home-forecast-card" style="cursor:pointer;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:14px">📈</span>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">이번 달 잔고 예측</div>
+        <span class="forecast-status-badge" style="color:${statusColor};background:${statusColor}22;border:1px solid ${statusColor}44">${statusIcon} ${statusLabel}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="forecast-mini-cell">
+          <div class="forecast-mini-label">월말 예상잔고</div>
+          <div class="forecast-mini-val" style="color:${statusColor}">${fmtShort(endBalance)}</div>
+          <div class="forecast-mini-sub">${daysLeft}일 후</div>
+        </div>
+        <div class="forecast-mini-cell">
+          <div class="forecast-mini-label">예정 지출</div>
+          <div class="forecast-mini-val" style="color:var(--red2)">${fmtShort(projExpense)}</div>
+          <div class="forecast-mini-sub">${expenseEvents.length}건</div>
+        </div>
+        <div class="forecast-mini-cell">
+          <div class="forecast-mini-label">다음 큰 지출</div>
+          <div class="forecast-mini-val" style="color:var(--orange);font-size:13px">${nextBig ? fmtShort(nextBig.expense) : '—'}</div>
+          <div class="forecast-mini-sub">${nextBig ? `${nextBig.date.getMonth() + 1}/${p2(nextBig.date.getDate())}` : '없음'}</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('home-forecast-card')?.addEventListener('click', () => {
+    if (typeof window._nav === 'function') window._nav('forecast');
   });
 }
 

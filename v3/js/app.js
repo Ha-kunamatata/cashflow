@@ -57,6 +57,7 @@ import {
   setTrendCategory,
   saveReportCard,
   renderHomeBudgetBars,
+  renderHomeForecastWidget,
 } from './render.js';
 
 import {
@@ -142,6 +143,7 @@ import {
   useTemplate,
   saveCurrentAsTemplate,
   handleReceiptOCR,
+  applyMemoSuggestion,
 } from './ui.js';
 
 import {
@@ -160,6 +162,53 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
 
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
+
+// ══════════════════════════════════════════════════════════════
+// 커스텀 테마 컬러
+// ══════════════════════════════════════════════════════════════
+const ACCENT_PRESETS = [
+  { label: '인디고',  accent: '#6366f1', accent2: '#818cf8', key: 'indigo'  },
+  { label: '블루',    accent: '#3b82f6', accent2: '#60a5fa', key: 'blue'    },
+  { label: '바이올렛',accent: '#8b5cf6', accent2: '#a78bfa', key: 'violet'  },
+  { label: '핑크',    accent: '#ec4899', accent2: '#f472b6', key: 'pink'    },
+  { label: '에메랄드',accent: '#10b981', accent2: '#34d399', key: 'emerald' },
+  { label: '앰버',    accent: '#f59e0b', accent2: '#fbbf24', key: 'amber'   },
+  { label: '로즈',    accent: '#f43f5e', accent2: '#fb7185', key: 'rose'    },
+  { label: '틸',      accent: '#14b8a6', accent2: '#2dd4bf', key: 'teal'    },
+];
+
+function applyAccentColor(preset) {
+  document.documentElement.style.setProperty('--accent',  preset.accent);
+  document.documentElement.style.setProperty('--accent2', preset.accent2);
+  document.documentElement.style.setProperty('--accent3', preset.accent2 + '88');
+  localStorage.setItem('accentPreset', preset.key);
+  _renderAccentSwatches();
+}
+
+function _renderAccentSwatches() {
+  const row = document.getElementById('accent-swatch-row');
+  if (!row) return;
+  const saved = localStorage.getItem('accentPreset') || 'blue';
+  row.innerHTML = ACCENT_PRESETS.map(p => `
+    <button class="accent-swatch ${p.key === saved ? 'active' : ''}"
+      data-key="${p.key}"
+      style="background:${p.accent};box-shadow:${p.key === saved ? `0 0 0 2px var(--bg), 0 0 0 4px ${p.accent}` : 'none'}"
+      title="${p.label}"></button>
+  `).join('');
+}
+
+{
+  const saved = ACCENT_PRESETS.find(p => p.key === (localStorage.getItem('accentPreset') || 'blue'))
+    || ACCENT_PRESETS.find(p => p.key === 'blue');
+  if (saved) applyAccentColor(saved);
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.accent-swatch[data-key]');
+  if (!btn) return;
+  const preset = ACCENT_PRESETS.find(p => p.key === btn.dataset.key);
+  if (preset) applyAccentColor(preset);
+});
 
 // ── 컨페티 애니메이션 ──────────────────────────────────
 window.launchConfetti = function(duration = 3200) {
@@ -380,8 +429,7 @@ document.getElementById('btn-open-profile')?.addEventListener('click', openProfi
 document.getElementById('btn-open-balance')?.addEventListener('click', openBalanceSheet);
 document.getElementById('btn-open-settings-page')?.addEventListener('click', () => navigate('settings'));
 
-// 홈 예측 바로가기
-document.getElementById('btn-home-forecast-link')?.addEventListener('click', () => navigate('forecast'));
+// 홈 예측 위젯은 renderHomeForecastWidget()에서 클릭 이벤트 등록
 
 // 잔고 숨기기/보이기 토글
 // 기본값: 숨김 (명시적으로 '0' 저장 시에만 표시)
@@ -435,7 +483,7 @@ document.getElementById('btn-report-cat-modal-close')?.addEventListener('click',
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
   btn.addEventListener('click', () => {
     navigate(btn.dataset.page, btn);
-    if (btn.dataset.page === 'settings') renderHouseholdSection();
+    if (btn.dataset.page === 'settings') { renderHouseholdSection(); _renderAccentSwatches(); }
   });
 });
 
@@ -1577,5 +1625,70 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlay.style.display !== 'none') closeSearch();
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════
+// 스마트 메모 자동완성
+// ══════════════════════════════════════════════════════════════
+(function _setupMemoSuggestions() {
+  const memoInput = document.getElementById('ledger-item-memo');
+  const sugBox    = document.getElementById('memo-suggestions');
+  if (!memoInput || !sugBox) return;
+
+  function _getMemoHistory() {
+    const history = [];
+    const seen = new Set();
+    const data = state.ledgerData || {};
+    // 최근 90일 데이터에서 메모 수집 (최신순)
+    const keys = Object.keys(data).sort().reverse().slice(0, 90);
+    for (const dk of keys) {
+      for (const item of (data[dk] || [])) {
+        if (!item.memo || !item.memo.trim()) continue;
+        const key = `${item.memo}::${item.category}::${item.type}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          history.push({ memo: item.memo.trim(), category: item.category, type: item.type });
+        }
+        if (history.length >= 200) return history;
+      }
+    }
+    return history;
+  }
+
+  function _showSuggestions(q) {
+    const hist = _getMemoHistory();
+    const query = q.trim().toLowerCase();
+    const matches = query
+      ? hist.filter(h => h.memo.toLowerCase().includes(query)).slice(0, 5)
+      : hist.slice(0, 5);
+
+    if (!matches.length) { sugBox.innerHTML = ''; return; }
+
+    sugBox.innerHTML = matches.map((h, i) =>
+      `<button class="memo-sug-chip" data-idx="${i}" type="button">${escapeHtml(h.memo)}<span class="memo-sug-cat">${escapeHtml(h.category || '')}</span></button>`
+    ).join('');
+
+    sugBox.querySelectorAll('.memo-sug-chip').forEach((btn, i) => {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        applyMemoSuggestion(matches[i]);
+        sugBox.innerHTML = '';
+      });
+    });
+  }
+
+  let _memoTimer;
+  memoInput.addEventListener('input', () => {
+    clearTimeout(_memoTimer);
+    _memoTimer = setTimeout(() => _showSuggestions(memoInput.value), 120);
+  });
+
+  memoInput.addEventListener('focus', () => {
+    _showSuggestions(memoInput.value);
+  });
+
+  memoInput.addEventListener('blur', () => {
+    setTimeout(() => { sugBox.innerHTML = ''; }, 200);
   });
 })();
