@@ -1559,3 +1559,51 @@ body.light-theme .bottom-nav::after {
   box-shadow: 0 4px 12px rgba(99,102,241,0.35);
 }
 .ai-chat-send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 18px rgba(99,102,241,0.45); }
+
+/* ── 소비 유형 태그 ──────────────────────────────────────── */
+.ledger-tag-row {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+}
+.ledger-tag-btn {
+  padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  font-family: var(--font); cursor: pointer;
+  border: 1.5px solid var(--border2); background: var(--bg3);
+  color: var(--text2); transition: all 0.15s;
+}
+.ledger-tag-btn.active {
+  background: rgba(99,102,241,0.18); border-color: #6366f1; color: #a5b4fc;
+}
+.lday-item-tag {
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  background: rgba(99,102,241,0.15); color: #a5b4fc;
+  font-weight: 600; margin-left: 2px;
+}
+
+/* ── 재정 건강 점수 미니 카드 ────────────────────────────── */
+.health-score-mini {
+  padding: 14px 16px; transition: opacity 0.15s;
+}
+.health-score-mini:active { opacity: 0.7; }
+
+/* ── 연간 재정 리뷰 ──────────────────────────────────────── */
+.annual-review-cards {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.annual-review-stat-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px; text-align: center;
+}
+.ar-stat-icon { font-size: 20px; margin-bottom: 4px; }
+.ar-stat-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.ar-stat-value { font-size: 16px; font-weight: 800; font-family: var(--mono); }
+.annual-review-highlights {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ar-highlight-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 12px;
+}
+.ar-hl-icon { font-size: 20px; flex-shrink: 0; }
+.ar-hl-title { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+.ar-hl-val { font-size: 14px; font-weight: 700; color: var(--text); }

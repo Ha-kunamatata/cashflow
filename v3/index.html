@@ -11,7 +11,7 @@
 <title>💰 내 자금 흐름</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -101,6 +101,9 @@
         <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
       </div>
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
+
+  <!-- 재정 건강 점수 -->
+  <div class="card health-score-mini" id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
 
   <!-- 예측/설정 빠른 링크 -->
   <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -471,6 +474,13 @@
     <div class="card-title">📅 전월 비교</div>
     <div id="report-mom-compare"></div>
   </div>
+
+  <!-- 연간 재정 리뷰 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">🎊 연간 재정 리뷰</div>
+    <div class="filter-tabs" id="annual-review-year-nav" style="margin-bottom:12px"></div>
+    <div id="annual-review-content"></div>
+  </div>
 </div>
 
 <!-- ── 리포트 카테고리 상세 모달 ── -->
@@ -655,7 +665,7 @@
 <div class="page" id="page-finance">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
     <div>
-      <div style="font-size:18px;font-weight:900;color:var(--text)">📈 재테크</div>
+      <div style="font-size:18px;font-weight:900;color:var(--text)">📈 투자</div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px">관심 종목 실시간 추적</div>
     </div>
     <div style="display:flex;gap:6px">
@@ -677,12 +687,12 @@
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="nav-btn active" data-page="home"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
   <button class="nav-btn" data-page="assets"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg><span>자산</span></button>
-  <button class="nav-btn" data-page="ledger"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>가계부</span></button>
-  <button class="nav-btn" data-page="entries"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>항목</span></button>
+  <button class="nav-btn" data-page="ledger"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>기록</span></button>
+  <button class="nav-btn" data-page="entries"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>고정</span></button>
   <button class="nav-btn" data-page="goals"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>목표</span></button>
   <button class="nav-btn" data-page="wishlist"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span>위시</span></button>
-  <button class="nav-btn" data-page="finance"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>재테크</span></button>
-  <button class="nav-btn" data-page="report"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>리포트</span></button>
+  <button class="nav-btn" data-page="finance"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>투자</span></button>
+  <button class="nav-btn" data-page="report"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>분석</span></button>
 </nav>
 
 <!-- ── 시트들 ── -->
@@ -805,6 +815,16 @@
       <div>
         <div class="form-label">메모 (선택)</div>
         <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모">
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="form-label">소비 유형 (선택)</div>
+      <div id="ledger-tag-row" class="ledger-tag-row">
+        <button class="ledger-tag-btn" data-tag="충동">💸 충동</button>
+        <button class="ledger-tag-btn" data-tag="계획">📋 계획</button>
+        <button class="ledger-tag-btn" data-tag="필수">✅ 필수</button>
+        <button class="ledger-tag-btn" data-tag="외식">🍽️ 외식</button>
+        <button class="ledger-tag-btn" data-tag="선물">🎁 선물</button>
       </div>
     </div>
     <div class="sheet-actions" style="margin-top:16px">

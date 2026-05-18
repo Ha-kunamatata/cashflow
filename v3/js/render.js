@@ -22,6 +22,8 @@ import { buildForecast, getCards, simulateWishPurchase } from './forecast.js';
 let _chartPeriod = 30;
 let _forecastFilter = 'all';
 let _entryFilter = '전체';
+let _annualReviewYear = null;
+let _annualReviewListenerReady = false;
 
 export let currentLedgerYear = today().getFullYear();
 export let currentLedgerMonth = today().getMonth();
@@ -331,6 +333,32 @@ export function renderHome() {
     const pct = Math.min(100, Math.round((checkTotal / spendable) * 100));
     fillEl.style.width = `${pct}%`;
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
+  }
+
+  // ── 재정 건강 점수 미니 카드 ────────────────────────────
+  const miniScoreEl = document.getElementById('health-score-mini');
+  if (miniScoreEl) {
+    const cf = _calcMonthCF(today());
+    const hs = _calcHealthScore(cf);
+    miniScoreEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;border:3px solid ${hs.color};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+          <div style="font-size:17px;font-weight:900;color:${hs.color};font-family:var(--mono);line-height:1">${hs.score}</div>
+          <div style="font-size:8px;color:var(--text3);line-height:1.2">/ 100</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:5px">
+            <span style="font-size:15px;font-weight:800;color:${hs.color}">${hs.grade}등급</span>
+            <span style="font-size:12px;color:var(--text2)">${hs.label}</span>
+            <span style="font-size:10px;color:var(--text3);margin-left:auto">분석 탭 →</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--text3)">저축률 <span style="color:${hs.savingsRate >= 20 ? 'var(--green2)' : hs.savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)'};font-weight:700">${hs.savingsRate}%</span></span>
+            <span style="font-size:10px;color:var(--text3)">지출비율 <span style="font-weight:700">${hs.expenseRatio}%</span></span>
+            <span style="font-size:10px;color:var(--text3)">할부비중 <span style="font-weight:700">${hs.halbuPct}%</span></span>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ── 하우스 레벨 & 스트릭 ───────────────────────────────
@@ -1337,6 +1365,30 @@ const REPORT_CAT_COLORS = {
   '교육': '#22d3ee', '생활': '#fb923c', '저축': '#34d399',
 };
 
+function _calcHealthScore(cf) {
+  const { income, expense } = cf;
+  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  const expenseRatio = income > 0 ? Math.round((expense / income) * 100) : 100;
+  const now = today();
+  const activeHalbu = state.entries.filter(
+    e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))
+  ).length;
+  const halbuAmt = state.entries
+    .filter(e => e.type === 'expense' && e.repeat === '매월' && e.category === '할부')
+    .reduce((s, e) => s + e.amount, 0);
+  const halbuPct = expense > 0 ? Math.round((halbuAmt / expense) * 100) : 0;
+  const score = Math.max(0, Math.min(100,
+    (savingsRate >= 20 ? 30 : savingsRate >= 10 ? 20 : savingsRate >= 0 ? 10 : 0) +
+    (expenseRatio <= 70 ? 30 : expenseRatio <= 85 ? 20 : expenseRatio <= 100 ? 10 : 0) +
+    (halbuPct <= 10 ? 20 : halbuPct <= 25 ? 12 : halbuPct <= 40 ? 6 : 0) +
+    (activeHalbu <= 2 ? 20 : activeHalbu <= 5 ? 12 : 6)
+  ));
+  const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 45 ? 'C' : score >= 30 ? 'D' : 'F';
+  const color = score >= 70 ? 'var(--green2)' : score >= 45 ? 'var(--yellow)' : 'var(--red2)';
+  const label = score >= 70 ? '우수' : score >= 45 ? '양호' : '주의';
+  return { score, grade, color, label, savingsRate, expenseRatio, halbuPct };
+}
+
 function _calcMonthCF(d) {
   const ym = yyyymm(d);
   const ymStr = String(ym);
@@ -1502,23 +1554,8 @@ export function renderReport() {
   // ── 재정 건강 지수 ────────────────────────────────────
   const healthEl = document.getElementById('report-health-score');
   if (healthEl) {
-    const savingsRate = curMonth.income > 0
-      ? Math.round(((curMonth.income - curMonth.expense) / curMonth.income) * 100)
-      : 0;
-    const expenseRatio = curMonth.income > 0 ? Math.round((curMonth.expense / curMonth.income) * 100) : 100;
-    const activeHalbu = state.entries.filter(e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))).length;
-    const halbuRatio = state.entries.filter(e => e.type === 'expense' && e.repeat === '매월')
-      .filter(e => e.category === '할부').reduce((s, e) => s + e.amount, 0);
-    const halbuPct = curMonth.expense > 0 ? Math.round((halbuRatio / curMonth.expense) * 100) : 0;
-
-    const score = Math.max(0, Math.min(100,
-      (savingsRate >= 20 ? 30 : savingsRate >= 10 ? 20 : savingsRate >= 0 ? 10 : 0) +
-      (expenseRatio <= 70 ? 30 : expenseRatio <= 85 ? 20 : expenseRatio <= 100 ? 10 : 0) +
-      (halbuPct <= 10 ? 20 : halbuPct <= 25 ? 12 : halbuPct <= 40 ? 6 : 0) +
-      (activeHalbu <= 2 ? 20 : activeHalbu <= 5 ? 12 : 6)
-    ));
-    const scoreColor = score >= 70 ? 'var(--green2)' : score >= 45 ? 'var(--yellow)' : 'var(--red2)';
-    const scoreLabel = score >= 70 ? '우수' : score >= 45 ? '양호' : '주의';
+    const hs = _calcHealthScore(curMonth);
+    const { score, color: scoreColor, label: scoreLabel, savingsRate, expenseRatio, halbuPct } = hs;
 
     healthEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
@@ -1581,6 +1618,113 @@ export function renderReport() {
         </div>
       </div>`;
   }
+
+  renderAnnualReview();
+}
+
+export function renderAnnualReview() {
+  const yearNavEl = document.getElementById('annual-review-year-nav');
+  const contentEl = document.getElementById('annual-review-content');
+  if (!contentEl) return;
+
+  const now = today();
+  if (_annualReviewYear === null) _annualReviewYear = now.getFullYear();
+
+  if (yearNavEl && !_annualReviewListenerReady) {
+    yearNavEl.addEventListener('click', e => {
+      const btn = e.target.closest('[data-annual-year]');
+      if (btn) {
+        _annualReviewYear = parseInt(btn.dataset.annualYear, 10);
+        renderAnnualReview();
+      }
+    });
+    _annualReviewListenerReady = true;
+  }
+
+  if (yearNavEl) {
+    const prevY = now.getFullYear() - 1;
+    const curY = now.getFullYear();
+    yearNavEl.innerHTML = [prevY, curY].map(y => `
+      <button class="filter-tab ${_annualReviewYear === y ? 'active' : ''}" data-annual-year="${y}">${y}년</button>
+    `).join('');
+  }
+
+  const yearPrefix = `${_annualReviewYear}-`;
+  let totalIncome = 0, totalExpense = 0;
+  const monthData = {};
+  const catTotals = {};
+  let recordDays = 0;
+
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    if (!dk.startsWith(yearPrefix)) continue;
+    const mm = dk.slice(5, 7);
+    if (!monthData[mm]) monthData[mm] = { income: 0, expense: 0 };
+    let hasEntry = false;
+    for (const item of items) {
+      if (item.type === 'expense') {
+        totalExpense += item.amount;
+        monthData[mm].expense += item.amount;
+        catTotals[item.category] = (catTotals[item.category] || 0) + item.amount;
+      } else {
+        totalIncome += item.amount;
+        monthData[mm].income += item.amount;
+      }
+      hasEntry = true;
+    }
+    if (hasEntry) recordDays++;
+  }
+
+  if (!totalIncome && !totalExpense) {
+    contentEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">${_annualReviewYear}년 데이터 없음</div><div class="empty-state-desc">가계부에 지출/수입을 기록하면 연간 리뷰가 표시됩니다</div></div>`;
+    return;
+  }
+
+  const totalSavings = totalIncome - totalExpense;
+  const savingsRate = totalIncome > 0 ? Math.round((totalSavings / totalIncome) * 100) : 0;
+
+  const months = Object.entries(monthData);
+  const bestMonth = months.length ? months.reduce((b, [m, d]) => {
+    const net = d.income - d.expense;
+    return (!b || net > b.net) ? { m, net } : b;
+  }, null) : null;
+  const worstMonth = months.length ? months.reduce((w, [m, d]) => {
+    const net = d.income - d.expense;
+    return (!w || net < w.net) ? { m, net } : w;
+  }, null) : null;
+  const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+
+  const netColor = totalSavings >= 0 ? 'var(--green2)' : 'var(--red2)';
+  const srColor = savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)';
+
+  contentEl.innerHTML = `
+    <div class="annual-review-cards">
+      <div class="annual-review-stat-card">
+        <div class="ar-stat-icon">💰</div>
+        <div class="ar-stat-label">총 수입</div>
+        <div class="ar-stat-value" style="color:var(--green2)">${fmtShort(totalIncome)}</div>
+      </div>
+      <div class="annual-review-stat-card">
+        <div class="ar-stat-icon">💸</div>
+        <div class="ar-stat-label">총 지출</div>
+        <div class="ar-stat-value" style="color:var(--red2)">${fmtShort(totalExpense)}</div>
+      </div>
+      <div class="annual-review-stat-card">
+        <div class="ar-stat-icon">📈</div>
+        <div class="ar-stat-label">총 저축</div>
+        <div class="ar-stat-value" style="color:${netColor}">${fmtSigned(totalSavings)}</div>
+      </div>
+      <div class="annual-review-stat-card">
+        <div class="ar-stat-icon">🎯</div>
+        <div class="ar-stat-label">저축률</div>
+        <div class="ar-stat-value" style="color:${srColor}">${savingsRate}%</div>
+      </div>
+    </div>
+    <div class="annual-review-highlights">
+      ${topCat ? `<div class="ar-highlight-row"><span class="ar-hl-icon">🏆</span><div><div class="ar-hl-title">최다 지출 카테고리</div><div class="ar-hl-val">${escapeHtml(topCat[0])} <span style="color:var(--red2)">${fmtShort(topCat[1])}</span></div></div></div>` : ''}
+      ${bestMonth ? `<div class="ar-highlight-row"><span class="ar-hl-icon">⭐</span><div><div class="ar-hl-title">최고 절약한 달</div><div class="ar-hl-val">${parseInt(bestMonth.m, 10)}월 <span style="color:var(--green2)">${fmtSigned(bestMonth.net)}</span></div></div></div>` : ''}
+      ${worstMonth && worstMonth.m !== bestMonth?.m ? `<div class="ar-highlight-row"><span class="ar-hl-icon">😅</span><div><div class="ar-hl-title">지출이 많았던 달</div><div class="ar-hl-val">${parseInt(worstMonth.m, 10)}월 <span style="color:var(--red2)">${fmtSigned(worstMonth.net)}</span></div></div></div>` : ''}
+      <div class="ar-highlight-row"><span class="ar-hl-icon">📝</span><div><div class="ar-hl-title">가계부 기록한 날</div><div class="ar-hl-val">${recordDays}일</div></div></div>
+    </div>`;
 }
 
 export function renderReportCatModal() {
