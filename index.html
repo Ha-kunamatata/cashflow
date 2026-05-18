@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<title>💰 내 자금 흐름</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+</head>
+<body>
+
+<!-- ── 로그인 화면 ── -->
+
+<div id="login-screen">
+  <div class="login-logo">💰</div>
+  <div class="login-title">내 자금 흐름</div>
+  <div class="login-sub">PERSONAL CASH FLOW MANAGER</div>
+  <div class="login-features">
+    <div class="login-feature"><div class="login-feature-icon">📈</div><span>365일 잔고 예측 및 위험일 감지</span></div>
+    <div class="login-feature"><div class="login-feature-icon">💳</div><span>카드/할부 자동 관리</span></div>
+    <div class="login-feature"><div class="login-feature-icon">☁️</div><span>PC · 폰 실시간 동기화</span></div>
+  </div>
+  <button class="btn btn-google-login" id="btn-google-login">
+    <div class="ripple-container"></div>
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    <span id="google-login-text">Google로 시작하기</span>
+  </button>
+  <div class="login-note">로그인한 계정 기준으로 Firebase에 동기화됩니다</div>
+</div>
+
+<!-- ── 싱크 배지 ── -->
+
+<div class="sync-badge" id="sync-badge"></div>
+
+<!-- ── 탑바 ── -->
+
+<div class="topbar" id="topbar" style="display:none">
+  <div class="topbar-left">
+    <div class="topbar-sub">내 자금 흐름</div>
+    <div class="topbar-title">CASH FLOW</div>
+  </div>
+  <div class="topbar-right">
+    <button class="topbar-search-btn" id="btn-open-search" title="검색">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button class="topbar-gear-btn" id="btn-open-settings-page" title="설정">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <div class="user-avatar" id="btn-open-profile">
+      <div class="user-avatar-placeholder" id="user-avatar-text">?</div>
+      <img id="user-avatar-img" src="" style="display:none" referrerpolicy="no-referrer">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+  페이지들
+══════════════════════════════════════════════ -->
+
+<!-- ① 홈 -->
+
+<div class="page active" id="page-home">
+  <div class="home-grid">
+    <div class="home-main">
+      <div class="balance-card" id="btn-open-balance">
+        <div class="balance-card-header">
+          <div>
+            <div class="balance-label">💳 현재 잔고</div>
+            <div class="balance-card-sub">오늘 기준 내 현금 흐름 상태</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="balance-eye-btn" id="btn-toggle-balance" onclick="event.stopPropagation()" title="잔고 숨기기/보기">
+              <svg id="balance-eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="balance-eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+            <div class="balance-live-badge">LIVE</div>
+          </div>
+        </div>
+        <!-- 잔고 표시 (토글) -->
+        <div class="balance-display-wrap">
+          <div class="balance-amount" id="balance-display">-</div>
+          <div class="balance-hidden-mask" id="balance-hidden-mask" style="display:none">
+            <span class="balance-mask-dots">●●●●●</span>
+            <span class="balance-mask-hint">탭해서 확인</span>
+          </div>
+        </div>
+        <!-- 스파크라인: 최근 14일 지출 패턴 -->
+        <div id="balance-sparkline" style="margin:6px 0 2px"></div>
+        <div class="balance-warning" id="balance-warning" style="display:none">
+          <span>⚠️</span><span id="balance-warning-text"></span>
+        </div>
+        <div id="balance-insight" class="balance-insight-text"></div>
+        <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
+        <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+      </div>
+  <div class="alert-banner" id="alert-banner" style="display:none"></div>
+
+  <!-- 오늘의 소비 타임라인 -->
+  <div id="today-timeline" style="margin-bottom:12px"></div>
+
+  <!-- 예산 진행 바 위젯 -->
+  <div id="home-budget-widget" style="margin-bottom:12px"></div>
+
+  <!-- 주간 요약 카드 -->
+  <div class="card weekly-summary-card" id="weekly-summary-card" style="margin-bottom:12px"></div>
+
+  <!-- 재정 건강 점수 -->
+  <div class="card health-score-mini" id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
+
+  <!-- 홈 예측 미니 위젯 -->
+  <div id="home-forecast-widget" style="margin-bottom:12px"></div>
+
+  <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
+  </div>
+
+  <!-- 하우스 레벨 카드 -->
+  <div class="card house-level-card" id="house-level-card" style="margin-bottom:12px"></div>
+
+  <!-- AI 인사이트 카드 -->
+  <div class="card ai-insight-card" id="ai-insight-card" style="margin-bottom:12px;padding:0;overflow:hidden">
+    <div class="ai-card-header">
+      <div class="ai-header-left">
+        <div class="ai-robot-icon">🤖</div>
+        <div>
+          <div class="ai-card-title">AI 재무 인사이트</div>
+          <div class="ai-model-badge">Gemini 2.5 Flash</div>
+        </div>
+      </div>
+      <button class="btn ai-refresh-btn" id="btn-ai-insight-refresh" title="새로고침">
+        <div class="ripple-container"></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+    <div class="ai-card-body" id="ai-insight-content">
+      <div class="ai-skeleton-wrap">
+        <div class="ai-skeleton" style="width:88%"></div>
+        <div class="ai-skeleton" style="width:70%"></div>
+        <div class="ai-skeleton" style="width:80%"></div>
+      </div>
+    </div>
+    <div class="ai-card-footer">
+      <span class="ai-updated-at" id="ai-insight-time"></span>
+      <button class="ai-insight-expand-btn" id="btn-ai-insight-expand">전체 보기 ↗</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item" data-action="entries-income" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 수입</div><div style="font-size:15px">📈</div>
+      </div>
+      <div class="summary-item-value green" id="sum-income">-</div>
+      <div class="summary-item-sub" id="sum-income-sub"></div>
+    </div>
+    <div class="summary-item" data-action="entries-expense" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 지출</div><div style="font-size:15px">📉</div>
+      </div>
+      <div class="summary-item-value red" id="sum-expense">-</div>
+      <div class="summary-item-sub" id="sum-expense-sub"></div>
+    </div>
+    <div class="summary-item" data-action="entries-halbu" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">이번달 할부</div><div style="font-size:15px">💳</div>
+      </div>
+      <div class="summary-item-value blue" id="sum-halbu">-</div>
+      <div class="summary-item-sub" id="sum-halbu-sub"></div>
+    </div>
+    <div class="summary-item" data-action="forecast" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">월 순현금</div><div style="font-size:15px">💹</div>
+      </div>
+      <div class="summary-item-value" id="sum-net">-</div>
+      <div class="summary-item-sub" id="sum-net-sub"></div>
+    </div>
+    <div class="summary-item" data-action="ledger" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div class="summary-item-label">이번달 가계부</div><div style="font-size:15px">📒</div>
+      </div>
+      <div class="summary-item-value orange" id="sum-checkcard">-</div>
+      <div class="summary-item-sub" id="sum-checkcard-sub"></div>
+      <div class="budget-bar"><div class="budget-bar-fill" id="checkcard-budget-fill" style="width:0%;background:var(--green2)"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="home-side">
+  <div class="card">
+    <div class="card-title">다가오는 입출금 <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">앞 30일</span></div>
+    <div id="upcoming-list"><div class="skeleton" style="height:200px"></div></div>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- ② 자산 (NEW) -->
+
+<div class="page" id="page-assets">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:18px;font-weight:900;color:var(--text)">내 자산</div>
+    <button class="btn" id="btn-add-asset" style="padding:10px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:13px;border:none;display:flex;align-items:center;gap:6px">
+      <div class="ripple-container"></div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      자산 추가
+    </button>
+  </div>
+  <div id="assets-page-content"></div>
+</div>
+
+<!-- ④ 예측 -->
+
+<div class="page" id="page-forecast">
+  <div class="forecast-grid">
+    <div class="forecast-main">
+      <div class="chart-container">
+        <div class="chart-header">
+          <span class="chart-title">잔고 예측</span>
+          <div class="chart-period-btns">
+            <button class="period-btn active" id="period-30">1개월</button>
+            <button class="period-btn" id="period-90">3개월</button>
+            <button class="period-btn" id="period-180">6개월</button>
+            <button class="period-btn" id="period-365">1년</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><svg id="forecast-chart" viewBox="0 0 560 140" style="width:100%"></svg></div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>잔고</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>위험선</div>
+          <div class="legend-item">
+            <span style="font-size:9px;color:var(--text3)">위험선</span>
+            <input type="number" id="danger-line-input" style="width:75px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 7px;font-size:10px;text-align:right;outline:none">
+            <span style="font-size:9px;color:var(--text3)">원</span>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="forecast-insights-card" style="display:none;margin-bottom:12px">
+        <div class="card-title">📊 예측 인사이트</div>
+        <div id="forecast-insights-content"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          365일 상세
+          <div class="filter-tabs" style="margin:0">
+            <button class="filter-tab active" data-forecast-filter="all">전체</button>
+            <button class="filter-tab" data-forecast-filter="event">이벤트</button>
+            <button class="filter-tab" data-forecast-filter="danger">위험일</button>
+          </div>
+        </div>
+        <div class="forecast-table-wrap">
+          <table class="forecast-table">
+            <thead><tr><th>날짜</th><th>요일</th><th>수입</th><th>지출</th><th>잔고</th><th>상태</th></tr></thead>
+            <tbody id="forecast-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="forecast-side">
+      <div class="card">
+        <div class="card-title">월별 수입 / 지출 분석</div>
+        <div id="monthly-chart" style="min-height:120px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 항목 (고정항목 + 카드관리 통합) -->
+
+<div class="page" id="page-entries">
+  <!-- 서브탭 -->
+  <div class="ledger-sub-tabs" style="margin-bottom:12px">
+    <button class="ledger-sub-tab active" data-entries-tab="fixed">📋 고정 항목</button>
+    <button class="ledger-sub-tab" data-entries-tab="cards">💳 카드 관리</button>
+  </div>
+
+  <!-- 고정항목 패널 -->
+  <div id="entries-panel-fixed">
+    <button class="btn btn-add-entry" id="btn-add-entry">
+      <div class="ripple-container"></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      수입 / 지출 추가
+    </button>
+    <div class="entries-summary" id="entries-summary-bar" style="display:none"></div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-entry-filter="전체">전체</button>
+      <button class="filter-tab" data-entry-filter="수입">수입</button>
+      <button class="filter-tab" data-entry-filter="지출">지출</button>
+      <button class="filter-tab" data-entry-filter="할부">할부</button>
+    </div>
+    <div id="subscription-radar" style="margin-bottom:12px"></div>
+    <div id="entries-list"></div>
+  </div>
+
+  <!-- 카드관리 패널 -->
+  <div id="entries-panel-cards" style="display:none">
+    <!-- 카드 관리 개념 안내 -->
+    <div style="padding:12px 14px;border-radius:12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.8">
+      <div style="font-size:12px;font-weight:800;color:var(--accent2);margin-bottom:6px">💡 카드 관리 사용 방법</div>
+      <div style="margin-bottom:4px">📋 <strong>고정항목탭</strong>에서 항목별로 카드를 지정하면 → 결제일에 자동 차감되며 아래 표에 자동 합산됩니다.</div>
+      <div style="margin-bottom:4px">💳 <strong>여기 (카드 관리)</strong>에는 식비·쇼핑 등 매달 달라지는 변동 지출만 입력하세요.</div>
+      <div>🔢 <strong>총 청구 예상액</strong> = 고정항목 합산 + 변동 지출 입력값</div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">💳 내 카드 목록</div>
+        <button class="btn btn-ghost" id="btn-add-card" style="font-size:12px;padding:6px 12px;border-radius:10px;font-weight:700">+ 카드 추가</button>
+      </div>
+      <div id="card-defs-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">월별 변동 지출 입력</div>
+      <div id="card-months-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 가계부 -->
+
+<div class="page" id="page-ledger">
+  <!-- 서브탭 (4개) -->
+  <div class="ledger-sub-tabs">
+    <button class="ledger-sub-tab active" data-tab="calendar">📅 달력</button>
+    <button class="ledger-sub-tab" data-tab="forecast">📈 예측</button>
+    <button class="ledger-sub-tab" data-tab="stats">📊 통계</button>
+    <button class="ledger-sub-tab" data-tab="budget">💰 예산</button>
+  </div>
+
+  <!-- ── 달력 뷰 ── -->
+  <div id="ledger-view-calendar">
+    <div class="card">
+      <div class="ledger-month-nav" style="margin-bottom:14px">
+        <button class="ledger-month-nav-arrow" id="btn-ledger-prev" title="이전 달">
+          <div class="ripple-container"></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div id="btn-ledger-month-label" class="ledger-month-nav-label"></div>
+        <button class="ledger-month-nav-arrow" id="btn-ledger-next" title="다음 달">
+          <div class="ripple-container"></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="ledger-cal-summary">
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">지출</span><span class="ledger-cal-sum-val red" id="ledger-total-spend">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">수입</span><span class="ledger-cal-sum-val green" id="ledger-total-income">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">순액</span><span class="ledger-cal-sum-val" id="ledger-total-net">-</span></div>
+        <div class="ledger-cal-sum-item"><span class="ledger-cal-sum-lbl">일평균</span><span class="ledger-cal-sum-val orange" id="ledger-avg-spend">-</span></div>
+      </div>
+      <div class="ledger-weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+      <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
+      <!-- 선택된 날짜 인라인 상세 패널 -->
+      <div id="ledger-day-inline-panel" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ── 통계 뷰 ── -->
+  <div id="ledger-view-stats" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <!-- 화살표 + 연월 통합 카드 -->
+        <div class="ledger-month-nav">
+          <button class="ledger-month-nav-arrow" id="btn-ledger-stats-prev" title="이전 달">
+            <div class="ripple-container"></div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div id="ledger-month-label-stats" class="ledger-month-nav-label"></div>
+          <button class="ledger-month-nav-arrow" id="btn-ledger-stats-next" title="다음 달">
+            <div class="ripple-container"></div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <!-- 기간 탭 -->
+        <div class="filter-tabs" style="margin:0;flex:1;justify-content:flex-end">
+          <button class="ledger-stats-tab filter-tab active" data-tab="monthly">이번달</button>
+          <button class="ledger-stats-tab filter-tab" data-tab="annual">올해</button>
+        </div>
+      </div>
+    </div>
+    <div id="ledger-stats-content"></div>
+    <!-- AI 분석 버튼 -->
+    <div style="margin-top:12px" id="ledger-ai-btn-wrap">
+      <button class="btn ai-ledger-btn" id="btn-ledger-ai">
+        <div class="ripple-container"></div>
+        <span class="ai-ledger-btn-icon">🤖</span>
+        <div class="ai-ledger-btn-text">
+          <div class="ai-ledger-btn-title">AI 소비 분석</div>
+          <div class="ai-ledger-btn-sub">이번달 지출 패턴을 AI가 분석해드려요</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.7"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 예산 뷰 ── -->
+  <div id="ledger-view-budget" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:900;color:var(--text)">예산 관리</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-nav-arrow" id="btn-budget-prev" title="이전 달"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div id="budget-month-label" style="font-size:14px;font-weight:700;min-width:90px;text-align:center"></div>
+        <button class="btn-nav-arrow" id="btn-budget-next" title="다음 달"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+    </div>
+    <div id="budget-page-content"></div>
+  </div>
+
+  <!-- ── 예측 뷰 (인라인) ── -->
+  <div id="ledger-view-forecast" style="display:none">
+    <!-- 예측 요약 카드 -->
+    <div class="card" style="margin-bottom:12px;padding:14px 16px" id="ledger-forecast-summary"></div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div class="card-title" style="margin:0">📈 잔고 예측</div>
+        <div class="chart-period-btns">
+          <button class="period-btn active" data-lf-period="30">1개월</button>
+          <button class="period-btn" data-lf-period="90">3개월</button>
+          <button class="period-btn" data-lf-period="180">6개월</button>
+          <button class="period-btn" data-lf-period="365">1년</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><svg id="ledger-forecast-chart" viewBox="0 0 560 120" style="width:100%"></svg></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">365일 상세</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="btn-nav-arrow" id="btn-lf-month-prev" title="이전 달" style="width:30px;height:30px"><div class="ripple-container"></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="ledger-month-chip" id="btn-lf-month-nav" style="font-size:12px;padding:4px 12px;min-width:80px;text-align:center"></div>
+          <button class="btn-nav-arrow" id="btn-lf-month-next" title="다음 달" style="width:30px;height:30px"><div class="ripple-container"></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">※ 기본: 이번달~다음달 표시 / 화살표로 월 이동</div>
+      <div class="forecast-table-wrap">
+        <table class="forecast-table">
+          <thead><tr><th>날짜</th><th>요일</th><th>수입</th><th>지출</th><th>잔고</th><th>상태</th></tr></thead>
+          <tbody id="ledger-forecast-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑥ 리포트 -->
+
+<div class="page" id="page-report">
+  <!-- 이달 요약 헤더 카드 -->
+  <div class="report-summary-header" id="report-header-card"></div>
+
+  <!-- 월별 현금 흐름 트렌드 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📊 6개월 현금 흐름</div>
+    <div id="report-net-chart" style="min-height:100px"></div>
+  </div>
+
+  <!-- 카테고리별 6개월 트렌드 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📈 카테고리 지출 트렌드 <span style="font-size:10px;font-weight:400;color:var(--text3)">(최근 6개월)</span></div>
+    <div id="report-cat-trend-chips" class="ledger-tag-row" style="margin-bottom:10px"></div>
+    <div id="report-cat-trend-chart" style="min-height:80px"></div>
+  </div>
+
+  <!-- 소비 성향 분석 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">🧠 소비 성향 분석</div>
+    <div id="report-personality"></div>
+  </div>
+
+  <!-- 월간 리포트 카드 -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div class="card-title" style="margin:0">📸 이달 리포트 카드</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">이달 소비 요약 이미지 저장</div>
+      </div>
+      <button class="btn btn-primary" id="btn-save-report-card" style="padding:8px 16px;font-size:12px;border-radius:12px;white-space:nowrap;flex-shrink:0">
+        <div class="ripple-container"></div>💾 카드 저장
+      </button>
+    </div>
+    <canvas id="report-card-canvas" style="display:none;width:100%;margin-top:12px;border-radius:12px;border:1px solid var(--border)"></canvas>
+  </div>
+
+  <!-- 카테고리별 지출 (클릭 시 모달) -->
+  <div class="card report-cat-card" id="report-cat-card" style="margin-bottom:12px;cursor:pointer">
+    <div class="card-title">
+      🗂️ 카테고리별 지출
+      <span style="font-size:10px;font-weight:400;color:var(--text3);margin-left:4px">탭해서 상세 보기 →</span>
+    </div>
+    <div id="report-cat-donut" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;min-height:80px"></div>
+  </div>
+
+  <!-- 상위 지출 항목 TOP 5 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">💸 TOP 지출 항목</div>
+    <div id="report-top-expenses"></div>
+  </div>
+
+  <!-- 지출 절약률 & 재정 건강 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">🏥 재정 건강 지수</div>
+    <div id="report-health-score"></div>
+  </div>
+
+  <!-- 전월 비교 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📅 전월 비교</div>
+    <div id="report-mom-compare"></div>
+  </div>
+
+  <!-- AI 주간 소비 코칭 -->
+  <div class="card" id="ai-coaching-card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:18px">🤖</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">AI 주간 소비 코칭</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">카테고리 이상 지출 감지 · Gemini AI</div>
+      </div>
+      <button class="btn ai-refresh-btn" id="btn-coaching-refresh" title="새로고침">
+        <div class="ripple-container"></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+    <div id="ai-coaching-content">
+      <div class="ai-skeleton-wrap">
+        <div class="ai-skeleton" style="width:82%"></div>
+        <div class="ai-skeleton" style="width:66%"></div>
+        <div class="ai-skeleton" style="width:74%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 연간 재정 리뷰 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">🎊 연간 재정 리뷰</div>
+    <div class="filter-tabs" id="annual-review-year-nav" style="margin-bottom:12px"></div>
+    <div id="annual-review-content"></div>
+  </div>
+
+  <!-- 만약에 시뮬레이터 -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">💡 만약에 시뮬레이터</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">작은 습관 변화가 6개월 후 잔고에 미치는 효과를 계산해보세요</div>
+    <div id="sim-cat-chips" class="ledger-tag-row" style="margin-bottom:12px"></div>
+    <div id="sim-slider-wrap" style="display:none;margin-bottom:12px">
+      <div class="form-label">목표 지출 (월)</div>
+      <input type="range" id="sim-slider" min="0" max="500000" step="5000" value="0" style="width:100%;accent-color:#6366f1;margin:6px 0">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)">
+        <span>0원</span>
+        <span id="sim-slider-val" style="font-weight:700;color:#a5b4fc">0원</span>
+        <span id="sim-slider-max">-</span>
+      </div>
+    </div>
+    <div id="sim-result"></div>
+  </div>
+</div>
+
+<!-- ── 리포트 카테고리 상세 모달 ── -->
+<div class="report-cat-modal-overlay" id="report-cat-modal">
+  <div class="report-cat-modal-panel">
+    <div class="report-cat-modal-header">
+      <div class="report-cat-modal-title">🗂️ 카테고리별 지출 분석</div>
+      <button class="report-cat-modal-close" id="btn-report-cat-modal-close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="report-cat-modal-content"></div>
+  </div>
+</div>
+
+<!-- ⑨ 목표 -->
+
+<div class="page" id="page-goals">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-add-entry" id="btn-add-goal" style="flex:1">
+      <div class="ripple-container"></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      목표 추가
+    </button>
+    <button class="btn" id="btn-goal-join" style="padding:12px 16px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:6px">
+      <div class="ripple-container"></div>
+      🔗 코드로 참여
+    </button>
+  </div>
+  <div id="goals-list"></div>
+</div>
+
+<!-- ⑧ 설정 -->
+
+<div class="page" id="page-settings">
+
+  <!-- 프로필 카드 -->
+  <div class="card settings-profile-card">
+    <div class="settings-profile-row">
+      <div class="settings-profile-avatar" id="settings-profile-avatar">?</div>
+      <div class="settings-profile-info">
+        <div class="settings-profile-name" id="settings-profile-name">사용자</div>
+        <div class="settings-profile-email" id="settings-profile-email">-</div>
+        <div class="settings-profile-provider">
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google 계정으로 로그인 중
+        </div>
+      </div>
+    </div>
+    <button class="btn settings-signout-btn" id="btn-settings-signout">
+      <div class="ripple-container"></div>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      로그아웃
+    </button>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📊 앱 사용 현황</div>
+    <div class="stats-grid" id="settings-stats"></div>
+  </div>
+
+  <div class="settings-grid">
+    <div class="settings-col">
+      <div class="card">
+        <div class="card-title">⚙️ 기본 설정</div>
+        <div class="setting-row">
+          <div><div class="setting-label">위험 기준선</div><div class="setting-sub">이 금액 아래면 빨간색 경고</div></div>
+          <input class="setting-input" type="number" id="setting-danger" value="100000" inputmode="numeric">
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">테마 모드</div><div class="setting-sub">다크 / 라이트 화면 전환</div></div>
+          <button class="btn btn-ghost" id="theme-toggle-btn"><div class="ripple-container"></div>다크 모드</button>
+        </div>
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+          <div><div class="setting-label">🎨 테마 컬러</div><div class="setting-sub">앱 전체 강조 색상 변경</div></div>
+          <div id="accent-swatch-row" class="accent-swatch-row"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">☁️ 동기화</div>
+        <div class="setting-row">
+          <div><div class="setting-label">Firebase 실시간 동기화</div><div class="setting-sub">로그인한 계정 기준으로 저장 및 동기화됩니다</div></div>
+          <span style="font-size:11px;color:var(--green2)">● 활성</span>
+        </div>
+      </div>
+      <div class="card" id="household-card">
+        <div class="card-title">👥 가계 공유</div>
+        <div id="household-section"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🤖 Gemini AI 설정</div>
+        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div><div class="setting-label">Gemini API 키</div><div class="setting-sub">Google AI Studio에서 발급 · 기기에만 저장됨</div></div>
+          <div style="display:flex;gap:8px;width:100%">
+            <input class="setting-input" type="password" id="gemini-api-key-input" placeholder="AIza…" style="flex:1;font-size:12px;font-family:var(--mono)">
+            <button class="btn btn-ghost" id="btn-save-gemini-key" style="padding:8px 14px;font-size:12px;white-space:nowrap"><div class="ripple-container"></div>저장</button>
+          </div>
+          <div id="gemini-key-status" style="font-size:11px;color:var(--text3)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="settings-col">
+      <div class="card">
+        <div class="card-title">🗄️ 데이터 관리</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn" id="btn-export" style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"><div class="ripple-container"></div>📤 데이터 내보내기 (JSON)</button>
+          <button class="btn" id="btn-import" style="padding:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"><div class="ripple-container"></div>📥 데이터 가져오기 (JSON)</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+          <button class="btn" id="btn-reset" style="padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red2);border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"><div class="ripple-container"></div>🗑️ 전체 초기화</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 관리 루틴</div>
+        <div style="font-size:12px;color:var(--text2);line-height:2.2">
+          <div>① <b>매일</b> — 토스로 잔고 확인 후 업데이트</div>
+          <div>② <b>카드 명세서</b> — 카드탭에 월별 금액 입력</div>
+          <div>③ <b>가계부</b> — 가계부탭에서 날짜별 소비 입력</div>
+          <div>④ <b>할부 끝나면</b> — 항목에서 종료월 확인/삭제</div>
+          <div>⑤ <b>새 지출</b> — 수입지출탭에서 추가</div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:20px;font-size:10px;color:var(--text3);line-height:1.8">
+        내 자금 흐름 v3.0 · Ha-kunamatata<br>
+        데이터는 Firebase에 동기화되어 저장됩니다
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 항목 폼 오버레이 ── -->
+
+<div class="form-overlay" id="form-overlay" style="display:none">
+  <div class="form-sheet" id="form-sheet">
+    <div class="form-handle"></div>
+    <div class="form-sheet-title" id="form-sheet-title">항목 추가</div>
+    <div class="type-toggle">
+      <button class="type-btn income-active" id="type-income-btn">▲ 수입</button>
+      <button class="type-btn inactive" id="type-expense-btn">▼ 지출</button>
+    </div>
+    <div class="form-row">
+      <div><div class="form-label">항목명</div><input class="form-input" id="f-name" placeholder="예: 월급"></div>
+      <div><div class="form-label">금액 (원)</div><input class="form-input" id="f-amount" type="number" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div class="form-row">
+      <div><div class="form-label">분류</div><select class="form-select" id="f-category"></select></div>
+      <div><div class="form-label">반복</div><select class="form-select" id="f-repeat"><option value="매월">매월</option><option value="1회성">1회성</option><option value="격주">격주</option></select></div>
+    </div>
+    <div class="form-row">
+      <div><div class="form-label" id="day-label">기준일 (매월 며칠)</div><input class="form-input" id="f-day" type="number" placeholder="25" min="1" max="31" inputmode="numeric"></div>
+      <div><div class="form-label">카드 구분</div><select class="form-select" id="f-card"><option value="">없음</option></select></div>
+    </div>
+    <div id="endmonth-wrap"><div class="form-label">종료월 (할부 마지막 달 YYYYMM)</div><input class="form-input" id="f-endmonth" placeholder="예: 202608 (없으면 빈칸)" inputmode="numeric" style="width:100%;margin-bottom:10px"></div>
+    <div id="date-wrap" style="display:none"><div class="form-label">날짜</div><input class="form-input" id="f-date" type="date" style="width:100%;margin-bottom:10px"></div>
+    <div class="form-actions">
+      <button class="btn btn-save" id="form-save-btn"><div class="ripple-container"></div>추가</button>
+      <button class="btn-cancel" id="form-cancel-btn">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 위시리스트 탭 ── -->
+<div class="page" id="page-wishlist">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-size:18px;font-weight:900;color:var(--text)">🛒 위시리스트</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">사고 싶은 것들을 기록하고 구매 가능 여부를 확인하세요</div>
+    </div>
+    <button class="btn btn-ghost" id="btn-add-wish" style="padding:8px 14px;font-size:13px;font-weight:700">+ 추가</button>
+  </div>
+  <div class="card" id="wish-summary-bar" style="display:none;margin-bottom:12px;padding:12px 16px">
+    <div style="display:flex;gap:16px;flex-wrap:wrap" id="wish-summary-inner"></div>
+  </div>
+  <div class="filter-tabs" style="margin-bottom:12px">
+    <button class="filter-tab active" data-wish-filter="전체">전체</button>
+    <button class="filter-tab" data-wish-filter="must">꼭 살 것</button>
+    <button class="filter-tab" data-wish-filter="want">사고 싶음</button>
+    <button class="filter-tab" data-wish-filter="maybe">고민 중</button>
+    <button class="filter-tab" data-wish-filter="bought">구매 완료</button>
+  </div>
+  <div id="wish-list"></div>
+  <!-- 다중선택 분석 바 -->
+  <div id="wish-multiselect-bar" style="display:none;position:sticky;bottom:72px;left:0;right:0;z-index:50;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:12px 16px;margin-top:10px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(99,102,241,0.4)">
+    <span id="wish-select-count" style="flex:1;font-size:13px;font-weight:700;color:#fff">항목을 선택하세요</span>
+    <button id="btn-wish-multianalyze" style="padding:8px 16px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📊 합산 분석</button>
+    <button id="btn-wish-clearselect" style="padding:8px 12px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:rgba(255,255,255,0.7);font-size:11px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<!-- ── 재테크 탭 ── -->
+<div class="page" id="page-finance">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-size:18px;font-weight:900;color:var(--text)">📈 투자</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">관심 종목 실시간 추적</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-ghost" id="btn-finance-refresh" style="padding:8px 12px;font-size:12px" title="새로고침">🔄</button>
+      <button class="btn btn-ghost" id="btn-add-watchlist" style="padding:8px 14px;font-size:13px;font-weight:700">+ 추가</button>
+    </div>
+  </div>
+  <div id="finance-refresh-info" style="font-size:10px;color:var(--text3);margin-bottom:10px;text-align:right"></div>
+  <div class="card" style="margin-bottom:12px;padding:12px 16px" id="finance-summary-bar">
+    <div style="display:flex;gap:16px;flex-wrap:wrap" id="finance-summary-inner">
+      <div style="font-size:12px;color:var(--text3)">종목을 추가하면 여기에 요약이 표시됩니다</div>
+    </div>
+  </div>
+  <div id="watchlist-container"></div>
+</div>
+
+<!-- ── 바텀 탭 (9개 — 스크롤 가능) ── -->
+
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button class="nav-btn active" data-page="home"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>홈</span></button>
+  <button class="nav-btn" data-page="assets"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg><span>자산</span></button>
+  <button class="nav-btn" data-page="ledger"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>기록</span></button>
+  <button class="nav-btn" data-page="entries"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>고정</span></button>
+  <button class="nav-btn" data-page="goals"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>목표</span></button>
+  <button class="nav-btn" data-page="wishlist"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span>위시</span></button>
+  <button class="nav-btn" data-page="finance"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>투자</span></button>
+  <button class="nav-btn" data-page="report"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>분석</span></button>
+</nav>
+
+<!-- ── 시트들 ── -->
+
+<div id="loading-overlay" class="app-loading-overlay"><div class="app-loading-box"><div class="app-loading-spinner"></div><div id="loading-text">처리 중...</div></div></div>
+
+<div class="sheet-overlay" id="profile-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-profile-top"><div class="sheet-profile-avatar" id="profile-sheet-avatar">?</div><div><div class="sheet-profile-name" id="profile-sheet-name">사용자</div><div class="sheet-profile-email" id="profile-sheet-email">-</div></div></div>
+    <div class="sheet-menu-list">
+      <button class="sheet-menu-btn" id="btn-profile-settings"><span>⚙️ 설정으로 가기</span><span>›</span></button>
+      <button class="sheet-menu-btn danger" id="btn-confirm-signout"><span>🚪 로그아웃</span><span>›</span></button>
+    </div>
+    <button class="sheet-close-btn" id="btn-close-profile">닫기</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="balance-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">잔고 수정</div>
+    <div class="sheet-sub">현재 잔고를 바로 수정할 수 있어요</div>
+    <div class="sheet-current-balance">현재 잔고: <strong id="balance-sheet-current">0원</strong></div>
+    <input type="number" id="balance-sheet-input" class="sheet-input" placeholder="수정할 잔고 입력" inputmode="numeric">
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-balance-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-balance-submit">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="signout-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">로그아웃할까요?</div>
+    <div class="sheet-sub">현재 계정에서 로그아웃됩니다.</div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-signout-cancel">취소</button>
+      <button class="sheet-danger-btn" id="btn-signout-confirm">로그아웃</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 목표 시트 ── -->
+
+<div class="sheet-overlay" id="goal-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="goal-sheet-title">목표 추가</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">이모지</div>
+        <input class="form-input" id="goal-emoji" placeholder="✈️" style="text-align:center;font-size:22px">
+      </div>
+      <div>
+        <div class="form-label">목표명</div>
+        <input class="form-input" id="goal-name" placeholder="예: 신혼여행">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">목표 금액 (원)</div>
+        <input class="form-input" id="goal-target" type="number" placeholder="5000000" inputmode="numeric">
+      </div>
+      <div>
+        <div class="form-label">목표 월 (YYYYMM)</div>
+        <input class="form-input" id="goal-date" placeholder="202612" inputmode="numeric">
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">현재 저금 (원)</div>
+      <input class="form-input" id="goal-saved" type="number" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-goal-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-goal-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 가계부 날짜 시트 ── -->
+<div class="sheet-overlay" id="ledger-day-sheet">
+  <div class="sheet-panel sheet-panel-tall">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="sheet-title" style="margin:0" id="ledger-day-sheet-date">-</div>
+      <button class="sheet-close-btn" id="btn-ledger-day-close" style="width:auto;margin:0;padding:8px 14px;font-size:12px">닫기</button>
+    </div>
+    <div class="lday-summary" id="ledger-day-sheet-summary"></div>
+    <div id="ledger-day-items-list" style="margin:12px 0;flex:1;overflow-y:auto"></div>
+    <button class="btn btn-add-entry" id="btn-ledger-add-item">
+      <div class="ripple-container"></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      항목 추가
+    </button>
+  </div>
+</div>
+
+<!-- ── 가계부 항목 폼 시트 ── -->
+<input type="file" id="receipt-photo-input" accept="image/*" capture="environment" style="display:none">
+<div class="sheet-overlay sheet-overlay-top" id="ledger-item-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="sheet-title" id="ledger-item-sheet-title" style="margin:0">항목 추가</div>
+      <button class="btn btn-ghost" id="btn-receipt-ocr" style="padding:6px 10px;font-size:11px;border-radius:10px;gap:4px;display:flex;align-items:center" title="영수증 촬영">
+        <div class="ripple-container"></div>
+        <span>📷</span><span>영수증</span>
+      </button>
+    </div>
+    <!-- 즐겨찾기 템플릿 -->
+    <div id="ledger-templates-row" style="margin-bottom:10px;display:none">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px;font-weight:700">⭐ 즐겨찾기</div>
+      <div id="ledger-templates-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div>
+    <div class="type-toggle" style="margin-bottom:14px">
+      <button class="type-btn expense-active" id="ledger-type-expense">▼ 지출</button>
+      <button class="type-btn inactive" id="ledger-type-income">▲ 수입</button>
+    </div>
+    <div id="ledger-cat-group-wrap">
+      <div class="form-label" style="margin-bottom:6px">카테고리 그룹</div>
+      <div id="ledger-cat-groups" class="ledger-cat-groups"></div>
+    </div>
+    <div class="form-label" style="margin:10px 0 6px">카테고리</div>
+    <div id="ledger-cat-chips" class="ledger-cat-chips"></div>
+    <div class="form-row" style="margin-top:14px">
+      <div>
+        <div class="form-label">금액 (원)</div>
+        <input class="form-input" id="ledger-item-amount" type="number" placeholder="0" inputmode="numeric" style="text-align:right;font-family:var(--mono)">
+      </div>
+      <div>
+        <div class="form-label">메모 (선택)</div>
+        <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모" autocomplete="off">
+        <div id="memo-suggestions" class="memo-suggestions"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="form-label">소비 유형 (선택)</div>
+      <div id="ledger-tag-row" class="ledger-tag-row">
+        <button class="ledger-tag-btn" data-tag="충동">💸 충동</button>
+        <button class="ledger-tag-btn" data-tag="계획">📋 계획</button>
+        <button class="ledger-tag-btn" data-tag="필수">✅ 필수</button>
+        <button class="ledger-tag-btn" data-tag="외식">🍽️ 외식</button>
+        <button class="ledger-tag-btn" data-tag="선물">🎁 선물</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
+      <button class="btn btn-ghost" id="btn-save-template" style="padding:10px 12px;font-size:11px;border-radius:10px;white-space:nowrap" title="즐겨찾기에 저장">
+        <div class="ripple-container"></div>⭐ 저장
+      </button>
+      <div class="sheet-actions" style="flex:1;margin:0">
+        <button class="sheet-secondary-btn" id="btn-ledger-item-cancel">취소</button>
+        <button class="sheet-primary-btn" id="btn-ledger-item-save">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAB 뒷배경 ── -->
+<div id="fab-backdrop"></div>
+
+<!-- ── 스피드 다이얼 FAB ── -->
+<div id="fab-speed-dial">
+  <div class="fab-sub" id="fab-sub-chat">
+    <span class="fab-sub-label">AI 도우미</span>
+    <button class="fab-sub-btn" id="btn-fab-chat" title="AI 재무 도우미">🤖</button>
+  </div>
+  <div class="fab-sub" id="fab-sub-ledger">
+    <span class="fab-sub-label">가계부 추가</span>
+    <button class="fab-sub-btn" id="btn-fab-ledger" title="가계부 빠른 입력">📒</button>
+  </div>
+  <button class="fab-main-btn" id="btn-fab-main" title="빠른 메뉴">
+    <div class="ripple-container"></div>
+    <span class="fab-main-icon">+</span>
+  </button>
+</div>
+
+<!-- ── AI 채팅 시트 ── -->
+<div class="sheet-overlay" id="ai-chat-sheet">
+  <div class="ai-chat-panel">
+    <div class="ai-analysis-drag-bar"></div>
+    <div class="ai-chat-header">
+      <div class="ai-analysis-header-icon" style="font-size:22px">🤖</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">AI 재무 도우미</div>
+        <div style="font-size:11px;color:rgba(139,92,246,0.8);margin-top:1px">Gemini 2.5 Flash</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-ai-chat-close" style="padding:6px 12px;font-size:13px;flex-shrink:0"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div id="ai-chat-messages" class="ai-chat-messages-wrap"></div>
+    <div class="ai-chat-input-row">
+      <input class="form-input ai-chat-input-field" id="ai-chat-input" type="text" placeholder="재무 관련 궁금한 점을 물어보세요…">
+      <button class="btn ai-chat-send-btn" id="btn-ai-chat-send">
+        <div class="ripple-container"></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI 인사이트 전체 보기 시트 ── -->
+<div class="sheet-overlay ai-fullscreen" id="ai-insight-full-sheet">
+  <div class="ai-analysis-panel">
+    <div class="ai-analysis-drag-bar"></div>
+    <div class="ai-analysis-header">
+      <div class="ai-analysis-header-icon">🤖</div>
+      <div style="flex:1">
+        <div class="ai-analysis-title">AI 재무 인사이트</div>
+        <div class="ai-analysis-sub" id="ai-insight-full-time">전체 내용</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-ai-insight-full-close" style="padding:6px 14px;font-size:13px;flex-shrink:0"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div class="ai-analysis-body" id="ai-insight-full-content"></div>
+  </div>
+</div>
+
+<!-- ── AI 소비 분석 시트 ── -->
+<div class="sheet-overlay ai-fullscreen" id="ai-analysis-sheet">
+  <div class="ai-analysis-panel">
+    <div class="ai-analysis-drag-bar"></div>
+    <div class="ai-analysis-header">
+      <div class="ai-analysis-header-icon">🤖</div>
+      <div style="flex:1">
+        <div class="ai-analysis-title">AI 소비 분석</div>
+        <div class="ai-analysis-sub" id="ai-analysis-month-label">이번달</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-ai-analysis-close" style="padding:6px 14px;font-size:13px;flex-shrink:0"><div class="ripple-container"></div>닫기</button>
+    </div>
+    <div class="ai-analysis-body" id="ai-analysis-content"></div>
+  </div>
+</div>
+
+<!-- ── 자산 추가/수정 시트 ── -->
+<div class="sheet-overlay" id="asset-form-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="asset-form-title">자산 추가</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">자산명</div>
+        <input class="form-input" id="asset-name" placeholder="예: 국민은행 통장">
+      </div>
+      <div>
+        <div class="form-label">금액 (원)</div>
+        <input class="form-input" id="asset-amount" type="number" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="form-label">자산 유형</div>
+        <select class="form-select" id="asset-type">
+          <option value="bank">🏦 은행 통장</option>
+          <option value="savings">💰 적금/예금</option>
+          <option value="investment">📈 주식/ETF</option>
+          <option value="cash">💵 현금</option>
+          <option value="crypto">🪙 가상화폐</option>
+          <option value="real_estate">🏠 부동산</option>
+          <option value="other">📦 기타</option>
+        </select>
+      </div>
+      <div>
+        <div class="form-label">용도</div>
+        <select class="form-select" id="asset-purpose">
+          <option value="생활비">생활비</option>
+          <option value="비상금">비상금</option>
+          <option value="투자금">투자금</option>
+          <option value="저축">저축</option>
+          <option value="자유">자유</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">메모 (선택)</div>
+      <input class="form-input" id="asset-memo" placeholder="간단히 메모">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-asset-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-asset-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 예산 편집 시트 ── -->
+<div class="sheet-overlay" id="budget-editor-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">예산 설정</div>
+    <div style="margin-bottom:14px;text-align:center;font-size:18px;font-weight:800;color:var(--accent2)" id="budget-editor-cat">카테고리</div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">예산 금액 (원) · 0 입력 시 삭제</div>
+      <input class="form-input" id="budget-editor-amount" type="number" placeholder="0" inputmode="numeric" style="text-align:right;font-family:var(--mono);font-size:18px">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-budget-editor-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-budget-editor-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 목표 공유 참여 시트 ── -->
+<div class="sheet-overlay" id="goal-join-sheet">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔗 코드로 목표 참여</div>
+    <div class="sheet-sub">목표를 공유받은 6자리 코드를 입력하세요</div>
+    <!-- 사용법 안내 -->
+    <div class="goal-join-how" style="margin:12px 0;padding:12px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.15);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.7">
+      <div style="font-weight:700;color:var(--accent2);margin-bottom:4px">💡 사용 방법</div>
+      <div>① 상대방이 <b>목표 탭</b>에서 목표를 추가한 뒤</div>
+      <div>② 목표 카드의 <b>🔗 공유 코드 생성</b> 버튼을 누르면</div>
+      <div>③ 6자리 코드가 생성돼요. 그 코드를 여기에 입력!</div>
+    </div>
+    <div style="margin:16px 0">
+      <input class="form-input" id="goal-join-code-input" placeholder="A B C 1 2 3" style="text-align:center;font-size:26px;font-weight:900;letter-spacing:6px;font-family:var(--mono);text-transform:uppercase" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="sheet-actions">
+      <button class="sheet-secondary-btn" id="btn-goal-join-cancel">취소</button>
+      <button class="sheet-primary-btn" id="btn-goal-join-confirm">참여하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 하우스 레벨 상세 시트 -->
+<div class="sheet-overlay" id="house-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">🏠 자산 레벨 상세</div>
+    <div id="house-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-house-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 오늘 지출 상세 시트 -->
+<div class="sheet-overlay" id="today-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">💸 오늘의 지출·수입</div>
+    <div id="today-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-today-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 월급/수입 상세 시트 -->
+<div class="sheet-overlay" id="salary-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">💰 수입 정보</div>
+    <div id="salary-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-salary-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 여유/예측 상세 시트 -->
+<div class="sheet-overlay" id="space-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="detail-sheet-header">📊 재정 여유 분석</div>
+    <div id="space-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-space-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 다가오는 입출금 상세 시트 -->
+<div class="sheet-overlay" id="upcoming-detail-sheet">
+  <div class="sheet-panel detail-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div id="upcoming-detail-content"></div>
+    <button class="sheet-secondary-btn" id="btn-upcoming-detail-close" style="margin-top:16px">닫기</button>
+  </div>
+</div>
+
+<!-- 달력 월 선택 시트 -->
+<div class="sheet-overlay" id="month-picker-sheet">
+  <div class="sheet-panel month-picker-sheet">
+    <div class="sheet-drag-handle"></div>
+    <div class="card-title" style="margin-bottom:16px">월 선택</div>
+    <div class="month-picker-year-nav">
+      <button class="btn-nav-arrow" id="btn-mp-year-prev" title="이전 연도"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="month-picker-year" id="mp-year-display">2025</div>
+      <button class="btn-nav-arrow" id="btn-mp-year-next" title="다음 연도"><div class="ripple-container"></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+    <div class="month-picker-grid" id="month-picker-grid"></div>
+    <button class="sheet-secondary-btn" id="btn-month-picker-close" style="margin-top:16px">취소</button>
+  </div>
+</div>
+
+<!-- 위시리스트 추가/수정 폼 -->
+<div class="sheet-overlay" id="wish-form-overlay">
+  <div class="sheet-panel wish-form-panel">
+    <div class="sheet-drag-handle"></div>
+    <div class="sheet-title" id="wish-form-title">위시 아이템 추가</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+      <div><div class="form-label">아이템명 *</div><input class="form-input" id="wf-name" placeholder="예: 맥북 프로 M4" style="width:100%"></div>
+      <div class="form-row">
+        <div><div class="form-label">가격 (원) *</div><input class="form-input" id="wf-price" type="number" placeholder="0" inputmode="numeric"></div>
+        <div>
+          <div class="form-label">우선순위</div>
+          <select class="form-select" id="wf-priority">
+            <option value="must">꼭 살 것</option>
+            <option value="want">사고 싶음</option>
+            <option value="maybe">고민 중</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><div class="form-label">카테고리</div><select class="form-select" id="wf-category"><option>전자기기</option><option>패션/뷰티</option><option>가구/인테리어</option><option>식품/건강</option><option>취미/스포츠</option><option>여행/경험</option><option>도서/교육</option><option>기타</option></select></div>
+        <div><div class="form-label">구매 목표일</div><input class="form-input" id="wf-date" type="date"></div>
+      </div>
+      <div><div class="form-label">상품 링크 (URL)</div><input class="form-input" id="wf-url" placeholder="https://..." type="url" style="width:100%"></div>
+      <div><div class="form-label">메모</div><input class="form-input" id="wf-notes" placeholder="간단한 메모" style="width:100%"></div>
+    </div>
+    <div class="form-actions" style="margin-top:16px">
+      <button class="btn btn-save" id="wish-form-save"><div class="ripple-container"></div>저장</button>
+      <button class="btn-cancel" id="wish-form-cancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 카드 추가/수정 폼 -->
+<div class="sheet-overlay" id="card-form-overlay">
+  <div class="sheet-panel" style="max-height:60vh">
+    <div class="sheet-drag-handle"></div>
+    <div class="sheet-title" id="card-form-title">카드 추가</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+      <div><div class="form-label">카드사명 *</div><input class="form-input" id="cf-name" placeholder="예: 삼성카드" style="width:100%"></div>
+      <div class="form-row">
+        <div>
+          <div class="form-label">대표 색상</div>
+          <select class="form-select" id="cf-color">
+            <option value="#3b82f6">파랑</option>
+            <option value="#f97316">주황</option>
+            <option value="#10b981">초록</option>
+            <option value="#8b5cf6">보라</option>
+            <option value="#ef4444">빨강</option>
+            <option value="#f59e0b">노랑</option>
+            <option value="#ec4899">핑크</option>
+            <option value="#6b7280">회색</option>
+          </select>
+        </div>
+        <div><div class="form-label">결제일 (매월 며칠)</div><input class="form-input" id="cf-payday" type="number" placeholder="1" min="1" max="31" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:16px">
+      <button class="btn btn-save" id="card-form-save"><div class="ripple-container"></div>저장</button>
+      <button class="btn-cancel" id="card-form-cancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관심종목 추가 폼 -->
+<div class="sheet-overlay" id="watchlist-form-overlay">
+  <div class="sheet-panel" style="max-height:80vh;display:flex;flex-direction:column">
+    <div class="sheet-drag-handle"></div>
+    <div class="sheet-title">관심종목 추가</div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:4px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6">
+        한국주식: 종목코드 입력 (예: 005930)<br>
+        미국주식: 티커 입력 (예: AAPL, TSLA)<br>
+        암호화폐: 티커-USD (예: BTC-USD, ETH-USD)
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><div class="form-label">종목코드 / 티커 *</div><input class="form-input" id="wl-symbol" placeholder="예: 005930 또는 AAPL" style="width:100%" autocapitalize="characters"></div>
+        <div><div class="form-label">종목명 (직접 입력)</div><input class="form-input" id="wl-name" placeholder="예: 삼성전자" style="width:100%"></div>
+        <div>
+          <div class="form-label">시장</div>
+          <select class="form-select" id="wl-market" style="width:100%">
+            <option value="KRX">한국 주식 (KRX/KOSDAQ)</option>
+            <option value="US">미국 주식 (NASDAQ/NYSE)</option>
+            <option value="CRYPTO">암호화폐</option>
+            <option value="OTHER">기타 (직접 티커 입력)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div><div class="form-label">매수가 (선택)</div><input class="form-input" id="wl-buyprice" type="number" placeholder="0" inputmode="decimal"></div>
+          <div><div class="form-label">수량 (선택)</div><input class="form-input" id="wl-qty" type="number" placeholder="0" inputmode="decimal"></div>
+        </div>
+        <div><div class="form-label">메모</div><input class="form-input" id="wl-note" placeholder="간단한 메모" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:16px;flex-shrink:0">
+      <button class="btn btn-save" id="watchlist-form-save"><div class="ripple-container"></div>추가</button>
+      <button class="btn-cancel" id="watchlist-form-cancel">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 위시 다중선택 분석 시트 ── -->
+<div class="sheet-overlay" id="wish-analyze-sheet" onclick="if(event.target===this)closeSheet('wish-analyze-sheet')">
+  <div class="sheet-panel" style="max-height:80vh;display:flex;flex-direction:column">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sheet-title" style="margin:0">📊 선택 항목 합산 분석</div>
+      <button onclick="closeSheet('wish-analyze-sheet')" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer">×</button>
+    </div>
+    <div id="wish-analyze-content" style="flex:1;overflow-y:auto"></div>
+    <button onclick="closeSheet('wish-analyze-sheet')" style="margin-top:16px;width:100%;padding:14px;border-radius:14px;background:var(--accent);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer">닫기</button>
+  </div>
+</div>
+
+<!-- ── 배지 도감 시트 ── -->
+<div class="sheet-overlay" id="badge-detail-overlay" onclick="if(event.target===this)window.closeBadgeDetail&&window.closeBadgeDetail()">
+  <div class="sheet-panel" id="badge-detail-panel" style="border-radius:28px 28px 0 0;overflow:hidden;padding:0">
+    <!-- 파티클 레이어 -->
+    <div id="badge-detail-particles" style="position:absolute;top:0;left:0;width:100%;height:220px;pointer-events:none;overflow:hidden;z-index:0"></div>
+    <!-- 배경 글로우 -->
+    <div id="badge-detail-glow" style="position:absolute;top:0;left:0;width:100%;height:220px;pointer-events:none;z-index:0;transition:background 0.4s"></div>
+    <!-- 콘텐츠 -->
+    <div style="position:relative;z-index:1;padding:36px 28px 40px">
+      <!-- 아이콘 -->
+      <div style="text-align:center;margin-bottom:20px">
+        <div id="badge-detail-icon-wrap" style="display:inline-flex;align-items:center;justify-content:center;width:100px;height:100px;border-radius:50%;border:3px solid transparent;animation:badgeIconPop 0.55s cubic-bezier(0.34,1.56,0.64,1)">
+          <span id="badge-detail-icon" style="font-size:52px;line-height:1"></span>
+        </div>
+        <div id="badge-detail-rarity-chip" style="display:inline-block;margin-top:12px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:1px"></div>
+      </div>
+      <!-- 텍스트 -->
+      <div style="text-align:center">
+        <div id="badge-detail-label" style="font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-0.3px"></div>
+        <div id="badge-detail-desc" style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px"></div>
+        <div id="badge-detail-status" style="padding:14px 20px;border-radius:16px;font-size:13px;font-weight:700;line-height:1.5"></div>
+        <div id="badge-detail-cat" style="display:inline-block;margin-top:12px;padding:4px 12px;border-radius:10px;font-size:11px;font-weight:700;background:var(--bg3);color:var(--text2)"></div>
+      </div>
+      <button onclick="window.closeBadgeDetail&&window.closeBadgeDetail()" style="margin-top:28px;width:100%;padding:16px;border-radius:16px;background:var(--accent);color:#fff;border:none;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.3px">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 코인 파티클 오버레이 ── -->
+<div id="coin-particle-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none"></div>
+
+<!-- ── JS 진입점 ── -->
+
+<script type="module" src="/src/app.js"></script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // 새 서비스워커가 설치되면 즉시 활성화 요청
+      reg.addEventListener('updatefound', () => {
+        const next = reg.installing;
+        next.addEventListener('statechange', () => {
+          // 새 SW가 activated 되면 controllerchange가 발생
+          // → 아래 리스너가 페이지를 자동 리로드
+        });
+      });
+    }).catch(() => {});
+
+    // 새 SW가 제어권을 가져오는 순간 → 자동 새로고침
+    // skipWaiting + clients.claim() 조합으로 설치 직후 바로 실행됨
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
+}
+</script>
+
+<!-- 컨페티 캔버스 -->
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none"></canvas>
+
+<!-- ── 전체 검색 오버레이 ── -->
+<div id="search-overlay" style="display:none">
+  <div class="search-header">
+    <div class="search-input-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;color:var(--text3)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search-input" type="search" placeholder="카테고리, 메모, 금액으로 검색..." autocomplete="off" spellcheck="false">
+      <button id="btn-search-clear" style="display:none;background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;line-height:1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <button id="btn-search-close" class="search-cancel-btn">취소</button>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+</body>
+</html>

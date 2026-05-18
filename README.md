@@ -4,6 +4,20 @@
 PC · 태블릿 · 모바일 어디서나 동일한 경험으로 사용할 수 있으며, 구글 계정으로 로그인 시 기기 간 실시간 동기화됩니다.
 
 > 🌐 **라이브 데모:** [https://ha-kunamatata.github.io/cashflow/v3/](https://ha-kunamatata.github.io/cashflow/v3/)
+> (Cloudflare Pages 마이그레이션 진행 중 — 자세한 내용은 [`DEPLOY.md`](DEPLOY.md))
+
+## ⚡ 빠른 시작 (개발)
+
+```bash
+npm install
+npm run dev       # http://localhost:5173
+npm run build     # 프로덕션 빌드 → dist/
+npm run typecheck # TypeScript 타입 검사
+```
+
+배포 가이드는 [`DEPLOY.md`](DEPLOY.md) 참고.
+
+---
 
 ---
 
