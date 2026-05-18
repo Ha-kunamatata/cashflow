@@ -354,8 +354,8 @@ export function renderHome() {
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <span style="font-size:10px;color:var(--text3)">저축률 <span style="color:${hs.savingsRate >= 20 ? 'var(--green2)' : hs.savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)'};font-weight:700">${hs.savingsRate}%</span></span>
-            <span style="font-size:10px;color:var(--text3)">지출비율 <span style="font-weight:700">${hs.expenseRatio}%</span></span>
-            <span style="font-size:10px;color:var(--text3)">할부비중 <span style="font-weight:700">${hs.halbuPct}%</span></span>
+            <span style="font-size:10px;color:var(--text3)">스트릭 <span style="color:${hs.streak >= 7 ? 'var(--green2)' : hs.streak >= 3 ? 'var(--yellow)' : 'var(--text2)'};font-weight:700">${hs.streak}일</span></span>
+            <span style="font-size:10px;color:var(--text3)">${hs.budgetCompliance !== null ? `예산준수 <span style="color:${hs.budgetCompliance >= 80 ? 'var(--green2)' : hs.budgetCompliance >= 50 ? 'var(--yellow)' : 'var(--red2)'};font-weight:700">${hs.budgetCompliance}%</span>` : `할부비중 <span style="font-weight:700">${hs.halbuPct}%</span>`}</span>
           </div>
         </div>
       </div>`;
@@ -1189,6 +1189,21 @@ function _renderMonthlyStats() {
   const m = currentLedgerMonth;
   const { expense, income, net, catTotals, dayMap } = getLedgerMonth(y, m);
 
+  // 태그별 집계
+  const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
+  const tagTotals = {}, tagCounts = {};
+  const pfx = `${y}-${p2(m + 1)}`;
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    if (!dk.startsWith(pfx)) continue;
+    for (const item of items) {
+      if (item.type === 'expense' && item.tag) {
+        tagTotals[item.tag] = (tagTotals[item.tag] || 0) + item.amount;
+        tagCounts[item.tag] = (tagCounts[item.tag] || 0) + 1;
+      }
+    }
+  }
+  const tagEntries = Object.entries(tagTotals).sort((a, b) => b[1] - a[1]);
+
   const el = document.getElementById('ledger-stats-content');
   if (!el) return;
 
@@ -1279,6 +1294,22 @@ function _renderMonthlyStats() {
         <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevInc)})</span>
       </div>
     </div>
+
+    ${tagEntries.length > 0 ? `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">🏷️ 소비 유형별 지출</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${tagEntries.map(([tag, amt]) => {
+          const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0;
+          const cnt = tagCounts[tag];
+          return `<div class="lstat-cat-row">
+            <span class="lstat-cat-name">${TAG_EMOJI[tag] || ''}${tag}</span>
+            <div class="lstat-cat-bar"><div style="width:${pct}%;background:#6366f1;height:100%;border-radius:4px;opacity:.85"></div></div>
+            <span class="lstat-cat-amt" style="min-width:80px;text-align:right">${cnt}건 · ${fmtShort(amt)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
   `;
 }
 
@@ -1367,26 +1398,51 @@ const REPORT_CAT_COLORS = {
 
 function _calcHealthScore(cf) {
   const { income, expense } = cf;
-  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
-  const expenseRatio = income > 0 ? Math.round((expense / income) * 100) : 100;
   const now = today();
-  const activeHalbu = state.entries.filter(
-    e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))
-  ).length;
+
+  // 저축률 (0~25)
+  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  const savPts = savingsRate >= 20 ? 25 : savingsRate >= 10 ? 18 : savingsRate >= 0 ? 10 : 0;
+
+  // 지출비율 (0~20)
+  const expenseRatio = income > 0 ? Math.round((expense / income) * 100) : 100;
+  const expPts = expenseRatio <= 70 ? 20 : expenseRatio <= 85 ? 12 : expenseRatio <= 100 ? 5 : 0;
+
+  // 할부비중 (0~15)
   const halbuAmt = state.entries
     .filter(e => e.type === 'expense' && e.repeat === '매월' && e.category === '할부')
     .reduce((s, e) => s + e.amount, 0);
   const halbuPct = expense > 0 ? Math.round((halbuAmt / expense) * 100) : 0;
-  const score = Math.max(0, Math.min(100,
-    (savingsRate >= 20 ? 30 : savingsRate >= 10 ? 20 : savingsRate >= 0 ? 10 : 0) +
-    (expenseRatio <= 70 ? 30 : expenseRatio <= 85 ? 20 : expenseRatio <= 100 ? 10 : 0) +
-    (halbuPct <= 10 ? 20 : halbuPct <= 25 ? 12 : halbuPct <= 40 ? 6 : 0) +
-    (activeHalbu <= 2 ? 20 : activeHalbu <= 5 ? 12 : 6)
-  ));
+  const halbuPts = halbuPct <= 10 ? 15 : halbuPct <= 25 ? 9 : halbuPct <= 40 ? 4 : 0;
+
+  // 활성 할부 수 (0~10)
+  const activeHalbu = state.entries.filter(
+    e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))
+  ).length;
+  const halbuCntPts = activeHalbu <= 2 ? 10 : activeHalbu <= 5 ? 6 : 2;
+
+  // 연속 기록 스트릭 (0~15)
+  const { count: streak } = computeStreak(state.ledgerData);
+  const streakPts = streak >= 14 ? 15 : streak >= 7 ? 10 : streak >= 3 ? 5 : 0;
+
+  // 예산 준수율 (0~15) — 예산 미설정 시 중립 8점
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const budgetCats = Object.keys(budget);
+  let budgetPts = 8;
+  let budgetCompliance = null; // null = 예산 없음
+  if (budgetCats.length > 0) {
+    const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+    const overCount = budgetCats.filter(cat => (actual[cat] || 0) > budget[cat]).length;
+    const ratio = overCount / budgetCats.length;
+    budgetPts = ratio === 0 ? 15 : ratio <= 0.2 ? 10 : ratio <= 0.5 ? 5 : 0;
+    budgetCompliance = Math.round((1 - ratio) * 100);
+  }
+
+  const score = Math.max(0, Math.min(100, savPts + expPts + halbuPts + halbuCntPts + streakPts + budgetPts));
   const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 45 ? 'C' : score >= 30 ? 'D' : 'F';
   const color = score >= 70 ? 'var(--green2)' : score >= 45 ? 'var(--yellow)' : 'var(--red2)';
   const label = score >= 70 ? '우수' : score >= 45 ? '양호' : '주의';
-  return { score, grade, color, label, savingsRate, expenseRatio, halbuPct };
+  return { score, grade, color, label, savingsRate, expenseRatio, halbuPct, streak, budgetCompliance };
 }
 
 function _calcMonthCF(d) {
@@ -1564,8 +1620,8 @@ export function renderReport() {
           <div style="font-size:9px;color:var(--text3)">/ 100</div>
         </div>
         <div>
-          <div style="font-size:16px;font-weight:800;color:${scoreColor}">${scoreLabel}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">재정 건강 지수</div>
+          <div style="font-size:16px;font-weight:800;color:${scoreColor}">${hs.grade}등급 · ${scoreLabel}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">재정 건강 지수 (6개 항목)</div>
         </div>
       </div>
       <div class="report-health-items">
@@ -1583,6 +1639,16 @@ export function renderReport() {
           <span>할부비중</span>
           <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${halbuPct}%;background:${halbuPct <= 10 ? 'var(--green2)' : halbuPct <= 25 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
           <span style="font-family:var(--mono);font-weight:700">${halbuPct}%</span>
+        </div>
+        <div class="report-health-row">
+          <span>기록 스트릭</span>
+          <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${Math.min(100, hs.streak / 14 * 100)}%;background:${hs.streak >= 7 ? 'var(--green2)' : hs.streak >= 3 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
+          <span style="font-family:var(--mono);font-weight:700;color:${hs.streak >= 7 ? 'var(--green2)' : hs.streak >= 3 ? 'var(--yellow)' : 'var(--text2)'}">${hs.streak}일</span>
+        </div>
+        <div class="report-health-row">
+          <span>예산준수</span>
+          <div class="report-health-bar-wrap"><div class="report-health-bar" style="width:${hs.budgetCompliance !== null ? hs.budgetCompliance : 50}%;background:${hs.budgetCompliance === null ? 'var(--text3)' : hs.budgetCompliance >= 80 ? 'var(--green2)' : hs.budgetCompliance >= 50 ? 'var(--yellow)' : 'var(--red2)'}"></div></div>
+          <span style="font-family:var(--mono);font-weight:700">${hs.budgetCompliance !== null ? hs.budgetCompliance + '%' : '-'}</span>
         </div>
       </div>`;
   }
