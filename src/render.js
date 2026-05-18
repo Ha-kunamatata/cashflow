@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════
 // render.js — 화면 렌더링
 // ════════════════════════════════════════════════════════
-import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config.js';
-import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel, HOUSE_LEVELS } from './assets.js';
-import { getMonthBudget, getMonthActual } from './budget.js';
-import { computeStreak, BADGE_DEFS, RARITY_CONFIG } from './streak.js';
+import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config';
+import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel, HOUSE_LEVELS } from './assets';
+import { getMonthBudget, getMonthActual } from './budget';
+import { computeStreak, BADGE_DEFS, RARITY_CONFIG } from './streak';
 import {
   today,
   dateKey,
@@ -15,10 +15,10 @@ import {
   fmtSigned,
   animateNumber,
   escapeHtml,
-} from './utils.js';
-import { state, DEFAULT_CARDS } from './state.js';
-import { buildForecast, getCards, simulateWishPurchase } from './forecast.js';
-import { hasGeminiKey, renderMarkdown, getWeeklyCoachingInsight } from './ai.js';
+} from './utils';
+import { state, DEFAULT_CARDS } from './state';
+import { buildForecast, getCards, simulateWishPurchase } from './forecast';
+import { hasGeminiKey, renderMarkdown, getWeeklyCoachingInsight } from './ai';
 
 let _chartPeriod = 30;
 let _forecastFilter = 'all';
@@ -3255,7 +3255,7 @@ export async function refreshAllStocks() {
 export async function renderHouseholdSection() {
   const el = document.getElementById('household-section');
   if (!el) return;
-  const { getCurrentHouseholdCode, getHouseholdMeta } = await import('./firebase.js');
+  const { getCurrentHouseholdCode, getHouseholdMeta } = await import('./firebase');
   const code = getCurrentHouseholdCode();
   if (!code) {
     el.innerHTML = `

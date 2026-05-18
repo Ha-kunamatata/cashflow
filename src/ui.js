@@ -1,15 +1,15 @@
 // ════════════════════════════════════════════════════════
 // ui.js — 폼 / 시트 / 네비게이션 / 인터랙션
 // ════════════════════════════════════════════════════════
-import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config.js';
-import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
-import { publishSharedGoal, fetchSharedGoalByCode, createHousehold, joinHousehold, leaveHousehold, getCurrentHouseholdCode } from './firebase.js';
-import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state.js';
-import * as renderModule from './render.js';
-import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI, renderMarkdown } from './ai.js';
-import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets.js';
-import { setMonthBudget, getMonthBudget } from './budget.js';
-import { computeStreak, checkBadges, BADGE_DEFS } from './streak.js';
+import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config';
+import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils';
+import { publishSharedGoal, fetchSharedGoalByCode, createHousehold, joinHousehold, leaveHousehold, getCurrentHouseholdCode } from './firebase';
+import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state';
+import * as renderModule from './render';
+import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI, renderMarkdown } from './ai';
+import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets';
+import { setMonthBudget, getMonthBudget } from './budget';
+import { computeStreak, checkBadges, BADGE_DEFS } from './streak';
 
 // ── 목표 관련 ────────────────────────────────────────────
 let _editGoalId = null;
@@ -681,7 +681,7 @@ export function initGeminiKeyUI() {
   if (!hasGeminiKey()) {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui.js').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
 }
@@ -715,7 +715,7 @@ export function saveGeminiKey() {
   } else {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui.js').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
 }
@@ -987,7 +987,7 @@ export function saveBudgetItem() {
 }
 
 export function applyBudgetSuggestion() {
-  import('./budget.js').then(({ suggestBudget }) => {
+  import('./budget').then(({ suggestBudget }) => {
     const suggested = suggestBudget(state.ledgerData, _budgetYear, _budgetMonth);
     for (const [cat, amt] of Object.entries(suggested)) {
       setMonthBudget(state.budgets, _budgetYear, _budgetMonth, cat, amt);
@@ -1442,8 +1442,8 @@ export function deleteTemplate(tplId) {
 // ════════════════════════════════════════════════════════
 export async function handleReceiptOCR(file) {
   if (!file) return;
-  const { analyzeReceipt } = await import('./ai.js');
-  const { hasGeminiKey } = await import('./ai.js');
+  const { analyzeReceipt } = await import('./ai');
+  const { hasGeminiKey } = await import('./ai');
   if (!hasGeminiKey()) { alert('영수증 분석을 사용하려면 Gemini API 키가 필요합니다.\n설정 탭에서 키를 등록해주세요.'); return; }
 
   const btn = document.getElementById('btn-receipt-ocr');

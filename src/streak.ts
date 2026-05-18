@@ -1,8 +1,25 @@
 // ════════════════════════════════════════════════════════
-// streak.js — 연속 기록 & 배지 관리
+// streak.ts — 연속 기록 & 배지 관리
 // ════════════════════════════════════════════════════════
+import type { LedgerData } from './types';
 
-export function computeStreak(ledgerData) {
+export type BadgeRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+export interface BadgeDef {
+  id: string;
+  icon: string;
+  label: string;
+  desc: string;
+  category: string;
+  rarity: BadgeRarity;
+}
+
+export interface StreakResult {
+  count: number;
+  hasToday: boolean;
+}
+
+export function computeStreak(ledgerData: LedgerData): StreakResult {
   const today = new Date();
   const pad = n => String(n).padStart(2, '0');
   let count = 0;
@@ -24,7 +41,7 @@ export function computeStreak(ledgerData) {
 }
 
 // ── 배지 카테고리별 정의 ──────────────────────────────────
-export const BADGE_DEFS = [
+export const BADGE_DEFS: BadgeDef[] = [
   // 🔥 연속 기록
   { id: 'streak3',    icon: '🌱', label: '새싹 기록',      desc: '3일 연속 가계부 기록',     category: '기록',   rarity: 'common' },
   { id: 'streak7',    icon: '🔥', label: '불꽃 일주일',    desc: '7일 연속 가계부 기록',     category: '기록',   rarity: 'uncommon' },
@@ -167,7 +184,8 @@ export const RARITY_CONFIG = {
   legendary: { label: 'LEGENDARY', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.35)', glow: true },
 };
 
-export function checkBadges(state) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function checkBadges(state: any): string[] {
   const earned = new Set(state.badges || []);
   const newBadges = [];
   const { count } = computeStreak(state.ledgerData);
@@ -286,7 +304,7 @@ export function checkBadges(state) {
     for (let i = 0; i <= allDates.length - 7 && !earned.has('free_week'); i++) {
       const week = allDates.slice(i, i + 7);
       const first = new Date(week[0]), last = new Date(week[6]);
-      if ((last - first) / 86400000 === 6) {
+      if ((last.getTime() - first.getTime()) / 86400000 === 6) {
         const weekExp = week.reduce((s, k) =>
           s + (state.ledgerData[k] || []).filter(i => i.type === 'expense').reduce((s2, i) => s2 + i.amount, 0), 0);
         if (weekExp > 0 && weekExp < 50_000) newBadges.push('free_week');
@@ -363,8 +381,8 @@ export function checkBadges(state) {
   }
 
   {
-    const byMonth = {};
-    Object.keys(state.ledgerData || {}).forEach(k => {
+    const byMonth: Record<string, Set<string>> = {};
+    Object.keys(state.ledgerData || {}).forEach((k: string) => {
       const ym = k.substring(0, 7);
       if (!byMonth[ym]) byMonth[ym] = new Set();
       byMonth[ym].add(k);
@@ -420,7 +438,10 @@ export function checkBadges(state) {
   if (hasAllFeatures && !earned.has('chal_all_used')) newBadges.push('chal_all_used');
   if (totalLedgerDays >= 100 && !earned.has('chal_100days')) newBadges.push('chal_100days');
 
-  const budgetCatCount = Object.values(state.budgets || {}).reduce((max, mb) => Math.max(max, Object.keys(mb || {}).length), 0);
+  const budgetCatCount: number = Object.values(state.budgets || {}).reduce<number>(
+    (max, mb) => Math.max(max, Object.keys((mb as Record<string, unknown>) || {}).length),
+    0,
+  );
   if (budgetCatCount >= 5 && !earned.has('chal_budget_all')) newBadges.push('chal_budget_all');
 
   const allHalbuDone = (state.entries || []).filter(e => e.category === '할부').length > 0 &&
