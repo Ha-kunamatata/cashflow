@@ -484,7 +484,7 @@ body {
 
 /* ── 반응형: tablet ── */
 @media (min-width: 640px) {
-  .page { padding:20px 20px 0; }
+  .page { padding:calc(72px + env(safe-area-inset-top, 0px)) 20px 0; }
   .summary-grid { grid-template-columns:repeat(4,1fr); }
   .balance-amount { font-size:40px; }
   .topbar { padding: calc(env(safe-area-inset-top) + 12px) 26px 12px; }
@@ -497,13 +497,15 @@ body {
   .nav-btn { flex:0 0 auto; padding:12px 0; gap:6px; }
   .nav-btn span { font-size:11px; }
   .nav-indicator { top:50%; left:0; right:auto; width:3px; height:30px; border-radius:0 3px 3px 0; transform:translateY(-50%); }
-  .page { max-width:1480px; padding:24px 24px 28px; }
+  .page { max-width:1480px; padding:calc(78px + env(safe-area-inset-top, 0px)) 24px 28px; }
   .home-grid { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(380px,0.95fr); gap:16px; align-items:start; }
   .forecast-grid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(360px,0.9fr); gap:16px; align-items:start; }
   .cards-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:16px; align-items:start; }
   .settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
   #page-entries { max-width:1040px; }
   .sync-badge { top:78px; }
+  /* 데스크톱: 바텀 네비가 왼쪽 사이드바로 이동했으므로 FAB을 화면 바닥에 더 가깝게 */
+  #fab-speed-dial { bottom: 28px; right: 28px; }
 }
 
 /* ── 모바일 디테일 ── */
