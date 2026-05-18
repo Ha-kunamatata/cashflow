@@ -441,6 +441,7 @@ export function openLedgerItemForm(dateStr, itemId) {
   _renderTagButtons();
 
   _renderItemFormType();
+  renderLedgerTemplates();
   openSheet('ledger-item-sheet');
   setTimeout(() => amtEl?.focus(), 120);
 }
@@ -1373,4 +1374,114 @@ export function copyHouseholdCode() {
   const code = getCurrentHouseholdCode();
   if (!code) return;
   navigator.clipboard?.writeText(code).then(() => showBadge('📋 코드 복사됨'));
+}
+
+// ════════════════════════════════════════════════════════
+// 즐겨찾기 템플릿
+// ════════════════════════════════════════════════════════
+export function renderLedgerTemplates() {
+  const row = document.getElementById('ledger-templates-row');
+  const chips = document.getElementById('ledger-templates-chips');
+  if (!row || !chips) return;
+  const templates = state.ledgerTemplates || [];
+  if (!templates.length) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  chips.innerHTML = templates.map(t => `
+    <button class="template-chip" data-tpl-id="${escapeHtml(t.id)}" title="${escapeHtml(t.memo || t.category)}">
+      <span style="font-size:10px;color:var(--text3)">${escapeHtml(t.category)}</span>
+      <span style="font-size:12px;font-weight:700;font-family:var(--mono)">${fmtShort(t.amount)}</span>
+      ${t.memo ? `<span style="font-size:10px;color:var(--text2);max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.memo)}</span>` : ''}
+    </button>
+  `).join('');
+}
+
+export function useTemplate(tplId) {
+  const tpl = (state.ledgerTemplates || []).find(t => t.id === tplId);
+  if (!tpl) return;
+  _ledgerItemType = tpl.type || 'expense';
+  _ledgerCategory = tpl.category;
+  for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
+    if (cats.includes(tpl.category)) { _ledgerCatGroup = grp; break; }
+  }
+  const amtEl = document.getElementById('ledger-item-amount');
+  const memoEl = document.getElementById('ledger-item-memo');
+  if (amtEl) amtEl.value = tpl.amount || '';
+  if (memoEl) memoEl.value = tpl.memo || '';
+  _ledgerItemTag = tpl.tag || null;
+  _renderTagButtons();
+  _renderItemFormType();
+}
+
+export function saveCurrentAsTemplate() {
+  const amtEl = document.getElementById('ledger-item-amount');
+  const memoEl = document.getElementById('ledger-item-memo');
+  const amount = parseInt(amtEl?.value || '0', 10);
+  if (!amount || amount <= 0) { showBadge('⚠️ 금액을 먼저 입력하세요'); return; }
+  if (!state.ledgerTemplates) state.ledgerTemplates = [];
+  const isDupe = state.ledgerTemplates.some(t =>
+    t.type === _ledgerItemType && t.category === _ledgerCategory && t.amount === amount
+  );
+  if (isDupe) { showBadge('이미 저장된 즐겨찾기예요'); return; }
+  state.ledgerTemplates.push({
+    id: uid(), type: _ledgerItemType, category: _ledgerCategory,
+    amount, memo: memoEl?.value?.trim() || '', tag: _ledgerItemTag || null,
+  });
+  save();
+  renderLedgerTemplates();
+  showBadge('⭐ 즐겨찾기에 저장됐어요');
+}
+
+export function deleteTemplate(tplId) {
+  state.ledgerTemplates = (state.ledgerTemplates || []).filter(t => t.id !== tplId);
+  save();
+  renderLedgerTemplates();
+}
+
+// ════════════════════════════════════════════════════════
+// 영수증 OCR
+// ════════════════════════════════════════════════════════
+export async function handleReceiptOCR(file) {
+  if (!file) return;
+  const { analyzeReceipt } = await import('./ai.js');
+  const { hasGeminiKey } = await import('./ai.js');
+  if (!hasGeminiKey()) { alert('영수증 분석을 사용하려면 Gemini API 키가 필요합니다.\n설정 탭에서 키를 등록해주세요.'); return; }
+
+  const btn = document.getElementById('btn-receipt-ocr');
+  const origText = btn?.innerHTML || '';
+  if (btn) btn.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block">⏳</span>';
+
+  try {
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    const result = await analyzeReceipt(base64, file.type || 'image/jpeg');
+
+    if (result.amount > 0) {
+      const amtEl = document.getElementById('ledger-item-amount');
+      if (amtEl) amtEl.value = result.amount;
+    }
+    if (result.memo) {
+      const memoEl = document.getElementById('ledger-item-memo');
+      if (memoEl) memoEl.value = result.memo;
+    }
+    if (result.category) {
+      for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
+        if (cats.some(c => result.category.includes(c) || c.includes(result.category))) {
+          _ledgerCatGroup = grp;
+          _ledgerCategory = cats.find(c => result.category.includes(c) || c.includes(result.category)) || cats[0];
+          break;
+        }
+      }
+      _renderItemFormType();
+    }
+    showBadge('📷 영수증 인식 완료!');
+  } catch (err) {
+    showBadge(`❌ ${err.message || 'OCR 실패'}`);
+  } finally {
+    if (btn) btn.innerHTML = origText;
+  }
 }

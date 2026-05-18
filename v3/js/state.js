@@ -28,6 +28,7 @@ export const state = {
   wishlist: [],         // [{ id, name, price, url, priority, targetDate, notes, category, bought }]
   watchlist: [],        // [{ id, symbol, name, market, buyPrice, quantity, note }]
   geminiKey: '',        // Gemini API 키 (크로스 디바이스 동기화용)
+  ledgerTemplates: [],  // [{ id, type, category, amount, memo }] — 즐겨찾기 템플릿
 };
 
 // ── 상태 완전 초기화 (계정 전환 시 메모리 상태 리셋) ──
@@ -49,6 +50,7 @@ export function resetState() {
   state.wishlist          = [];
   state.watchlist         = [];
   state.geminiKey         = '';
+  state.ledgerTemplates   = [];
 }
 
 // ── 저장 ──────────────────────────────────────────────
@@ -89,8 +91,9 @@ export function load() {
     }
   } catch (e) {}
   // 누락 필드 보완 (구버전 데이터 호환)
-  if (!state.wishlist)  state.wishlist  = [];
-  if (!state.watchlist) state.watchlist = [];
+  if (!state.wishlist)        state.wishlist        = [];
+  if (!state.watchlist)       state.watchlist       = [];
+  if (!state.ledgerTemplates) state.ledgerTemplates = [];
 }
 
 // ── checkData → ledgerData 마이그레이션 ───────────────
