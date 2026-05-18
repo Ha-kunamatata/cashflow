@@ -101,10 +101,15 @@
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
         <div id="balance-insight" class="balance-insight-text"></div>
+        <!-- 월 진행률 바 -->
+        <div id="month-progress-wrap" style="margin-top:10px"></div>
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
         <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
       </div>
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
+
+  <!-- 이번달 현금흐름 요약 카드 (NEW) -->
+  <div id="home-cashflow-card" style="margin-bottom:12px"></div>
 
   <!-- 오늘의 소비 타임라인 -->
   <div id="today-timeline" style="margin-bottom:12px"></div>
@@ -113,10 +118,10 @@
   <div id="home-budget-widget" style="margin-bottom:12px"></div>
 
   <!-- 주간 요약 카드 -->
-  <div class="card weekly-summary-card" id="weekly-summary-card" style="margin-bottom:12px"></div>
+  <div id="weekly-summary-card" style="margin-bottom:12px"></div>
 
   <!-- 재정 건강 점수 -->
-  <div class="card health-score-mini" id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
+  <div id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
 
   <!-- 홈 예측 미니 위젯 -->
   <div id="home-forecast-widget" style="margin-bottom:12px"></div>
@@ -197,6 +202,11 @@
 </div>
 
 <div class="home-side">
+  <!-- 다음 7일 캘린더 (NEW) -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">다음 7일 예정 <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">수입/지출</span></div>
+    <div id="upcoming-7day"></div>
+  </div>
   <div class="card">
     <div class="card-title">다가오는 입출금 <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">앞 30일</span></div>
     <div id="upcoming-list"><div class="skeleton" style="height:200px"></div></div>

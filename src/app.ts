@@ -257,6 +257,21 @@ window.launchConfetti = function(duration = 3200) {
 };
 
 // ── 로컬 알림 체크 ──────────────────────────────────────
+const _NOTIF_CACHE_KEY = 'cashflow_notif_sent';
+function _wasNotifSentToday(key: string): boolean {
+  try {
+    const d = JSON.parse(localStorage.getItem(_NOTIF_CACHE_KEY) || '{}');
+    return d[key] === new Date().toDateString();
+  } catch { return false; }
+}
+function _markNotifSent(key: string) {
+  try {
+    const d = JSON.parse(localStorage.getItem(_NOTIF_CACHE_KEY) || '{}');
+    d[key] = new Date().toDateString();
+    localStorage.setItem(_NOTIF_CACHE_KEY, JSON.stringify(d));
+  } catch {}
+}
+
 async function _checkNotifications() {
   if (!('Notification' in window) || Notification.permission === 'denied') return;
   if (Notification.permission === 'default') {
@@ -265,17 +280,70 @@ async function _checkNotifications() {
   }
   if (Notification.permission !== 'granted') return;
 
+  const [{ fmtShort, yyyymm, p2 }, { buildForecast }] = await Promise.all([
+    import('./utils'),
+    import('./forecast'),
+  ]);
+  const { getMonthBudget, getMonthActual } = await import('./budget');
+
   const now = new Date();
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
 
-  import('./utils').then(({ fmtShort }) => {
-    const salaryEntry = state.entries.find(e => e.type === 'income' && e.repeat === '매월' && e.day);
-    if (salaryEntry && tomorrow.getDate() === salaryEntry.day) {
-      new Notification('💰 내일 월급날!', {
-        body: `${salaryEntry.name} ${fmtShort(salaryEntry.amount)} 입금 예정`, icon: '/favicon.ico'
-      });
-    }
+  const send = (key: string, title: string, body: string) => {
+    if (_wasNotifSentToday(key)) return;
+    new Notification(title, { body, icon: '/favicon.ico' });
+    _markNotifSent(key);
+  };
+
+  // 1. 월급 D-1
+  const salaryEntry = state.entries.find(e => e.type === 'income' && e.repeat === '매월' && e.day);
+  if (salaryEntry && tomorrow.getDate() === salaryEntry.day) {
+    send('salary', '💰 내일 월급날!', `${salaryEntry.name} ${fmtShort(salaryEntry.amount)} 입금 예정`);
+  }
+
+  // 2. 예산 초과 경고 (80% 이상 소진 카테고리)
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+  const overCats = Object.entries(budget).filter(([cat, bgt]) => {
+    const act = actual[cat] || 0;
+    return bgt > 0 && act >= bgt * 0.8;
   });
+  if (overCats.length > 0) {
+    const names = overCats.slice(0, 2).map(([c]) => c).join(', ');
+    const key = `budget_over_${now.getMonth()}`;
+    const isExceeded = overCats.some(([cat, bgt]) => (actual[cat] || 0) >= bgt);
+    if (isExceeded) {
+      send(key + '_exceeded', '🚨 예산 초과!', `${names} 카테고리가 예산을 초과했어요`);
+    } else {
+      send(key + '_warn', '⚠️ 예산 80% 소진', `${names} 등 ${overCats.length}개 카테고리 주의`);
+    }
+  }
+
+  // 3. 잔고 위험 예측 알림 (3일 이내)
+  const fc = buildForecast(7);
+  const soon = fc.slice(1, 4).find(f => f.balance < state.dangerLine && (f.income > 0 || f.expense > 0));
+  if (soon) {
+    const dayStr = `${soon.date.getMonth() + 1}/${p2(soon.date.getDate())}`;
+    send('danger_soon', '⚠️ 잔고 위험 임박', `${dayStr} 잔고 ${fmtShort(soon.balance)} 위험선 이하 예상`);
+  }
+
+  // 4. 큰 지출 예정일 D-1 (5만원 이상)
+  const bigTomorrow = fc[1];
+  if (bigTomorrow && bigTomorrow.expense >= 50000) {
+    const names = bigTomorrow.events.slice(0, 2).map(e => e.name).join(', ');
+    send(`big_exp_${tomorrow.getDate()}`, '💳 내일 큰 지출 예정', `${fmtShort(bigTomorrow.expense)} — ${names}`);
+  }
+
+  // 5. 할부 종료 임박 (다음 달 마지막)
+  const nextYm = yyyymm(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+  const todayYm = yyyymm(now);
+  const endingHalbu = state.entries.filter(
+    e => e.type === 'expense' && e.category === '할부' && e.endMonth &&
+      (parseInt(e.endMonth, 10) === todayYm || parseInt(e.endMonth, 10) === nextYm)
+  );
+  if (endingHalbu.length > 0) {
+    send('halbu_end', '✅ 할부 종료 임박', `${endingHalbu.map(e => e.name).slice(0, 2).join(', ')} 등 ${endingHalbu.length}건 곧 종료`);
+  }
 }
 
 // ── 스와이프로 항목 삭제 (가계부 날짜 시트) ────────────
