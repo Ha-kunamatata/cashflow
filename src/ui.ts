@@ -1441,33 +1441,60 @@ export function deleteTemplate(tplId) {
 // ════════════════════════════════════════════════════════
 // 영수증 OCR
 // ════════════════════════════════════════════════════════
+function _showOcrOverlay(dataUrl: string) {
+  let ov = document.getElementById('ocr-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'ocr-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <img src="${dataUrl}" style="max-width:280px;max-height:360px;border-radius:12px;object-fit:contain;opacity:0.7;border:1px solid rgba(255,255,255,0.15)"/>
+    <div style="display:flex;align-items:center;gap:10px;color:#fff">
+      <div style="width:18px;height:18px;border:2px solid rgba(165,180,252,0.6);border-top-color:#a5b4fc;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      <span style="font-size:13px;font-weight:600">영수증 분석 중…</span>
+    </div>`;
+}
+function _hideOcrOverlay() {
+  document.getElementById('ocr-overlay')?.remove();
+}
+
 export async function handleReceiptOCR(file) {
   if (!file) return;
-  const { analyzeReceipt } = await import('./ai');
-  const { hasGeminiKey } = await import('./ai');
+  const { analyzeReceipt, hasGeminiKey } = await import('./ai');
   if (!hasGeminiKey()) { alert('영수증 분석을 사용하려면 Gemini API 키가 필요합니다.\n설정 탭에서 키를 등록해주세요.'); return; }
 
   const btn = document.getElementById('btn-receipt-ocr');
   const origText = btn?.innerHTML || '';
-  if (btn) btn.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block">⏳</span>';
 
   try {
-    const base64 = await new Promise((res, rej) => {
+    // 이미지 미리보기 + 로딩 오버레이
+    const dataUrl: string = await new Promise((res, rej) => {
       const reader = new FileReader();
-      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onload = e => res(e.target.result as string);
       reader.onerror = rej;
       reader.readAsDataURL(file);
     });
 
+    _showOcrOverlay(dataUrl);
+    if (btn) btn.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block">⏳</span>';
+
+    const base64 = dataUrl.split(',')[1];
     const result = await analyzeReceipt(base64, file.type || 'image/jpeg');
 
     if (result.amount > 0) {
-      const amtEl = document.getElementById('ledger-item-amount');
-      if (amtEl) amtEl.value = result.amount;
+      const amtEl = document.getElementById('ledger-item-amount') as HTMLInputElement;
+      if (amtEl) amtEl.value = String(result.amount);
     }
     if (result.memo) {
-      const memoEl = document.getElementById('ledger-item-memo');
+      const memoEl = document.getElementById('ledger-item-memo') as HTMLInputElement;
       if (memoEl) memoEl.value = result.memo;
+    }
+    // 날짜 자동 설정 (영수증에서 추출된 경우)
+    if (result.date) {
+      const dateEl = document.getElementById('ledger-item-date') as HTMLInputElement;
+      if (dateEl) dateEl.value = result.date;
     }
     if (result.category) {
       for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
@@ -1479,10 +1506,13 @@ export async function handleReceiptOCR(file) {
       }
       _renderItemFormType();
     }
-    showBadge('📷 영수증 인식 완료!');
+
+    const filled = [result.amount > 0 ? '금액' : '', result.memo ? '메모' : '', result.date ? '날짜' : ''].filter(Boolean);
+    showBadge(`📷 인식 완료 — ${filled.join(', ')} 자동입력`);
   } catch (err) {
     showBadge(`❌ ${err.message || 'OCR 실패'}`);
   } finally {
+    _hideOcrOverlay();
     if (btn) btn.innerHTML = origText;
   }
 }
