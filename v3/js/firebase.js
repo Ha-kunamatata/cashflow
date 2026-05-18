@@ -81,7 +81,10 @@ export async function signOutUser() {
 
 function getRef() {
   const user = auth.currentUser;
-  return user ? doc(db, 'users', user.uid, 'data', 'main') : null;
+  if (!user) return null;
+  const hCode = localStorage.getItem('cashflow_household');
+  if (hCode) return doc(db, 'households', hCode, 'data', 'main');
+  return doc(db, 'users', user.uid, 'data', 'main');
 }
 
 export async function saveToFirebase(data) {
@@ -146,6 +149,88 @@ export async function fetchSharedGoalByCode(code) {
     return snap.exists() ? snap.data() : null;
   } catch (e) {
     console.warn('공유 목표 조회 실패:', e);
+    return null;
+  }
+}
+
+// ── 가계 공유 (커플/가족) ────────────────────────────────
+export function getCurrentHouseholdCode() {
+  return localStorage.getItem('cashflow_household') || null;
+}
+
+export async function createHousehold(stateData) {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  try {
+    await setDoc(doc(db, 'households', code), {
+      ownerId: user.uid,
+      ownerName: user.displayName || user.email || '알 수 없음',
+      members: [user.uid],
+      memberNames: [user.displayName || user.email || '알 수 없음'],
+      createdAt: new Date().toISOString(),
+    });
+    const dataRef = doc(db, 'households', code, 'data', 'main');
+    await setDoc(dataRef, stateData);
+    localStorage.setItem('cashflow_household', code);
+    return code;
+  } catch (e) {
+    console.warn('가계 생성 실패:', e);
+    return null;
+  }
+}
+
+export async function joinHousehold(code) {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const upper = code.trim().toUpperCase();
+  try {
+    const metaRef = doc(db, 'households', upper);
+    const metaSnap = await getDoc(metaRef);
+    if (!metaSnap.exists()) return null;
+    const meta = metaSnap.data();
+    const members = [...new Set([...meta.members, user.uid])];
+    const memberNames = [...new Set([...meta.memberNames, user.displayName || user.email || '알 수 없음'])];
+    await setDoc(metaRef, { ...meta, members, memberNames });
+    localStorage.setItem('cashflow_household', upper);
+    const dataSnap = await getDoc(doc(db, 'households', upper, 'data', 'main'));
+    return dataSnap.exists() ? dataSnap.data() : {};
+  } catch (e) {
+    console.warn('가계 참여 실패:', e);
+    return null;
+  }
+}
+
+export async function leaveHousehold() {
+  const code = getCurrentHouseholdCode();
+  if (!code) return;
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const metaRef = doc(db, 'households', code);
+      const metaSnap = await getDoc(metaRef);
+      if (metaSnap.exists()) {
+        const meta = metaSnap.data();
+        const members = meta.members.filter(uid => uid !== user.uid);
+        const memberNames = meta.memberNames
+          ? meta.memberNames.filter((_, i) => meta.members[i] !== user.uid)
+          : [];
+        await setDoc(metaRef, { ...meta, members, memberNames });
+      }
+    } catch (e) {
+      console.warn('가계 나가기 실패:', e);
+    }
+  }
+  localStorage.removeItem('cashflow_household');
+}
+
+export async function getHouseholdMeta() {
+  const code = getCurrentHouseholdCode();
+  if (!code) return null;
+  try {
+    const snap = await getDoc(doc(db, 'households', code));
+    return snap.exists() ? { ...snap.data(), code } : null;
+  } catch (e) {
     return null;
   }
 }

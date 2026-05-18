@@ -24,6 +24,8 @@ let _forecastFilter = 'all';
 let _entryFilter = '전체';
 let _annualReviewYear = null;
 let _annualReviewListenerReady = false;
+let _simCategory = null;
+let _simCurrentAvg = 0;
 
 export let currentLedgerYear = today().getFullYear();
 export let currentLedgerMonth = today().getMonth();
@@ -183,6 +185,69 @@ export function renderSettingsStats() {
 }
 
 // ════════════════════════════════════════════════════════
+// 주간 요약 카드
+// ════════════════════════════════════════════════════════
+function _getWeekExpense(offsetWeeks) {
+  const now = today();
+  const dow = now.getDay();
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMon + offsetWeeks * 7);
+  monday.setHours(0, 0, 0, 0);
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    if (d > now) break;
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    total += (state.ledgerData?.[dk] || [])
+      .filter(it => it.type === 'expense')
+      .reduce((s, it) => s + it.amount, 0);
+  }
+  return total;
+}
+
+export function renderWeeklyCard() {
+  const el = document.getElementById('weekly-summary-card');
+  if (!el) return;
+  const thisWeek = _getWeekExpense(0);
+  const lastWeek = _getWeekExpense(-1);
+  const diff = thisWeek - lastWeek;
+  const diffColor = diff <= 0 ? 'var(--green2)' : 'var(--red2)';
+  const now = today();
+  const dow = now.getDay();
+  const daysIn = dow === 0 ? 7 : dow; // days elapsed this week (Mon=1...Sun=7)
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const hasBudget = Object.keys(budget).length > 0;
+  const actual = hasBudget ? getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth()) : {};
+  const budgetTotal = Object.values(budget).reduce((s, v) => s + v, 0);
+  const actualTotal = Object.values(actual).reduce((s, v) => s + v, 0);
+  const remaining = budgetTotal - actualTotal;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:18px">📅</span>
+      <div style="font-size:13px;font-weight:800;color:var(--text)">이번 주 지출 현황</div>
+      <span style="font-size:10px;color:var(--text3);margin-left:auto">월요일 기준</span>
+    </div>
+    <div style="display:flex;gap:0;margin-bottom:${hasBudget ? '10px' : '0'}">
+      <div style="flex:1;text-align:center;padding:10px 8px;background:var(--bg3);border-radius:12px 0 0 12px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">지난 주</div>
+        <div style="font-size:15px;font-weight:800;font-family:var(--mono);color:var(--text2)">${fmtShort(lastWeek)}</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px 8px;background:rgba(99,102,241,0.12);border-radius:0 12px 12px 0;border:1px solid rgba(99,102,241,0.3)">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">이번 주 (${daysIn}일)</div>
+        <div style="font-size:15px;font-weight:800;font-family:var(--mono);color:#a5b4fc">${fmtShort(thisWeek)}</div>
+        <div style="font-size:10px;margin-top:2px;color:${diffColor}">${diff <= 0 ? '▼' : '▲'} ${fmtShort(Math.abs(diff))} 전주비</div>
+      </div>
+    </div>
+    ${hasBudget ? `<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+      <span style="color:var(--text3)">이번달 예산 잔여</span>
+      <span style="font-weight:800;font-family:var(--mono);color:${remaining >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(remaining)}</span>
+    </div>` : ''}`;
+}
+
+// ════════════════════════════════════════════════════════
 // 홈
 // ════════════════════════════════════════════════════════
 export function renderHome() {
@@ -334,6 +399,8 @@ export function renderHome() {
     fillEl.style.width = `${pct}%`;
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
+
+  renderWeeklyCard();
 
   // ── 재정 건강 점수 미니 카드 ────────────────────────────
   const miniScoreEl = document.getElementById('health-score-mini');
@@ -708,7 +775,44 @@ export function setEntryFilter(filter, btn) {
   renderEntries();
 }
 
+export function renderSubscriptionRadar() {
+  const el = document.getElementById('subscription-radar');
+  if (!el) return;
+  const SUB_CATS = new Set(['구독', '인터넷·통신', '보험']);
+  const subs = state.entries.filter(e =>
+    e.type === 'expense' && e.repeat === '매월' && SUB_CATS.has(e.category)
+  );
+  if (!subs.length) { el.innerHTML = ''; return; }
+  const total = subs.reduce((s, e) => s + e.amount, 0);
+  el.innerHTML = `
+    <div class="card" style="border:1px solid rgba(251,191,36,0.3);background:rgba(251,191,36,0.06)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:16px">📡</span>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text)">구독/정기결제 레이더</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">혹시 안 쓰는 구독 있지 않나요?</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:11px;color:var(--text3)">월 합계</div>
+          <div style="font-size:15px;font-weight:900;font-family:var(--mono);color:var(--yellow)">${fmtShort(total)}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${subs.map(e => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:10px">
+            <span style="font-size:14px">${e.category === '구독' ? '📺' : e.category === '인터넷·통신' ? '📱' : '🛡️'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtml(e.name)}</div>
+              <div style="font-size:10px;color:var(--text3)">${escapeHtml(e.category)} · 매월 ${e.day || '-'}일</div>
+            </div>
+            <div style="font-size:13px;font-weight:800;font-family:var(--mono);color:var(--red2)">-${fmtShort(e.amount)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
 export function renderEntries() {
+  renderSubscriptionRadar();
   const container = document.getElementById('entries-list');
   if (!container) return;
 
@@ -1477,6 +1581,111 @@ function _buildDonutSvg(cats, total, R = 52, CX = 60, CY = 60) {
   return paths;
 }
 
+// ════════════════════════════════════════════════════════
+// 만약에 시뮬레이터
+// ════════════════════════════════════════════════════════
+export function renderSimulator() {
+  const chipsEl = document.getElementById('sim-cat-chips');
+  if (!chipsEl) return;
+
+  // 최근 3개월 카테고리별 지출 평균 계산
+  const now = today();
+  const catTotals = {}, catMonths = {};
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+    for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+      if (!dk.startsWith(prefix)) continue;
+      for (const item of items) {
+        if (item.type !== 'expense') continue;
+        catTotals[item.category] = (catTotals[item.category] || 0) + item.amount;
+        catMonths[item.category] = new Set([...(catMonths[item.category] || []), prefix]);
+      }
+    }
+  }
+  const cats = Object.entries(catTotals)
+    .map(([cat, total]) => ({ cat, avg: Math.round(total / (catMonths[cat]?.size || 1)) }))
+    .filter(c => c.avg > 0)
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 8);
+
+  if (!cats.length) {
+    chipsEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">가계부 데이터가 쌓이면 시뮬레이터를 사용할 수 있어요</div>';
+    return;
+  }
+
+  chipsEl.innerHTML = cats.map(c =>
+    `<button class="ledger-tag-btn${_simCategory === c.cat ? ' active' : ''}" data-sim-cat="${escapeHtml(c.cat)}">${escapeHtml(c.cat)} <span style="font-size:9px;opacity:.7">${fmtShort(c.avg)}</span></button>`
+  ).join('');
+
+  updateSimResult();
+}
+
+export function setSimCategory(cat) {
+  const now = today();
+  let total = 0, months = 0;
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+    let monthTotal = 0;
+    for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+      if (!dk.startsWith(prefix)) continue;
+      for (const item of items) {
+        if (item.type === 'expense' && item.category === cat) monthTotal += item.amount;
+      }
+    }
+    if (monthTotal > 0) { total += monthTotal; months++; }
+  }
+  _simCategory = cat;
+  _simCurrentAvg = months > 0 ? Math.round(total / months) : 0;
+
+  document.querySelectorAll('#sim-cat-chips .ledger-tag-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.simCat === cat)
+  );
+
+  const wrap = document.getElementById('sim-slider-wrap');
+  const slider = document.getElementById('sim-slider');
+  const maxEl = document.getElementById('sim-slider-max');
+  if (wrap) wrap.style.display = _simCurrentAvg > 0 ? '' : 'none';
+  if (slider) { slider.max = _simCurrentAvg; slider.value = Math.round(_simCurrentAvg * 0.6); }
+  if (maxEl) maxEl.textContent = fmtShort(_simCurrentAvg) + ' (현재)';
+
+  updateSimResult();
+}
+
+export function updateSimResult() {
+  const resultEl = document.getElementById('sim-result');
+  if (!resultEl) return;
+  if (!_simCategory || !_simCurrentAvg) {
+    resultEl.innerHTML = '';
+    return;
+  }
+  const slider = document.getElementById('sim-slider');
+  const target = slider ? Number(slider.value) : 0;
+  const monthlySaving = _simCurrentAvg - target;
+
+  const valEl = document.getElementById('sim-slider-val');
+  if (valEl) valEl.textContent = fmtShort(target);
+
+  if (monthlySaving <= 0) {
+    resultEl.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">현재보다 지출을 줄여야 절약 효과가 계산돼요</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = `
+    <div style="padding:10px 12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:12px;margin-top:4px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${escapeHtml(_simCategory)} 지출을 ${fmtShort(_simCurrentAvg)} → ${fmtShort(target)}으로 줄이면</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center">
+        ${[1, 3, 6, 12].map(m => `
+          <div style="padding:8px 4px;background:var(--bg3);border-radius:10px">
+            <div style="font-size:9px;color:var(--text3)">${m}개월</div>
+            <div style="font-size:13px;font-weight:800;font-family:var(--mono);color:var(--green2)">+${fmtShort(monthlySaving * m)}</div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center">월 절약액 <span style="color:var(--green2);font-weight:700">${fmtShort(monthlySaving)}</span></div>
+    </div>`;
+}
+
 export function renderReport() {
   const now = today();
 
@@ -1685,6 +1894,7 @@ export function renderReport() {
       </div>`;
   }
 
+  renderSimulator();
   renderAnnualReview();
 }
 
@@ -2653,4 +2863,42 @@ export async function refreshAllStocks() {
   renderFinance();
 
   if (infoEl) infoEl.textContent = `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR')}`;
+}
+
+// ════════════════════════════════════════════════════════
+// 가계 공유 섹션
+// ════════════════════════════════════════════════════════
+export async function renderHouseholdSection() {
+  const el = document.getElementById('household-section');
+  if (!el) return;
+  const { getCurrentHouseholdCode, getHouseholdMeta } = await import('./firebase.js');
+  const code = getCurrentHouseholdCode();
+  if (!code) {
+    el.innerHTML = `
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+        커플이나 가족과 같은 가계부를 공유하세요.<br>한 명이 코드를 생성하면 다른 사람이 참여할 수 있어요.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn" id="btn-create-household" style="padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:8px;justify-content:center"><div class="ripple-container"></div>🏠 공유 코드 생성하기</button>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="household-join-code" placeholder="코드 입력 (6자리)" maxlength="6" style="flex:1;text-transform:uppercase;font-family:var(--mono);font-size:14px;text-align:center;letter-spacing:3px">
+          <button class="btn btn-ghost" id="btn-join-household" style="padding:12px 16px;font-size:13px;white-space:nowrap">참여</button>
+        </div>
+      </div>`;
+    return;
+  }
+  const meta = await getHouseholdMeta() || {};
+  const isOwner = meta.ownerId === window.currentUser?.uid;
+  const memberStr = (meta.memberNames || []).join(' · ') || '-';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:12px;margin-bottom:12px">
+      <span style="font-size:20px">🏠</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#a5b4fc">공유 모드 활성 ${isOwner ? '(방장)' : '(멤버)'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">코드: <span style="font-family:var(--mono);font-weight:700;color:var(--text);letter-spacing:2px">${code}</span></div>
+      </div>
+      <button id="btn-copy-household-code" style="margin-left:auto;padding:4px 10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#a5b4fc;font-size:11px;cursor:pointer">복사</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">멤버: ${escapeHtml(memberStr)}</div>
+    <button class="btn" id="btn-leave-household" style="padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red2);border-radius:12px;font-size:13px;font-family:var(--font);width:100%;display:flex;align-items:center;gap:8px;justify-content:center">${isOwner ? '🚪 공유 모드 종료' : '🚪 가계에서 나가기'}</button>`;
 }

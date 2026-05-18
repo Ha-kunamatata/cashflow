@@ -50,6 +50,9 @@ import {
   renderCardDefs,
   getWishSelectedIds,
   clearWishSelection,
+  renderHouseholdSection,
+  setSimCategory,
+  updateSimResult,
 } from './render.js';
 
 import {
@@ -126,6 +129,10 @@ import {
   hideWatchlistForm,
   saveWatchlistItem,
   deleteWatchlistItem,
+  createHouseholdUI,
+  joinHouseholdUI,
+  leaveHouseholdUI,
+  copyHouseholdCode,
 } from './ui.js';
 
 import {
@@ -308,7 +315,25 @@ document.getElementById('btn-report-cat-modal-close')?.addEventListener('click',
 
 // 바텀 탭
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
-  btn.addEventListener('click', () => navigate(btn.dataset.page, btn));
+  btn.addEventListener('click', () => {
+    navigate(btn.dataset.page, btn);
+    if (btn.dataset.page === 'settings') renderHouseholdSection();
+  });
+});
+
+// 만약에 시뮬레이터
+document.getElementById('sim-cat-chips')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-sim-cat]');
+  if (btn) setSimCategory(btn.dataset.simCat);
+});
+document.getElementById('sim-slider')?.addEventListener('input', updateSimResult);
+
+// 가계 공유 — 이벤트 위임 (내용이 동적으로 교체되므로)
+document.getElementById('household-card')?.addEventListener('click', e => {
+  if (e.target.id === 'btn-create-household' || e.target.closest('#btn-create-household')) createHouseholdUI();
+  else if (e.target.id === 'btn-join-household' || e.target.closest('#btn-join-household')) joinHouseholdUI();
+  else if (e.target.id === 'btn-leave-household' || e.target.closest('#btn-leave-household')) leaveHouseholdUI();
+  else if (e.target.id === 'btn-copy-household-code') copyHouseholdCode();
 });
 
 // 항목 탭 서브탭 (고정항목 | 카드관리)

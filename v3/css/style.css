@@ -1607,3 +1607,10 @@ body.light-theme .bottom-nav::after {
 .ar-hl-icon { font-size: 20px; flex-shrink: 0; }
 .ar-hl-title { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
 .ar-hl-val { font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* ── 주간 요약 카드 ──────────────────────────────────────── */
+.weekly-summary-card { padding: 14px 16px; }
+
+/* ── 만약에 시뮬레이터 슬라이더 ─────────────────────────── */
+#sim-slider { -webkit-appearance: none; height: 6px; background: var(--bg3); border-radius: 6px; border: 1px solid var(--border2); outline: none; }
+#sim-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; box-shadow: 0 2px 8px rgba(99,102,241,0.4); }
