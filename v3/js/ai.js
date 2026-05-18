@@ -284,3 +284,88 @@ ${summary}
 
   return callGemini(prompt, 1536);
 }
+
+// ── 4. 주간 소비 코칭 ─────────────────────────────────
+export async function getWeeklyCoachingInsight(state) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const pad = n => String(n).padStart(2, '0');
+
+  const catThis = {}, catLast = {};
+  const thisPrefix = `${year}-${pad(month + 1)}`;
+  const lastDate = new Date(year, month - 1, 1);
+  const lastPrefix = `${lastDate.getFullYear()}-${pad(lastDate.getMonth() + 1)}`;
+
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    for (const item of items) {
+      if (item.type !== 'expense') continue;
+      if (dk.startsWith(thisPrefix)) {
+        catThis[item.category] = (catThis[item.category] || 0) + item.amount;
+      } else if (dk.startsWith(lastPrefix)) {
+        catLast[item.category] = (catLast[item.category] || 0) + item.amount;
+      }
+    }
+  }
+
+  const thisTotal = Object.values(catThis).reduce((s, v) => s + v, 0);
+  const lastTotal = Object.values(catLast).reduce((s, v) => s + v, 0);
+  const fixedIncome = (state.entries || [])
+    .filter(e => e.type === 'income' && e.repeat === '매월')
+    .reduce((s, e) => s + e.amount, 0);
+
+  const anomalies = [];
+  for (const [cat, amt] of Object.entries(catThis)) {
+    const prev = catLast[cat] || 0;
+    if (prev === 0 && amt > 10000) {
+      anomalies.push({ cat, amt, prev, change: 100 });
+    } else if (prev > 0) {
+      const changePct = Math.round(((amt - prev) / prev) * 100);
+      if (changePct > 20) anomalies.push({ cat, amt, prev, change: changePct });
+    }
+  }
+  anomalies.sort((a, b) => b.change - a.change);
+
+  const catList = Object.entries(catThis)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([cat, amt]) => {
+      const prev = catLast[cat];
+      const changeStr = prev
+        ? ` (전월 ${prev.toLocaleString('ko-KR')}원, ${Math.round((amt - prev) / prev * 100) >= 0 ? '+' : ''}${Math.round((amt - prev) / prev * 100)}%)`
+        : ' (이번달 신규)';
+      return `  - ${cat}: ${amt.toLocaleString('ko-KR')}원${changeStr}`;
+    })
+    .join('\n') || '  (없음)';
+
+  const anomalyList = anomalies.slice(0, 3)
+    .map(a => `  - ${a.cat}: +${a.change}% (${a.amt.toLocaleString('ko-KR')}원 / 전월 ${a.prev.toLocaleString('ko-KR')}원)`)
+    .join('\n') || '  (없음)';
+
+  const prompt = `당신은 개인 재무 코치 AI입니다. 다음 데이터를 바탕으로 실용적인 소비 코칭을 제공하세요.
+
+이번달 지출 합계: ${thisTotal.toLocaleString('ko-KR')}원
+전월 지출 합계: ${lastTotal.toLocaleString('ko-KR')}원
+월 고정수입: ${fixedIncome.toLocaleString('ko-KR')}원
+
+이번달 카테고리별 지출 (상위 5개):
+${catList}
+
+전월 대비 급증한 카테고리:
+${anomalyList}
+
+인사말 없이 바로 아래 형식으로 한국어 코칭을 작성하세요:
+
+## 📊 이번달 지출 진단
+전월 대비 지출 변화를 1-2문장으로 요약.
+
+## ⚠️ 주목할 카테고리
+급증한 지출 카테고리 분석. 없으면 긍정적 피드백.
+
+## 💡 이번주 절약 팁
+즉시 실천 가능한 구체적인 절약 행동 2가지.
+
+각 섹션 2-3문장. 간결하고 실용적으로.`;
+
+  return callGemini(prompt, 1024);
+}
