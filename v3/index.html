@@ -107,6 +107,9 @@
   <!-- 오늘의 소비 타임라인 -->
   <div id="today-timeline" style="margin-bottom:12px"></div>
 
+  <!-- 예산 진행 바 위젯 -->
+  <div id="home-budget-widget" style="margin-bottom:12px"></div>
+
   <!-- 주간 요약 카드 -->
   <div class="card weekly-summary-card" id="weekly-summary-card" style="margin-bottom:12px"></div>
 
@@ -355,6 +358,8 @@
       </div>
       <div class="ledger-weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
       <div id="ledger-calendar-grid" class="ledger-calendar-grid"></div>
+      <!-- 선택된 날짜 인라인 상세 패널 -->
+      <div id="ledger-day-inline-panel" style="display:none"></div>
     </div>
   </div>
 
@@ -468,6 +473,20 @@
   <div class="card" style="margin-bottom:12px">
     <div class="card-title">🧠 소비 성향 분석</div>
     <div id="report-personality"></div>
+  </div>
+
+  <!-- 월간 리포트 카드 -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div class="card-title" style="margin:0">📸 이달 리포트 카드</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">이달 소비 요약 이미지 저장</div>
+      </div>
+      <button class="btn btn-primary" id="btn-save-report-card" style="padding:8px 16px;font-size:12px;border-radius:12px;white-space:nowrap;flex-shrink:0">
+        <div class="ripple-container"></div>💾 카드 저장
+      </button>
+    </div>
+    <canvas id="report-card-canvas" style="display:none;width:100%;margin-top:12px;border-radius:12px;border:1px solid var(--border)"></canvas>
   </div>
 
   <!-- 카테고리별 지출 (클릭 시 모달) -->
