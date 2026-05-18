@@ -681,8 +681,62 @@ body.light-theme .form-sheet { background:linear-gradient(180deg,#ffffff,#f5f8ff
 
 /* ── AI 컴포넌트 ── */
 .ai-insight-card { border:1px solid rgba(99,102,241,0.25); background:rgba(99,102,241,0.07); }
-.ai-chat-fab { position:fixed; bottom:calc(72px + env(safe-area-inset-bottom)); right:18px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; box-shadow:0 4px 20px rgba(99,102,241,0.5); display:flex; align-items:center; justify-content:center; padding:0; z-index:2000; cursor:pointer; }
-.ai-chat-fab:active { transform:scale(0.94); }
+/* ── 스피드 다이얼 FAB ── */
+#fab-speed-dial {
+  position: fixed;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  z-index: 2000;
+}
+.fab-main-btn {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.5);
+  padding: 0; flex-shrink: 0;
+  transition: box-shadow 0.2s;
+}
+.fab-main-btn:active { transform: scale(0.94); }
+.fab-main-icon {
+  font-size: 28px; color: #fff; font-weight: 300; line-height: 1;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  display: block;
+}
+#fab-speed-dial.open .fab-main-icon { transform: rotate(45deg); }
+.fab-sub {
+  display: flex; align-items: center; gap: 10px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+#fab-speed-dial.open .fab-sub { opacity: 1; pointer-events: auto; transform: translateY(0); }
+#fab-speed-dial.open #fab-sub-chat   { transition-delay: 0.06s; }
+#fab-speed-dial.open #fab-sub-ledger { transition-delay: 0.0s; }
+.fab-sub-label {
+  font-size: 11px; font-weight: 700; color: #fff;
+  background: rgba(0,0,0,0.6); padding: 4px 9px; border-radius: 8px;
+  white-space: nowrap; backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.fab-sub-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--bg2); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  transition: transform 0.15s;
+}
+.fab-sub-btn:active { transform: scale(0.9); }
+/* 뒷배경 오버레이 */
+#fab-backdrop {
+  position: fixed; inset: 0; z-index: 1999;
+  display: none;
+}
 
 /* ── 리포트 탭 ── */
 .report-cat-legend-row { display:flex; align-items:center; gap:7px; padding:3px 0; }
@@ -760,7 +814,7 @@ body.light-theme .badge-item { background: var(--bg3); border-color: var(--borde
 body.light-theme .badge-item.earned { background: rgba(99,102,241,0.06); border-color: rgba(99,102,241,0.3); }
 body.light-theme .house-progress-fill { background: linear-gradient(90deg, #4f46e5, #7c3aed); }
 body.light-theme .streak-chip { background: rgba(234,88,12,0.10); border-color: rgba(234,88,12,0.25); color: var(--orange); }
-body.light-theme .ai-chat-fab { box-shadow: 0 4px 20px rgba(99,102,241,0.35); }
+body.light-theme .fab-main-btn { box-shadow: 0 4px 20px rgba(99,102,241,0.35); }
 
 /* ════════════════════════════════════════════════════════
    탑바 밸런스 필
@@ -1633,22 +1687,6 @@ body.light-theme .bottom-nav::after {
 /* ── lday-item 스와이프 지원 ──────────────────────────── */
 .lday-item { transition: transform 0.22s ease; }
 
-/* ── 빠른 입력 FAB ─────────────────────────────────────── */
-.quick-add-fab {
-  position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom));
-  right: 80px;
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
-  border: none;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.45);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-  padding: 0; z-index: 2000; cursor: pointer; color: #fff;
-  transition: transform 0.15s;
-}
-.quick-add-fab:active { transform: scale(0.9); }
 
 /* ── 즐겨찾기 템플릿 칩 ─────────────────────────────────── */
 .template-chip {
