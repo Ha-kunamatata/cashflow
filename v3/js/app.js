@@ -1456,3 +1456,126 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
   const btn = e.target.closest('.ledger-tag-btn');
   if (btn?.dataset.cat) setTrendCategory(btn.dataset.cat);
 });
+
+// ══════════════════════════════════════════════════════════════
+// 전체 검색
+// ══════════════════════════════════════════════════════════════
+(function _setupSearch() {
+  const overlay  = document.getElementById('search-overlay');
+  const input    = document.getElementById('search-input');
+  const results  = document.getElementById('search-results');
+  const clearBtn = document.getElementById('btn-search-clear');
+  const closeBtn = document.getElementById('btn-search-close');
+  const openBtn  = document.getElementById('btn-open-search');
+  if (!overlay) return;
+
+  const CAT_COLORS = {
+    '월급':'#34d399','부수입':'#6ee7b7','식비':'#60a5fa','교통':'#38bdf8',
+    '카드':'#f87171','할부':'#fb923c','공과금':'#facc15','보험':'#c084fc',
+    '통신':'#a78bfa','구독':'#f472b6','기타지출':'#94a3b8','주거':'#fbbf24',
+    '의료':'#4ade80','문화':'#e879f9','기타':'#64748b',
+  };
+
+  function openSearch() {
+    overlay.style.display = 'flex';
+    setTimeout(() => input.focus(), 80);
+    _renderResults('');
+  }
+  function closeSearch() {
+    overlay.style.display = 'none';
+    input.value = '';
+    clearBtn.style.display = 'none';
+  }
+
+  function highlight(text, query) {
+    if (!query) return escapeHtml(text);
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx < 0) return escapeHtml(text);
+    return escapeHtml(text.slice(0, idx))
+      + `<mark class="search-result-mark">${escapeHtml(text.slice(idx, idx + query.length))}</mark>`
+      + escapeHtml(text.slice(idx + query.length));
+  }
+
+  function _renderResults(query) {
+    const q = query.trim().toLowerCase();
+    const items = [];
+
+    for (const [dk, entries] of Object.entries(state.ledgerData || {})) {
+      for (const item of entries) {
+        const catMatch  = item.category?.toLowerCase().includes(q);
+        const memoMatch = item.memo?.toLowerCase().includes(q);
+        const amtStr    = String(item.amount);
+        const amtMatch  = amtStr.includes(q);
+        const dateMatch = dk.includes(q);
+        if (!q || catMatch || memoMatch || amtMatch || dateMatch) {
+          items.push({ dk, item });
+        }
+      }
+    }
+
+    // 최신 날짜 순 정렬, 최대 60건
+    items.sort((a, b) => b.dk.localeCompare(a.dk));
+    const slice = items.slice(0, 60);
+
+    if (!slice.length) {
+      results.innerHTML = `<div class="search-empty">${q ? '검색 결과가 없어요' : '가계부에 기록된 내역이 없어요'}<br><span style="font-size:20px;margin-top:8px;display:block">🔍</span></div>`;
+      return;
+    }
+
+    const d0 = new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    results.innerHTML = slice.map(({ dk, item }) => {
+      const d = new Date(dk);
+      const isToday = dk === `${d0.getFullYear()}-${p2(d0.getMonth()+1)}-${p2(d0.getDate())}`;
+      const dateLabel = isToday ? '오늘' : `${d.getMonth()+1}/${d.getDate()}`;
+      const sign = item.type === 'expense' ? '-' : '+';
+      const amtColor = item.type === 'expense' ? 'var(--red2)' : 'var(--green2)';
+      const dot = CAT_COLORS[item.category] || '#64748b';
+      return `<div class="search-result-item" data-dk="${dk}">
+        <div class="search-result-dot" style="background:${dot}"></div>
+        <div class="search-result-info">
+          <div class="search-result-cat">${highlight(item.category || '', query)}</div>
+          <div class="search-result-meta">
+            <span>${dateLabel}</span>
+            ${item.memo ? `<span>·</span><span>${highlight(item.memo, query)}</span>` : ''}
+          </div>
+        </div>
+        <div class="search-result-amt" style="color:${amtColor}">${sign}${fmtShort(item.amount)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  let _debounceTimer;
+  input.addEventListener('input', () => {
+    const q = input.value;
+    clearBtn.style.display = q ? 'flex' : 'none';
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => _renderResults(q), 140);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.style.display = 'none';
+    _renderResults('');
+    input.focus();
+  });
+
+  results.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-dk]');
+    if (!row) return;
+    const dk = row.dataset.dk;
+    closeSearch();
+    // 기록 탭으로 이동 후 해당 날짜 열기
+    const ledgerBtn = document.querySelector('.nav-btn[data-page="ledger"]');
+    navigate('ledger', ledgerBtn);
+    setTimeout(() => _toggleLedgerInlinePanel(dk), 280);
+  });
+
+  openBtn?.addEventListener('click', openSearch);
+  closeBtn?.addEventListener('click', closeSearch);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeSearch();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+  });
+})();
