@@ -53,6 +53,7 @@ import {
   renderHouseholdSection,
   setSimCategory,
   updateSimResult,
+  renderWeeklyCoachingCard,
 } from './render.js';
 
 import {
@@ -150,6 +151,110 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
+// ── 컨페티 애니메이션 ──────────────────────────────────
+window.launchConfetti = function(duration = 3200) {
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a78bfa', '#34d399', '#fbbf24', '#60a5fa'];
+  const particles = Array.from({ length: 90 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -10 - Math.random() * 80,
+    w: Math.random() * 9 + 4,
+    h: Math.random() * 6 + 3,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    vx: (Math.random() - 0.5) * 4,
+    vy: Math.random() * 4 + 2,
+    rot: Math.random() * 360,
+    rotV: (Math.random() - 0.5) * 9,
+    alpha: 1,
+  }));
+  const end = Date.now() + duration;
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = Date.now();
+    const ratio = Math.max(0, (end - now) / duration);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.rot += p.rotV; p.vy += 0.06;
+      p.alpha = Math.min(1, ratio * 3);
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (now < end) requestAnimationFrame(frame);
+    else canvas.style.display = 'none';
+  }
+  requestAnimationFrame(frame);
+};
+
+// ── 로컬 알림 체크 ──────────────────────────────────────
+async function _checkNotifications() {
+  if (!('Notification' in window) || Notification.permission === 'denied') return;
+  if (Notification.permission === 'default') {
+    const perm = await Notification.requestPermission().catch(() => 'denied');
+    if (perm !== 'granted') return;
+  }
+  if (Notification.permission !== 'granted') return;
+
+  const now = new Date();
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+
+  import('./utils.js').then(({ fmtShort }) => {
+    const salaryEntry = state.entries.find(e => e.type === 'income' && e.repeat === '매월' && e.day);
+    if (salaryEntry && tomorrow.getDate() === salaryEntry.day) {
+      new Notification('💰 내일 월급날!', {
+        body: `${salaryEntry.name} ${fmtShort(salaryEntry.amount)} 입금 예정`, icon: '/favicon.ico'
+      });
+    }
+  });
+}
+
+// ── 스와이프로 항목 삭제 (가계부 날짜 시트) ────────────
+(function _setupSwipeDelete() {
+  let el = null, startX = 0, startY = 0, swiping = false;
+  const container = document.getElementById('ledger-day-items-list');
+  if (!container) return;
+
+  container.addEventListener('touchstart', e => {
+    const item = e.target.closest('.lday-item');
+    if (!item) return;
+    el = item; startX = e.touches[0].clientX; startY = e.touches[0].clientY; swiping = false;
+    el.style.transition = 'none';
+  }, { passive: true });
+
+  container.addEventListener('touchmove', e => {
+    if (!el) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (!swiping && dy > 10) { el = null; return; }
+    if (dx < -5) swiping = true;
+    if (swiping && dx < 0) {
+      el.style.transform = `translateX(${Math.max(-76, dx)}px)`;
+    }
+  }, { passive: true });
+
+  container.addEventListener('touchend', e => {
+    if (!el) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    el.style.transition = 'transform 0.22s ease';
+    if (swiping && dx < -56) {
+      const delBtn = el.querySelector('.lday-del-btn');
+      el.style.transform = 'translateX(0)';
+      if (delBtn) delBtn.click();
+    } else {
+      el.style.transform = 'translateX(0)';
+    }
+    el = null; swiping = false;
+  });
+})();
+
 // ── Firebase 인증 상태 감지 ────────────────────────────
 initAuth(
   async (user) => {
@@ -222,6 +327,9 @@ initAuth(
     // 월급날 이벤트 & 배지 체크
     checkSalaryEvent();
     runBadgeCheck();
+
+    // 로컬 알림 체크 (비동기)
+    _checkNotifications();
 
     // 예산 모듈 참조 등록 (render.js에서 year/month 접근용)
     window._budgetUiRef = { getBudgetYear, getBudgetMonth };
@@ -548,6 +656,7 @@ document.getElementById('budget-page-content')?.addEventListener('click', (e) =>
 });
 
 // AI 기능
+document.getElementById('btn-coaching-refresh')?.addEventListener('click', () => renderWeeklyCoachingCard(true));
 document.getElementById('btn-save-gemini-key')?.addEventListener('click', saveGeminiKey);
 document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);
 document.getElementById('btn-ai-insight-expand')?.addEventListener('click', () => openSheet('ai-insight-full-sheet'));

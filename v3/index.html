@@ -11,7 +11,7 @@
 <title>💰 내 자금 흐름</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -93,6 +93,8 @@
             <span class="balance-mask-hint">탭해서 확인</span>
           </div>
         </div>
+        <!-- 스파크라인: 최근 14일 지출 패턴 -->
+        <div id="balance-sparkline" style="margin:6px 0 2px"></div>
         <div class="balance-warning" id="balance-warning" style="display:none">
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
@@ -101,6 +103,9 @@
         <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
       </div>
   <div class="alert-banner" id="alert-banner" style="display:none"></div>
+
+  <!-- 오늘의 소비 타임라인 -->
+  <div id="today-timeline" style="margin-bottom:12px"></div>
 
   <!-- 주간 요약 카드 -->
   <div class="card weekly-summary-card" id="weekly-summary-card" style="margin-bottom:12px"></div>
@@ -477,6 +482,28 @@
   <div class="card" style="margin-bottom:12px">
     <div class="card-title">📅 전월 비교</div>
     <div id="report-mom-compare"></div>
+  </div>
+
+  <!-- AI 주간 소비 코칭 -->
+  <div class="card" id="ai-coaching-card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:18px">🤖</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">AI 주간 소비 코칭</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">카테고리 이상 지출 감지 · Gemini AI</div>
+      </div>
+      <button class="btn ai-refresh-btn" id="btn-coaching-refresh" title="새로고침">
+        <div class="ripple-container"></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+    <div id="ai-coaching-content">
+      <div class="ai-skeleton-wrap">
+        <div class="ai-skeleton" style="width:82%"></div>
+        <div class="ai-skeleton" style="width:66%"></div>
+        <div class="ai-skeleton" style="width:74%"></div>
+      </div>
+    </div>
   </div>
 
   <!-- 연간 재정 리뷰 -->
@@ -1247,6 +1274,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- 컨페티 캔버스 -->
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none"></canvas>
 
 </body>
 </html>

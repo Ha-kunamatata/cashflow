@@ -18,6 +18,7 @@ import {
 } from './utils.js';
 import { state, DEFAULT_CARDS } from './state.js';
 import { buildForecast, getCards, simulateWishPurchase } from './forecast.js';
+import { hasGeminiKey, renderMarkdown, getWeeklyCoachingInsight } from './ai.js';
 
 let _chartPeriod = 30;
 let _forecastFilter = 'all';
@@ -26,6 +27,7 @@ let _annualReviewYear = null;
 let _annualReviewListenerReady = false;
 let _simCategory = null;
 let _simCurrentAvg = 0;
+const _celebratedGoals = new Set();
 
 export let currentLedgerYear = today().getFullYear();
 export let currentLedgerMonth = today().getMonth();
@@ -248,6 +250,68 @@ export function renderWeeklyCard() {
 }
 
 // ════════════════════════════════════════════════════════
+// 스파크라인 (최근 14일 지출 패턴)
+// ════════════════════════════════════════════════════════
+function _renderSparkline() {
+  const el = document.getElementById('balance-sparkline');
+  if (!el) return;
+  const now = today();
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const items = state.ledgerData?.[dk] || [];
+    const exp = items.filter(it => it.type === 'expense').reduce((s, it) => s + it.amount, 0);
+    days.push({ exp, isToday: i === 0 });
+  }
+  const hasData = days.some(d => d.exp > 0);
+  if (!hasData) { el.innerHTML = ''; return; }
+  const maxExp = Math.max(...days.map(d => d.exp), 1);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:0.5px">14일 지출 패턴</span>
+      <span style="font-size:9px;color:rgba(255,255,255,0.45)">오늘 <span style="color:#f87171;font-weight:700">${fmtShort(days[13].exp)}</span></span>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:26px">
+      ${days.map(d => {
+        const pct = Math.max(10, Math.round((d.exp / maxExp) * 100));
+        const col = d.isToday ? 'rgba(129,140,248,0.9)' : d.exp > 0 ? 'rgba(248,113,113,0.65)' : 'rgba(255,255,255,0.08)';
+        return `<div style="flex:1;border-radius:2px 2px 0 0;background:${col};height:${pct}%;transition:height 0.3s ease"></div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 오늘의 소비 타임라인
+// ════════════════════════════════════════════════════════
+function _renderTodayTimeline() {
+  const el = document.getElementById('today-timeline');
+  if (!el) return;
+  const dk = dateKey(today());
+  const items = (state.ledgerData?.[dk] || []).filter(i => i.type === 'expense');
+  if (!items.length) { el.innerHTML = ''; return; }
+  const totalExp = items.reduce((s, i) => s + i.amount, 0);
+  el.innerHTML = `
+    <div class="card" style="padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:14px">🕐</span>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">오늘의 지출</div>
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--red2);margin-left:auto">-${fmtShort(totalExp)}</span>
+      </div>
+      ${items.slice(-4).reverse().map(i => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border)">
+          <span style="font-size:11px;width:16px;text-align:center">💸</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(i.memo || i.category || '-')}</div>
+            <div style="font-size:10px;color:var(--text3)">${escapeHtml(i.category)}</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--red2);flex-shrink:0">-${fmtShort(i.amount)}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
 // 홈
 // ════════════════════════════════════════════════════════
 export function renderHome() {
@@ -304,9 +368,23 @@ export function renderHome() {
 
   const monthPrefix = `${today().getFullYear()}-${p2(today().getMonth() + 1)}`;
   const { expense: checkTotal } = getLedgerMonth(today().getFullYear(), today().getMonth());
+  const prevMonthDate = new Date(today().getFullYear(), today().getMonth() - 1, 1);
+  const { expense: prevCheckTotal } = getLedgerMonth(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
 
   const sc = document.getElementById('sum-checkcard');
-  if (sc) sc.textContent = fmtShort(checkTotal);
+  if (sc) {
+    let trendHtml = '';
+    if (prevCheckTotal > 0 && checkTotal > 0) {
+      const diff = checkTotal - prevCheckTotal;
+      const pct = Math.round(Math.abs(diff) / prevCheckTotal * 100);
+      if (pct >= 5) {
+        trendHtml = diff < 0
+          ? ` <span class="trend-arrow trend-down">▼${pct}%</span>`
+          : ` <span class="trend-arrow trend-up">▲${pct}%</span>`;
+      }
+    }
+    sc.innerHTML = fmtShort(checkTotal) + trendHtml;
+  }
 
   const net = monthlyIncome - monthlyExpense;
   const netEl = document.getElementById('sum-net');
@@ -400,18 +478,31 @@ export function renderHome() {
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
 
+  _renderSparkline();
+  _renderTodayTimeline();
   renderWeeklyCard();
 
-  // ── 재정 건강 점수 미니 카드 ────────────────────────────
+  // ── 재정 건강 점수 미니 카드 (SVG 링 + 카운트업) ─────
   const miniScoreEl = document.getElementById('health-score-mini');
   if (miniScoreEl) {
     const cf = _calcMonthCF(today());
     const hs = _calcHealthScore(cf);
+    const r = 20, cx = 26, cy = 26;
+    const circ = 2 * Math.PI * r;
+    const dash = (hs.score / 100) * circ;
     miniScoreEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:52px;height:52px;border-radius:50%;border:3px solid ${hs.color};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
-          <div style="font-size:17px;font-weight:900;color:${hs.color};font-family:var(--mono);line-height:1">${hs.score}</div>
-          <div style="font-size:8px;color:var(--text3);line-height:1.2">/ 100</div>
+        <div style="position:relative;flex-shrink:0;width:52px;height:52px">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${hs.color}" stroke-width="4"
+              stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+              stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
+              style="transition:stroke-dasharray 0.8s ease"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;line-height:1">
+            <div id="health-score-num" style="font-size:15px;font-weight:900;color:${hs.color};font-family:var(--mono)">0</div>
+          </div>
         </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:5px">
@@ -426,6 +517,9 @@ export function renderHome() {
           </div>
         </div>
       </div>`;
+    // 카운트업 애니메이션
+    const numEl = document.getElementById('health-score-num');
+    if (numEl) animateNumber(numEl, hs.score, v => Math.round(v).toString());
   }
 
   // ── 하우스 레벨 & 스트릭 ───────────────────────────────
@@ -1686,6 +1780,40 @@ export function updateSimResult() {
     </div>`;
 }
 
+// ════════════════════════════════════════════════════════
+// AI 주간 소비 코칭 카드
+// ════════════════════════════════════════════════════════
+export async function renderWeeklyCoachingCard(force = false) {
+  const el = document.getElementById('ai-coaching-content');
+  if (!el) return;
+
+  if (!hasGeminiKey()) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:4px 0">Gemini API 키를 설정하면 AI 소비 코칭을 받을 수 있어요. 설정 탭에서 키를 입력해주세요.</div>`;
+    return;
+  }
+
+  const CACHE_KEY = 'cashflow_coaching_cache';
+  const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+  const TTL = 7 * 24 * 3600 * 1000;
+  if (!force && cached && Date.now() - cached.ts < TTL) {
+    el.innerHTML = `<div class="ai-coaching-body">${cached.html}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px">마지막 업데이트: ${new Date(cached.ts).toLocaleDateString('ko-KR')}</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="ai-skeleton-wrap"><div class="ai-skeleton" style="width:82%"></div><div class="ai-skeleton" style="width:66%"></div><div class="ai-skeleton" style="width:74%"></div></div>`;
+
+  try {
+    const insight = await getWeeklyCoachingInsight(state);
+    const html = renderMarkdown(insight);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), html }));
+    el.innerHTML = `<div class="ai-coaching-body">${html}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px">방금 업데이트됨</div>`;
+  } catch (err) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3)">${escapeHtml(err.message || 'AI 분석 실패')}</div>`;
+  }
+}
+
 export function renderReport() {
   const now = today();
 
@@ -1895,6 +2023,7 @@ export function renderReport() {
   }
 
   renderSimulator();
+  renderWeeklyCoachingCard();
   renderAnnualReview();
 }
 
@@ -2103,6 +2232,10 @@ export function renderGoals() {
       else if (monthsLeft <= 3 && pct < 100) urgency = 'warning';
     }
     const barColor = pct >= 100 ? 'var(--green2)' : urgency === 'urgent' ? 'var(--red2)' : urgency === 'warning' ? 'var(--orange)' : pct >= 60 ? 'var(--accent2)' : '#60a5fa';
+    if (pct >= 100 && !_celebratedGoals.has(g.id)) {
+      _celebratedGoals.add(g.id);
+      setTimeout(() => window.launchConfetti?.(), 400);
+    }
 
     // Monthly savings speed relative to required
     const monthlyIncome = state.entries
