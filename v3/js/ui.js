@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config.js';
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils.js';
-import { publishSharedGoal, fetchSharedGoalByCode } from './firebase.js';
+import { publishSharedGoal, fetchSharedGoalByCode, createHousehold, joinHousehold, leaveHousehold, getCurrentHouseholdCode } from './firebase.js';
 import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state.js';
 import * as renderModule from './render.js';
 import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI, renderMarkdown } from './ai.js';
@@ -1325,4 +1325,52 @@ export function deleteWatchlistItem(symbol) {
   state.watchlist = (state.watchlist || []).filter(w => w.symbol !== symbol);
   save();
   renderModule.renderFinance();
+}
+
+// ── 가계 공유 (커플/가족) ────────────────────────────────
+export async function createHouseholdUI() {
+  const btn = document.getElementById('btn-create-household');
+  if (btn) { btn.disabled = true; btn.textContent = '생성 중...'; }
+  try {
+    const code = await createHousehold({ ...state });
+    if (!code) { alert('가계 생성에 실패했어요. 다시 시도해주세요.'); return; }
+    showBadge(`🏠 공유 코드: ${code}`);
+    await renderModule.renderHouseholdSection();
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+export async function joinHouseholdUI() {
+  const input = document.getElementById('household-join-code');
+  const code = input?.value.trim().toUpperCase();
+  if (!code || code.length !== 6) { alert('6자리 코드를 입력해주세요'); return; }
+  const btn = document.getElementById('btn-join-household');
+  if (btn) { btn.disabled = true; btn.textContent = '참여 중...'; }
+  try {
+    const data = await joinHousehold(code);
+    if (data === null) { alert('코드를 찾을 수 없어요. 다시 확인해주세요.'); return; }
+    if (Object.keys(data).length > 0) {
+      Object.assign(state, data);
+      renderModule.renderAll();
+    }
+    showBadge('🏠 가계에 참여했어요');
+    await renderModule.renderHouseholdSection();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '참여'; }
+  }
+}
+
+export async function leaveHouseholdUI() {
+  const code = getCurrentHouseholdCode();
+  if (!confirm(`공유 모드(${code})를 종료할까요? 내 개인 데이터로 돌아갑니다.`)) return;
+  await leaveHousehold();
+  showBadge('🚪 공유 모드 종료됨');
+  await renderModule.renderHouseholdSection();
+}
+
+export function copyHouseholdCode() {
+  const code = getCurrentHouseholdCode();
+  if (!code) return;
+  navigator.clipboard?.writeText(code).then(() => showBadge('📋 코드 복사됨'));
 }
