@@ -1485,3 +1485,32 @@ export async function handleReceiptOCR(file) {
     if (btn) btn.innerHTML = origText;
   }
 }
+
+// 메모 자동완성 칩 클릭 시 폼에 적용
+export function applyMemoSuggestion({ memo, category, type }) {
+  const memoEl = document.getElementById('ledger-item-memo');
+  if (memoEl) memoEl.value = memo;
+
+  if (type && type !== _ledgerItemType) {
+    _ledgerItemType = type;
+    _renderItemFormType();
+  }
+  if (category) {
+    if (type === 'income') {
+      if (LEDGER_INCOME_CATEGORIES.includes(category)) _ledgerCategory = category;
+    } else {
+      for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
+        if (cats.includes(category)) {
+          _ledgerCatGroup = grp;
+          _ledgerCategory = category;
+          break;
+        }
+      }
+    }
+    _renderItemFormType();
+  }
+
+  // 추천 패널 닫기
+  const sug = document.getElementById('memo-suggestions');
+  if (sug) sug.innerHTML = '';
+}
