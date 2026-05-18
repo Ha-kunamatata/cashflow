@@ -1,38 +1,67 @@
 // ════════════════════════════════════════════════════════
-// state.js — 앱 상태 관리 / 저장 / 로드
+// state.ts — 앱 상태 관리 / 저장 / 로드
 // ════════════════════════════════════════════════════════
 import { STORAGE_KEY } from './config';
 import { uid, isPastOrToday } from './utils';
+import type { Entry, Card, LedgerData, LedgerItem, Goal, Asset, BudgetMap, WishItem, WatchlistItem, LedgerTemplate } from './types';
 
-// 기본 카드 정의 (커스터마이즈 가능)
-export const DEFAULT_CARDS = [
+declare global {
+  interface Window {
+    firebaseReady?: boolean;
+    saveToFirebase?: (data: unknown) => void;
+    currentUser?: unknown;
+  }
+}
+
+export interface StateShape {
+  balance: number;
+  dangerLine: number;
+  entries: Entry[];
+  cards: Card[] | null;
+  cardData: Record<string, Record<string, number>>;
+  checkData: Record<string, unknown>;
+  ledgerData: LedgerData;
+  appliedCheckData: Record<string, number>;
+  goals: Goal[];
+  theme: 'dark' | 'light';
+  assets: Asset[];
+  budgets: BudgetMap;
+  badges: string[];
+  streak: { count: number; lastDate: string };
+  wishlist: WishItem[];
+  watchlist: WatchlistItem[];
+  geminiKey: string;
+  ledgerTemplates: LedgerTemplate[];
+}
+
+export const DEFAULT_CARDS: Card[] = [
   { id: 'hyundai', name: '현대카드', color: '#3b82f6', payDay: 1 },
   { id: 'kookmin', name: '국민카드', color: '#f97316', payDay: 3 },
 ];
 
-export const state = {
+export const state: StateShape = {
   balance: 0,
   dangerLine: 100000,
   entries: [],
-  cards: null,          // [{ id, name, color, payDay }] — null이면 DEFAULT_CARDS 사용
-  cardData: {},         // { YYYYMM: { [card.id]: amount } }
-  checkData: {},        // 구버전 호환용 (ledgerData로 마이그레이션됨)
-  ledgerData: {},       // { YYYY-MM-DD: [{ id, type, category, amount, memo }] }
-  appliedCheckData: {}, // 잔고에 이미 반영된 내역 (날짜별 순지출)
+  cards: null,
+  cardData: {},
+  checkData: {},
+  ledgerData: {},
+  appliedCheckData: {},
   goals: [],
   theme: 'dark',
-  assets: [],           // 자산 목록
-  budgets: {},          // { "YYYY-MM": { "category": amount } }
-  badges: [],           // earned badge ids
+  assets: [],
+  budgets: {},
+  badges: [],
   streak: { count: 0, lastDate: '' },
-  wishlist: [],         // [{ id, name, price, url, priority, targetDate, notes, category, bought }]
-  watchlist: [],        // [{ id, symbol, name, market, buyPrice, quantity, note }]
-  geminiKey: '',        // Gemini API 키 (크로스 디바이스 동기화용)
-  ledgerTemplates: [],  // [{ id, type, category, amount, memo }] — 즐겨찾기 템플릿
+  wishlist: [],
+  watchlist: [],
+  geminiKey: '',
+  ledgerTemplates: [],
 };
 
 // ── 상태 완전 초기화 (계정 전환 시 메모리 상태 리셋) ──
-export function resetState() {
+export function resetState(): void {
   state.balance           = 0;
   state.dangerLine        = 100000;
   state.entries           = [];
@@ -54,10 +83,10 @@ export function resetState() {
 }
 
 // ── 저장 ──────────────────────────────────────────────
-export function save() {
+export function save(): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {}
+  } catch (_) {}
 
   if (window.firebaseReady && window.saveToFirebase) {
     window.saveToFirebase(JSON.parse(JSON.stringify(state)));
@@ -65,44 +94,44 @@ export function save() {
 }
 
 // ── 상태 유효성 검사 ──────────────────────────────────
-function validateState(d) {
+function validateState(d: unknown): d is Partial<StateShape> {
   if (typeof d !== 'object' || d === null || Array.isArray(d)) return false;
-  if ('balance'          in d && typeof d.balance !== 'number') return false;
-  if ('dangerLine'       in d && typeof d.dangerLine !== 'number') return false;
-  if ('entries'          in d && !Array.isArray(d.entries)) return false;
-  if ('goals'            in d && !Array.isArray(d.goals)) return false;
-  if ('cardData'         in d && (typeof d.cardData !== 'object' || Array.isArray(d.cardData))) return false;
-  if ('ledgerData'       in d && (typeof d.ledgerData !== 'object' || Array.isArray(d.ledgerData))) return false;
-  if ('appliedCheckData' in d && (typeof d.appliedCheckData !== 'object' || Array.isArray(d.appliedCheckData))) return false;
-  if ('assets'   in d && !Array.isArray(d.assets))   return false;
-  if ('badges'   in d && !Array.isArray(d.badges))   return false;
-  if ('budgets'  in d && (typeof d.budgets  !== 'object' || Array.isArray(d.budgets)))  return false;
-  if ('streak'   in d && (typeof d.streak   !== 'object' || Array.isArray(d.streak)))   return false;
+  const o = d as Record<string, unknown>;
+  if ('balance'          in o && typeof o.balance !== 'number') return false;
+  if ('dangerLine'       in o && typeof o.dangerLine !== 'number') return false;
+  if ('entries'          in o && !Array.isArray(o.entries)) return false;
+  if ('goals'            in o && !Array.isArray(o.goals)) return false;
+  if ('cardData'         in o && (typeof o.cardData !== 'object' || Array.isArray(o.cardData))) return false;
+  if ('ledgerData'       in o && (typeof o.ledgerData !== 'object' || Array.isArray(o.ledgerData))) return false;
+  if ('appliedCheckData' in o && (typeof o.appliedCheckData !== 'object' || Array.isArray(o.appliedCheckData))) return false;
+  if ('assets'   in o && !Array.isArray(o.assets))   return false;
+  if ('badges'   in o && !Array.isArray(o.badges))   return false;
+  if ('budgets'  in o && (typeof o.budgets  !== 'object' || Array.isArray(o.budgets)))  return false;
+  if ('streak'   in o && (typeof o.streak   !== 'object' || Array.isArray(o.streak)))   return false;
   return true;
 }
 
 // ── 로드 ──────────────────────────────────────────────
-export function load() {
+export function load(): void {
   try {
     const d = localStorage.getItem(STORAGE_KEY);
     if (d) {
-      const parsed = JSON.parse(d);
+      const parsed: unknown = JSON.parse(d);
       if (validateState(parsed)) Object.assign(state, parsed);
     }
-  } catch (e) {}
-  // 누락 필드 보완 (구버전 데이터 호환)
+  } catch (_) {}
   if (!state.wishlist)        state.wishlist        = [];
   if (!state.watchlist)       state.watchlist       = [];
   if (!state.ledgerTemplates) state.ledgerTemplates = [];
 }
 
 // ── checkData → ledgerData 마이그레이션 ───────────────
-export function migrateLedger() {
+export function migrateLedger(): void {
   if (!state.ledgerData) state.ledgerData = {};
   if (!state.checkData)  state.checkData  = {};
 
   const hasLedger = Object.keys(state.ledgerData).length > 0;
-  if (hasLedger) return; // 이미 마이그레이션됨
+  if (hasLedger) return;
 
   for (const [dk, amount] of Object.entries(state.checkData)) {
     const amt = Number(amount);
@@ -113,15 +142,13 @@ export function migrateLedger() {
         category: '기타',
         amount: amt,
         memo: '',
-      }];
+      } as LedgerItem];
     }
   }
 }
 
 // ── 가계부 → 잔고 반영 ────────────────────────────────
-// 날짜별 (지출합계 - 수입합계) = 순지출을 잔고에 반영
-// appliedCheckData[dk] = 이미 반영된 순지출
-export function syncLedgerToBalance() {
+export function syncLedgerToBalance(): void {
   if (!state.appliedCheckData) state.appliedCheckData = {};
   if (!state.ledgerData)       state.ledgerData       = {};
 
@@ -134,7 +161,7 @@ export function syncLedgerToBalance() {
     const items   = state.ledgerData[dk] || [];
     const expense = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
     const income  = items.filter(i => i.type === 'income' ).reduce((s, i) => s + i.amount, 0);
-    const raw     = expense - income; // 순지출 (양수 = 잔고 감소)
+    const raw     = expense - income;
 
     const applied = Number(state.appliedCheckData[dk] || 0);
     const target  = isPastOrToday(dk) ? raw : 0;
@@ -147,11 +174,10 @@ export function syncLedgerToBalance() {
   }
 }
 
-// 구버전 호환 (app.js가 아직 이 이름을 사용하는 경우를 위한 alias)
 export { syncLedgerToBalance as syncCheckDataToBalance };
 
 // ── state 필드 초기화 (누락 필드 보완) ────────────────
-export function ensureStateFields() {
+export function ensureStateFields(): void {
   if (!state.goals)     state.goals     = [];
   if (!state.checkData) state.checkData = {};
   if (!state.ledgerData) state.ledgerData = {};
@@ -161,12 +187,9 @@ export function ensureStateFields() {
   if (!state.streak)    state.streak    = { count: 0, lastDate: '' };
   if (!state.wishlist)  state.wishlist  = [];
   if (!state.watchlist) state.watchlist = [];
-  if (!state.cards)     state.cards     = null; // null = DEFAULT_CARDS
+  if (!state.cards)     state.cards     = null;
 }
 
-// ── 기본 데이터 (첫 실행 시) ──────────────────────────
-// 신규 유저는 완전히 빈 상태로 시작 (개인 데이터 없음)
-export function initDefaultData() {
+export function initDefaultData(): void {
   ensureStateFields();
-  // 아무것도 주입하지 않음 — 새 유저는 빈 화면에서 시작
 }

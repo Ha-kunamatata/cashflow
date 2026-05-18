@@ -1,9 +1,81 @@
 // ════════════════════════════════════════════════════════
-// game.js — 재정 배틀 RPG (모바일 방치형 픽셀 게임)
+// game.ts — 재정 배틀 RPG (모바일 방치형 픽셀 게임)
 // ════════════════════════════════════════════════════════
+import type { StateShape } from './state';
+
+type Palette = Record<string, string | null>;
+
+interface MonsterTypeDef {
+  label: string;
+  baseColor: string;
+  hpColor: string;
+  atk: number;
+  ps: number;
+  grid: string[];
+  palette: Palette;
+  isBoss?: boolean;
+}
+
+interface HeroLevelDef {
+  label: string;
+  color: string;
+  ps: number;
+  grid: string[];
+  palette: Palette;
+}
+
+interface Star {
+  x: number; y: number; size: number; speed: number; phase: number;
+}
+
+interface Hero {
+  x: number; y: number;
+  level: number;
+  def: HeroLevelDef;
+  atk: number;
+  hp: number;
+  maxHp: number;
+  monthlyIncome: number;
+  attackTick: number;
+  attackTarget: Monster | null;
+}
+
+interface Monster {
+  id: string;
+  name: string;
+  amount: number;
+  category: string;
+  x: number; y: number;
+  mtype: MonsterTypeDef;
+  hp: number;
+  maxHp: number;
+  monAtk: number;
+  wobble: number;
+  dead: boolean;
+  deathTick: number;
+  flashTick: number;
+}
+
+interface Particle {
+  x: number; y: number;
+  text: string;
+  color: string;
+  vy: number;
+  vx: number;
+  life: number;
+  size: number;
+}
+
+interface InfoPanel {
+  visible: boolean;
+  lines: string[];
+  x: number; y: number;
+  tick: number;
+  color: string;
+}
 
 // ── 수치 포맷 헬퍼 ───────────────────────────────────────
-function fmtHp(n) {
+function fmtHp(n: number): string {
   if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`;
   if (n >= 10_000)      return `${Math.round(n / 10000)}만`;
   if (n >= 1_000)       return `${(n / 1000).toFixed(0)}천`;
@@ -11,7 +83,7 @@ function fmtHp(n) {
 }
 
 // grid: array of equal-length strings; palette: char→color (null=skip)
-function drawSprite(ctx, cx, cy, grid, palette, ps) {
+function drawSprite(ctx: CanvasRenderingContext2D, cx: number, cy: number, grid: string[], palette: Palette, ps: number): void {
   const rows = grid.length;
   const cols = grid[0].length;
   const ox = Math.round(cx - (cols * ps) / 2);
@@ -27,8 +99,7 @@ function drawSprite(ctx, cx, cy, grid, palette, ps) {
 }
 
 // ── Monster type definitions ───────────────────────────
-// 5 tiers: slime(<1만) goblin(<5만) orc(<10만) troll(<20만) dragon(20만+)
-const MONSTER_TYPES = {
+const MONSTER_TYPES: Record<string, MonsterTypeDef> = {
   slime: {
     label: '슬라임', baseColor: '#4ade80', hpColor: '#166534',
     atk: 3, ps: 3,
@@ -109,7 +180,7 @@ const MONSTER_TYPES = {
   },
 };
 
-function getMonsterType(amount) {
+function getMonsterType(amount: number): MonsterTypeDef {
   if (amount <  10_000) return MONSTER_TYPES.slime;
   if (amount <  50_000) return MONSTER_TYPES.goblin;
   if (amount < 100_000) return MONSTER_TYPES.orc;
@@ -118,7 +189,7 @@ function getMonsterType(amount) {
 }
 
 // ── Hero level definitions (5 levels) ─────────────────
-const HERO_LEVELS = {
+const HERO_LEVELS: Record<number, HeroLevelDef> = {
   1: {
     label: '농부', color: '#94a3b8', ps: 4,
     grid: [
@@ -201,7 +272,7 @@ const HERO_LEVELS = {
   },
 };
 
-function getHeroLevel(netWorth) {
+function getHeroLevel(netWorth: number): number {
   if (netWorth <  1_000_000) return 1;
   if (netWorth <  5_000_000) return 2;
   if (netWorth < 10_000_000) return 3;
@@ -213,52 +284,54 @@ function getHeroLevel(netWorth) {
 // FinanceGame — Main game class
 // ════════════════════════════════════════════════════════
 export class FinanceGame {
-  constructor(canvas, state) {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  state: StateShape;
+
+  W = 0; H = 0;
+  tick = 0;
+  running = false;
+  animFrame: number | null = null;
+
+  hero: Hero | null = null;
+  monsters: Monster[] = [];
+  particles: Particle[] = [];
+  stars: Star[] = [];
+
+  lastBattleTick = 0;
+  BATTLE_INTERVAL = 180;
+
+  salaryPerSec = 0;
+  salaryAccum  = 0;
+  paydayFlash  = 0;
+  respawnTimer: ReturnType<typeof setTimeout> | null = null;
+
+  _infoPanel: InfoPanel = { visible: false, lines: [], x: 0, y: 0, tick: 0, color: '#60a5fa' };
+  _clickHandler: ((e: MouseEvent) => void) | null = null;
+  _touchHandler: ((e: TouchEvent) => void) | null = null;
+
+  constructor(canvas: HTMLCanvasElement, state: StateShape) {
     this.canvas = canvas;
-    this.ctx    = canvas.getContext('2d');
+    this.ctx    = canvas.getContext('2d')!;
     this.state  = state;
-
-    this.W = 0; this.H = 0;
-    this.tick = 0;
-    this.running = false;
-    this.animFrame = null;
-
-    this.hero = null;
-    this.monsters = [];
-    this.particles = [];
-    this.stars = [];
-
-    this.lastBattleTick = 0;
-    this.BATTLE_INTERVAL = 180; // 3 s @ 60 fps
-
-    this.salaryPerSec = 0;
-    this.salaryAccum  = 0;
-    this.paydayFlash  = 0;
-    this.respawnTimer = null;
-
-    // 클릭 정보 패널
-    this._infoPanel = { visible: false, lines: [], x: 0, y: 0, tick: 0, color: '#60a5fa' };
-    this._clickHandler = null;
-    this._touchHandler = null;
   }
 
   // ── Public API ────────────────────────────────────────
-  init() {
+  init(): void {
     this._resize();
     this._buildStars();
     this._buildHero();
     this._buildMonsters();
     this._calcSalary();
-    // 캔버스 클릭/터치 이벤트
     this._clickHandler = (e) => this._handleClick(e);
-    this._touchHandler = (e) => { e.preventDefault(); if (e.changedTouches[0]) this._handleClick(e.changedTouches[0]); };
+    this._touchHandler = (e) => { e.preventDefault(); if (e.changedTouches[0]) this._handleClick(e.changedTouches[0] as unknown as MouseEvent); };
     this.canvas.addEventListener('click', this._clickHandler);
     this.canvas.addEventListener('touchend', this._touchHandler, { passive: false });
     this.canvas.style.cursor = 'pointer';
     if (!this.running) { this.running = true; this._loop(); }
   }
 
-  destroy() {
+  destroy(): void {
     this.running = false;
     if (this.animFrame) cancelAnimationFrame(this.animFrame);
     if (this.respawnTimer) clearTimeout(this.respawnTimer);
@@ -267,7 +340,7 @@ export class FinanceGame {
     this.animFrame = null;
   }
 
-  resize() {
+  resize(): void {
     this._resize();
     if (this.hero) {
       this.hero.x = Math.round(this.W * 0.17);
@@ -276,7 +349,7 @@ export class FinanceGame {
     this._repositionMonsters();
   }
 
-  updateState(newState) {
+  updateState(newState: StateShape): void {
     this.state = newState;
     this._buildHero();
     this._buildMonsters();
@@ -284,38 +357,34 @@ export class FinanceGame {
   }
 
   // ── Setup helpers ─────────────────────────────────────
-  _resize() {
-    const wrap = this.canvas.parentElement;
+  _resize(): void {
+    const wrap = this.canvas.parentElement!;
     this.W = wrap.offsetWidth || (window.innerWidth - 32) || 360;
     this.H = wrap.offsetHeight || 360;
     this.canvas.width  = this.W;
     this.canvas.height = this.H;
   }
 
-  _calcSalary() {
+  _calcSalary(): void {
     const monthly = (this.state.entries || [])
       .filter(e => e.type === 'income' && e.repeat === '매월')
       .reduce((s, e) => s + (e.amount || 0), 0);
-    // 초당 원 단위 수입 trickle (파티클 표시용)
     this.salaryPerSec = monthly / (30 * 24 * 3600);
     this.salaryAccum = 0;
   }
 
-  _buildHero() {
+  _buildHero(): void {
     const totalAssets = (this.state.assets || []).reduce((s, a) => s + (a.amount || 0), 0);
     const lvl = getHeroLevel(totalAssets);
 
-    // 월수입 = 영웅 최대 HP
     const monthly = (this.state.entries || [])
       .filter(e => e.type === 'income' && e.repeat === '매월')
       .reduce((s, e) => s + (e.amount || 0), 0);
-    const maxHp = Math.max(100_000, monthly); // 최소 10만원
+    const maxHp = Math.max(100_000, monthly);
 
-    // 잔고 = 현재 HP (월수입 대비 비율로 표시)
     const balance = this.state.balance || 0;
     const hp = Math.max(0, Math.min(maxHp, balance));
 
-    // 공격력 = 월수입 / 30 / 적 수 (일당 소득 배분)
     const numExp = Math.max(1, (this.state.entries || []).filter(e => e.type === 'expense' && e.repeat === '매월').length);
     const atk = Math.max(1_000, Math.round(monthly / 30 / numExp * 2));
 
@@ -333,10 +402,9 @@ export class FinanceGame {
     };
   }
 
-  _buildMonsters() {
+  _buildMonsters(): void {
     const expenses = (this.state.entries || [])
       .filter(e => e.type === 'expense' && e.repeat === '매월');
-    const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
     const count = expenses.length;
     const cols  = Math.min(count, 3);
@@ -355,9 +423,7 @@ export class FinanceGame {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const mtype = getMonsterType(e.amount || 0);
-      // 몬스터 HP = 월 지출액 (실제 원 단위)
       const maxHp = Math.max(1_000, e.amount || 0);
-      // 몬스터 공격력 = 지출액 / 30 (일 단위 부담)
       const monAtk = Math.max(100, Math.round((e.amount || 0) / 30));
 
       return {
@@ -379,7 +445,7 @@ export class FinanceGame {
     });
   }
 
-  _repositionMonsters() {
+  _repositionMonsters(): void {
     const count = this.monsters.length;
     if (count === 0) return;
     const cols = Math.min(count, 3);
@@ -397,7 +463,7 @@ export class FinanceGame {
     });
   }
 
-  _buildStars() {
+  _buildStars(): void {
     this.stars = Array.from({ length: 70 }, () => ({
       x: Math.random() * this.W,
       y: Math.random() * this.H * 0.68,
@@ -408,7 +474,7 @@ export class FinanceGame {
   }
 
   // ── Main loop ─────────────────────────────────────────
-  _loop() {
+  _loop(): void {
     if (!this.running) return;
     this.animFrame = requestAnimationFrame(() => this._loop());
     this.tick++;
@@ -421,13 +487,11 @@ export class FinanceGame {
     this._drawHUD();
     this._drawInfoPanel();
 
-    // Auto-battle every BATTLE_INTERVAL ticks
     if (this.tick - this.lastBattleTick >= this.BATTLE_INTERVAL) {
       this._autoBattle();
       this.lastBattleTick = this.tick;
     }
 
-    // 월급 파티클 (시각적 효과만 — 실제 회복은 battle tick에서 처리)
     if (this.salaryPerSec > 0 && this.hero) {
       this.salaryAccum += this.salaryPerSec / 60;
       if (this.salaryAccum >= 1000) {
@@ -447,10 +511,9 @@ export class FinanceGame {
   }
 
   // ── Draw: Background ──────────────────────────────────
-  _drawBackground() {
+  _drawBackground(): void {
     const { ctx, W, H } = this;
 
-    // Sky gradient
     const g = ctx.createLinearGradient(0, 0, 0, H * 0.76);
     g.addColorStop(0,   '#060918');
     g.addColorStop(0.5, '#0b1428');
@@ -458,7 +521,6 @@ export class FinanceGame {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H * 0.76);
 
-    // Parallax stars
     this.stars.forEach(s => {
       s.x -= s.speed;
       if (s.x < 0) { s.x = W + 2; s.y = Math.random() * H * 0.64; }
@@ -469,17 +531,14 @@ export class FinanceGame {
     });
     ctx.globalAlpha = 1;
 
-    // Moon
     const mx = Math.round(W * 0.86), my = Math.round(H * 0.10);
     ctx.fillStyle = '#fef9c3';
     ctx.beginPath(); ctx.arc(mx, my, 17, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fef08a';
     ctx.beginPath(); ctx.arc(mx, my, 13, 0, Math.PI * 2); ctx.fill();
-    // Crescent shadow
     ctx.fillStyle = '#0b1428';
     ctx.beginPath(); ctx.arc(mx + 7, my - 1, 12, 0, Math.PI * 2); ctx.fill();
 
-    // Distant mountains (simple silhouette)
     ctx.fillStyle = 'rgba(12,28,58,0.8)';
     ctx.beginPath();
     ctx.moveTo(0, H * 0.62);
@@ -496,7 +555,6 @@ export class FinanceGame {
     ctx.closePath();
     ctx.fill();
 
-    // Payday flash
     if (this.paydayFlash > 0) {
       ctx.fillStyle = `rgba(251,191,36,${(this.paydayFlash / 120) * 0.18})`;
       ctx.fillRect(0, 0, W, H);
@@ -504,7 +562,7 @@ export class FinanceGame {
   }
 
   // ── Draw: Ground ──────────────────────────────────────
-  _drawGround() {
+  _drawGround(): void {
     const { ctx, W, H } = this;
     const gy = Math.round(H * 0.75);
 
@@ -514,13 +572,11 @@ export class FinanceGame {
     ctx.fillStyle = g;
     ctx.fillRect(0, gy, W, H - gy);
 
-    // Ground edge glow
     ctx.fillStyle = '#1e3a8a';
     ctx.fillRect(0, gy, W, 2);
     ctx.fillStyle = 'rgba(30,58,138,0.3)';
     ctx.fillRect(0, gy + 2, W, 3);
 
-    // Battle grid lines
     ctx.strokeStyle = 'rgba(37,99,235,0.06)';
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 24) {
@@ -529,7 +585,7 @@ export class FinanceGame {
   }
 
   // ── Draw: Hero ────────────────────────────────────────
-  _drawHero() {
+  _drawHero(): void {
     const { ctx } = this;
     const h = this.hero;
     if (!h) return;
@@ -537,16 +593,13 @@ export class FinanceGame {
     const bobY = Math.round(Math.sin(this.tick * 0.07) * 2);
     const drawY = h.y + bobY;
 
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath();
     ctx.ellipse(h.x, h.y + 23, 16, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Sprite
     drawSprite(ctx, h.x, drawY, h.def.grid, h.def.palette, h.def.ps);
 
-    // Attack line to target
     if (h.attackTick > 0) {
       h.attackTick--;
       const t = h.attackTarget;
@@ -562,7 +615,6 @@ export class FinanceGame {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Slash cross at target
         const sx = t.x, sy = t.y;
         ctx.strokeStyle = '#fef08a';
         ctx.lineWidth = 3;
@@ -575,7 +627,6 @@ export class FinanceGame {
       }
     }
 
-    // HP bar
     const bw = 54, bh = 7;
     const bx = h.x - bw / 2, by = h.y - 58;
     ctx.fillStyle = '#0f172a';
@@ -589,7 +640,6 @@ export class FinanceGame {
     ctx.textAlign = 'center';
     ctx.fillText(`잔고 ${fmtHp(h.hp)} / 월수입 ${fmtHp(h.maxHp)}`, h.x, by - 3);
 
-    // Level badge
     const badgeW = 34, badgeH = 13;
     ctx.fillStyle = h.def.color;
     ctx.fillRect(h.x - badgeW / 2, h.y + 26, badgeW, badgeH);
@@ -600,7 +650,7 @@ export class FinanceGame {
   }
 
   // ── Draw: Monsters ────────────────────────────────────
-  _drawMonsters() {
+  _drawMonsters(): void {
     const { ctx } = this;
 
     this.monsters.forEach(m => {
@@ -624,16 +674,14 @@ export class FinanceGame {
       const wy = Math.cos(m.wobble * 0.75) * 2;
       const dx = m.x + wx, dy = m.y + wy;
 
-      // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.26)';
       ctx.beginPath();
       ctx.ellipse(dx, m.y + sprH / 2 + 3, sprW * 0.42, 4, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hit flash overlay
       if (m.flashTick > 0) {
         m.flashTick--;
-        const whitePal = {};
+        const whitePal: Palette = {};
         for (const k of Object.keys(m.mtype.palette)) {
           whitePal[k] = m.mtype.palette[k] ? '#ffffff' : null;
         }
@@ -642,10 +690,8 @@ export class FinanceGame {
         ctx.globalAlpha = 1;
       }
 
-      // Main sprite
       drawSprite(ctx, dx, dy, m.mtype.grid, m.mtype.palette, ps);
 
-      // Boss indicator
       if (m.mtype.isBoss) {
         ctx.fillStyle = '#ef4444';
         ctx.font = 'bold 7px monospace';
@@ -653,7 +699,6 @@ export class FinanceGame {
         ctx.fillText('★ BOSS ★', dx, dy - sprH / 2 - 18);
       }
 
-      // HP bar (HP = 지출액)
       const bw = Math.max(36, sprW + 6);
       const bh = 5;
       const bx = dx - bw / 2;
@@ -664,7 +709,6 @@ export class FinanceGame {
       ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#eab308' : '#ef4444';
       ctx.fillRect(bx, by, Math.round(bw * hpPct), bh);
 
-      // Name & HP(원)
       const nameStr = m.name.length > 5 ? m.name.slice(0, 4) + '…' : m.name;
       ctx.font = 'bold 8px monospace';
       ctx.fillStyle = '#e2e8f0';
@@ -678,7 +722,7 @@ export class FinanceGame {
   }
 
   // ── Draw: Particles ───────────────────────────────────
-  _drawParticles() {
+  _drawParticles(): void {
     const { ctx } = this;
     this.particles = this.particles.filter(p => p.life > 0);
     this.particles.forEach(p => {
@@ -696,7 +740,7 @@ export class FinanceGame {
   }
 
   // ── Draw: HUD ─────────────────────────────────────────
-  _drawHUD() {
+  _drawHUD(): void {
     const { ctx, W, H } = this;
     if (!this.hero) return;
 
@@ -704,18 +748,15 @@ export class FinanceGame {
     const hudY = H - hudH;
     const alive = this.monsters.filter(m => !m.dead);
 
-    // Panel
     ctx.fillStyle = 'rgba(4,7,20,0.94)';
     ctx.fillRect(0, hudY, W, hudH);
     ctx.fillStyle = '#1e3a8a';
     ctx.fillRect(0, hudY, W, 1);
 
-    // Dividers
     ctx.fillStyle = 'rgba(30,58,138,0.35)';
     ctx.fillRect(Math.round(W / 3), hudY + 7, 1, hudH - 14);
     ctx.fillRect(Math.round(W * 2 / 3), hudY + 7, 1, hudH - 14);
 
-    // Balance
     const bal = this.state.balance || 0;
     const balStr = bal >= 100_000_000 ? `${(bal / 100_000_000).toFixed(1)}억`
                  : bal >= 10_000      ? `${Math.round(bal / 10000)}만원`
@@ -728,7 +769,6 @@ export class FinanceGame {
     ctx.fillStyle = bal >= 0 ? '#4ade80' : '#f87171';
     ctx.fillText(balStr, 10, hudY + 35);
 
-    // Monster count
     ctx.font = '700 8px monospace';
     ctx.fillStyle = '#475569';
     ctx.textAlign = 'center';
@@ -737,7 +777,6 @@ export class FinanceGame {
     ctx.fillStyle = alive.length === 0 ? '#4ade80' : '#f87171';
     ctx.fillText(`${alive.length} / ${this.monsters.length}`, W / 2, hudY + 35);
 
-    // Hero info
     ctx.font = '700 8px monospace';
     ctx.fillStyle = '#475569';
     ctx.textAlign = 'right';
@@ -747,7 +786,6 @@ export class FinanceGame {
     ctx.fillText(`LV${this.hero.level} ${this.hero.def.label}`, W - 10, hudY + 35);
     ctx.textAlign = 'left';
 
-    // Empty state overlay
     if (this.monsters.length === 0) {
       ctx.fillStyle = 'rgba(0,0,0,0.52)';
       ctx.fillRect(0, 0, W, H * 0.76);
@@ -764,11 +802,10 @@ export class FinanceGame {
   }
 
   // ── Battle logic ──────────────────────────────────────
-  _autoBattle() {
+  _autoBattle(): void {
     const alive = this.monsters.filter(m => !m.dead);
     if (!this.hero || alive.length === 0) return;
 
-    // 영웅 공격: 랜덤 대상 1개 (±25% 편차)
     const target = alive[Math.floor(Math.random() * alive.length)];
     const dmg = Math.round(this.hero.atk * (0.75 + Math.random() * 0.5));
     target.hp = Math.max(0, target.hp - dmg);
@@ -805,34 +842,31 @@ export class FinanceGame {
       }
     }
 
-    // 몬스터 반격: 공격력 = 지출액/30 (일 단위 부담)
     alive.forEach(m => {
       if (m.dead) return;
       const monDmg = Math.max(100, Math.round(m.monAtk * 0.4 * (m.hp / m.maxHp + 0.3)));
-      this.hero.hp = Math.max(0, this.hero.hp - monDmg);
+      this.hero!.hp = Math.max(0, this.hero!.hp - monDmg);
       if (Math.random() < 0.55) {
         this._spawnParticle(
-          this.hero.x + (Math.random() - 0.5) * 18,
-          this.hero.y - 20,
+          this.hero!.x + (Math.random() - 0.5) * 18,
+          this.hero!.y - 20,
           `-${fmtHp(monDmg)}`, '#ef4444', -1.1, 50, 10
         );
       }
     });
 
-    // 수동 회복: 월수입/30 / 8 per battle (하루 소득 8분할)
     const regen = Math.max(1000, Math.round(this.hero.maxHp / 30 / 8));
     this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + regen);
   }
 
   // ── 캔버스 클릭/터치 ──────────────────────────────────
-  _handleClick(e) {
+  _handleClick(e: MouseEvent | { clientX: number; clientY: number }): void {
     const rect = this.canvas.getBoundingClientRect();
     const sx = this.W / rect.width;
     const sy = this.H / rect.height;
     const cx = (e.clientX - rect.left) * sx;
     const cy = (e.clientY - rect.top) * sy;
 
-    // 영웅 히트체크 (반경 32)
     const h = this.hero;
     if (h && Math.hypot(cx - h.x, cy - h.y) < 38) {
       const hpPct = h.maxHp > 0 ? Math.round(h.hp / h.maxHp * 100) : 0;
@@ -843,7 +877,6 @@ export class FinanceGame {
       return;
     }
 
-    // 몬스터 히트체크
     for (const m of this.monsters) {
       if (m.dead) continue;
       const ps = m.mtype.ps;
@@ -861,7 +894,7 @@ export class FinanceGame {
     }
   }
 
-  _showInfo(lines, x, y, color = '#60a5fa') {
+  _showInfo(lines: string[], x: number, y: number, color = '#60a5fa'): void {
     this._infoPanel = {
       visible: true,
       lines,
@@ -872,7 +905,7 @@ export class FinanceGame {
     };
   }
 
-  _drawInfoPanel() {
+  _drawInfoPanel(): void {
     const p = this._infoPanel;
     if (!p.visible || p.tick <= 0) { this._infoPanel.visible = false; return; }
     p.tick--;
@@ -888,7 +921,6 @@ export class FinanceGame {
     const bx = p.x - bw / 2;
     const by = p.y - bh;
 
-    // 배경
     ctx.fillStyle = 'rgba(4,7,20,0.95)';
     const r = 8;
     ctx.beginPath();
@@ -917,7 +949,7 @@ export class FinanceGame {
     ctx.globalAlpha = 1;
   }
 
-  _spawnParticle(x, y, text, color, vy = -1.5, life = 60, size = 11, vx = 0) {
+  _spawnParticle(x: number, y: number, text: string, color: string, vy = -1.5, life = 60, size = 11, vx = 0): void {
     this.particles.push({ x, y, text, color, vy, vx, life, size });
   }
 }
