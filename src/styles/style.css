@@ -138,7 +138,7 @@ body {
   background: rgba(10,15,30,0.99);
   border-top: 1px solid rgba(30,58,95,0.5);
   display: flex;
-  overflow-x: auto; overflow-y: hidden;
+  overflow-x: hidden; overflow-y: hidden;
   scrollbar-width: none; -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
   border-radius: 22px 22px 0 0;
@@ -149,13 +149,13 @@ body {
 }
 .bottom-nav::-webkit-scrollbar { display: none; }
 .nav-btn {
-  flex: 0 0 auto; min-width: 46px; padding: 12px 6px 10px;
+  flex: 1; min-width: 0; padding: 10px 4px 8px;
   background: none; border: none; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   color: var(--text3); transition: color 0.2s; position: relative;
 }
-.nav-btn.active { color: var(--accent2); min-width: 62px; }
-.nav-btn svg { width: 22px; height: 22px; transition: transform 0.2s; }
+.nav-btn.active { color: var(--accent2); }
+.nav-btn svg { width: 22px; height: 22px; flex-shrink: 0; transition: transform 0.2s; }
 .nav-btn.active svg { transform: scale(1.08); }
 /* 비활성 탭 텍스트 숨김 → 아이콘만 */
 .nav-btn span { font-size: 10px; font-weight: 700; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.2s ease, opacity 0.2s; }
@@ -368,16 +368,18 @@ body {
 .bar-value { font-size:11px; font-family:var(--mono); color:var(--text2); min-width:44px; text-align:right; }
 
 /* ── 가계부 ── */
-.ledger-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:8px; }
-.ledger-weekdays div { text-align:center; font-size:11px; color:var(--text3); font-weight:700; padding:6px 0; }
-.ledger-calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-.ledger-day { min-height:104px; border:1px solid rgba(255,255,255,0.07); background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)),rgba(15,23,42,0.72); border-radius:18px; padding:8px; cursor:pointer; transition:transform .15s, border-color .15s; display:flex; flex-direction:column; justify-content:space-between; }
+/* 달력 카드 좌우 패딩 축소 → 7열이 화면에 다 들어오도록 */
+#ledger-view-calendar > .card { padding-left: 8px; padding-right: 8px; }
+.ledger-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px; }
+.ledger-weekdays div { text-align:center; font-size:11px; color:var(--text3); font-weight:700; padding:4px 0; }
+.ledger-calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.ledger-day { min-height:84px; border:1px solid rgba(255,255,255,0.07); background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)),rgba(15,23,42,0.72); border-radius:10px; padding:5px 4px; cursor:pointer; transition:transform .15s, border-color .15s; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; }
 .ledger-day:hover { border-color:rgba(96,165,250,0.20); transform:translateY(-1px); }
 .ledger-day.empty { background:transparent; border:1px dashed rgba(45,74,122,0.25); cursor:default; }
 .ledger-day.today { border-color:var(--accent); box-shadow:0 0 0 1px rgba(96,165,250,0.34) inset,0 12px 24px rgba(37,99,235,0.14); }
 .ledger-day.selected { background:linear-gradient(180deg,rgba(59,130,246,0.18),rgba(59,130,246,0.08)),rgba(15,23,42,0.78); border-color:var(--accent2); }
 .ledger-day-top { display:flex; justify-content:space-between; align-items:center; }
-.ledger-day-num { font-size:15px; font-weight:800; }
+.ledger-day-num { font-size:13px; font-weight:800; }
 .ledger-day-num.sun { color:var(--red2); }
 .ledger-day-num.sat { color:var(--accent2); }
 .ledger-day-amount { font-size:11px; font-weight:700; color:var(--orange); font-family:var(--mono); text-align:right; word-break:break-all; }
@@ -613,9 +615,9 @@ body.light-theme .form-sheet { background:linear-gradient(180deg,#ffffff,#f5f8ff
 .ledger-cal-sum-val.orange { color:var(--orange); }
 
 /* 달력 셀 내 수입/지출 표시 */
-.ledger-day-amounts { display:flex; flex-direction:column; gap:1px; margin-top:4px; }
-.ledger-day-expense { font-size:11px; font-weight:700; color:var(--red2); font-family:var(--mono); text-align:right; word-break:break-all; line-height:1.2; }
-.ledger-day-income  { font-size:10px; font-weight:700; color:var(--green2); font-family:var(--mono); text-align:right; word-break:break-all; line-height:1.2; }
+.ledger-day-amounts { display:flex; flex-direction:column; gap:1px; margin-top:3px; min-width:0; overflow:hidden; }
+.ledger-day-expense { font-size:10px; font-weight:700; color:var(--red2); font-family:var(--mono); text-align:right; word-break:break-all; line-height:1.2; }
+.ledger-day-income  { font-size:9px; font-weight:700; color:var(--green2); font-family:var(--mono); text-align:right; word-break:break-all; line-height:1.2; }
 
 /* 히트맵 */
 .ledger-day.heat-1 { background:linear-gradient(180deg,rgba(249,115,22,.08),rgba(249,115,22,.04)),rgba(15,23,42,0.72); }
