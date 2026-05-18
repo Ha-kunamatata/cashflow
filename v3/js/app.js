@@ -54,6 +54,7 @@ import {
   setSimCategory,
   updateSimResult,
   renderWeeklyCoachingCard,
+  setTrendCategory,
 } from './render.js';
 
 import {
@@ -134,6 +135,11 @@ import {
   joinHouseholdUI,
   leaveHouseholdUI,
   copyHouseholdCode,
+  // 빠른 입력 & OCR
+  renderLedgerTemplates,
+  useTemplate,
+  saveCurrentAsTemplate,
+  handleReceiptOCR,
 } from './ui.js';
 
 import {
@@ -1297,3 +1303,43 @@ window.closeBadgeDetail = function() {
 
 // 시트 내부 navigate 버튼용 글로벌 핸들러
 window._nav = (page) => navigate(page);
+
+// ══════════════════════════════════════════════════════════════
+// 빠른 입력 FAB
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-quick-add-fab')?.addEventListener('click', () => {
+  const todayKey = (() => {
+    const d = new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  })();
+  openLedgerItemForm(null, todayKey);
+});
+
+// ══════════════════════════════════════════════════════════════
+// 가계부 항목 폼 — 템플릿 · 저장 · OCR
+// ══════════════════════════════════════════════════════════════
+document.getElementById('ledger-templates-chips')?.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-tpl-id]');
+  if (chip) useTemplate(chip.dataset.tplId);
+});
+
+document.getElementById('btn-save-template')?.addEventListener('click', saveCurrentAsTemplate);
+
+document.getElementById('btn-receipt-ocr')?.addEventListener('click', () => {
+  document.getElementById('receipt-photo-input')?.click();
+});
+
+document.getElementById('receipt-photo-input')?.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleReceiptOCR(file);
+  e.target.value = '';
+});
+
+// ══════════════════════════════════════════════════════════════
+// 리포트 탭 — 카테고리 트렌드 칩 이벤트 위임
+// ══════════════════════════════════════════════════════════════
+document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.ledger-tag-btn');
+  if (btn?.dataset.cat) setTrendCategory(btn.dataset.cat);
+});

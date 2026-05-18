@@ -1562,7 +1562,14 @@ function _renderAnnualStats() {
       <div class="card-title">월별 수입 / 지출</div>
       <div class="monthly-chart-bar">${monthBars}</div>
     </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">📅 ${y}년 지출 히트맵</div>
+      <div id="ledger-heatmap" style="overflow-x:auto;padding-bottom:4px"></div>
+    </div>
   `;
+
+  _renderHeatmap(y);
 }
 
 export function changeLedgerMonth(diff) {
@@ -1778,6 +1785,244 @@ export function updateSimResult() {
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center">월 절약액 <span style="color:var(--green2);font-weight:700">${fmtShort(monthlySaving)}</span></div>
     </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 연간 히트맵 (GitHub contribution style)
+// ════════════════════════════════════════════════════════
+function _renderHeatmap(year) {
+  const el = document.getElementById('ledger-heatmap');
+  if (!el) return;
+
+  // 해당 연도의 모든 일별 지출 수집
+  const dayExp = {};
+  const yearPfx = `${year}-`;
+  for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+    if (!dk.startsWith(yearPfx)) continue;
+    const exp = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+    if (exp > 0) dayExp[dk] = exp;
+  }
+
+  const maxExp = Math.max(...Object.values(dayExp), 1);
+  const jan1 = new Date(year, 0, 1);
+  const startDow = jan1.getDay(); // 0=일
+  const totalDays = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 366 : 365;
+
+  const cellSize = 13, gap = 2;
+  const cols = Math.ceil((totalDays + startDow) / 7);
+  const W = cols * (cellSize + gap);
+  const H = 7 * (cellSize + gap);
+
+  let cells = '';
+  const monthLabels = [];
+  let lastMonth = -1;
+
+  for (let i = 0; i < totalDays + startDow; i++) {
+    const col = Math.floor(i / 7);
+    const row = i % 7;
+    if (i < startDow) continue; // 첫 주 빈칸
+    const dayIdx = i - startDow;
+    const d = new Date(year, 0, dayIdx + 1);
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const exp = dayExp[dk] || 0;
+    const intensity = exp > 0 ? Math.min(1, exp / maxExp) : 0;
+
+    // 월 레이블
+    if (d.getMonth() !== lastMonth && row === 0) {
+      lastMonth = d.getMonth();
+      monthLabels.push({ col, label: `${d.getMonth() + 1}월` });
+    }
+
+    const col4 = intensity === 0 ? 'var(--bg4)' :
+      intensity < 0.33 ? '#1e4620' : intensity < 0.66 ? '#296b30' : '#2ea043';
+    const x = col * (cellSize + gap);
+    const y = row * (cellSize + gap);
+    cells += `<rect x="${x}" y="${y + 14}" width="${cellSize}" height="${cellSize}" rx="2" fill="${col4}" opacity="${exp > 0 ? '0.92' : '0.4'}"><title>${dk}: ${exp > 0 ? fmtShort(exp) : '기록 없음'}</title></rect>`;
+  }
+
+  const labels = monthLabels.map(({ col, label }) =>
+    `<text x="${col * (cellSize + gap)}" y="11" fill="var(--text3)" font-size="9" font-family="monospace">${label}</text>`
+  ).join('');
+
+  el.innerHTML = `<svg width="${W}" height="${H + 14}" viewBox="0 0 ${W} ${H + 14}" style="overflow:visible">${labels}${cells}</svg>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 카테고리별 6개월 트렌드 차트
+// ════════════════════════════════════════════════════════
+let _trendSelectedCats = [];
+
+export function setTrendCategory(cat) {
+  if (_trendSelectedCats.includes(cat)) {
+    _trendSelectedCats = _trendSelectedCats.filter(c => c !== cat);
+  } else if (_trendSelectedCats.length < 4) {
+    _trendSelectedCats.push(cat);
+  }
+  document.querySelectorAll('#report-cat-trend-chips .ledger-tag-btn').forEach(b =>
+    b.classList.toggle('active', _trendSelectedCats.includes(b.dataset.cat))
+  );
+  _renderTrendChart();
+}
+
+function _renderCategoryTrend() {
+  const chipsEl = document.getElementById('report-cat-trend-chips');
+  const chartEl = document.getElementById('report-cat-trend-chart');
+  if (!chipsEl || !chartEl) return;
+
+  const now = today();
+  const months = [];
+  const allCatTotals = {};
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+    const catMonth = {};
+    for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+      if (!dk.startsWith(prefix)) continue;
+      for (const item of items) {
+        if (item.type !== 'expense') continue;
+        catMonth[item.category] = (catMonth[item.category] || 0) + item.amount;
+        allCatTotals[item.category] = (allCatTotals[item.category] || 0) + item.amount;
+      }
+    }
+    months.push({ label: `${d.getMonth() + 1}월`, cats: catMonth });
+  }
+
+  // 상위 6개 카테고리 (6개월 합산 기준)
+  const topCats = Object.entries(allCatTotals)
+    .sort((a, b) => b[1] - a[1]).slice(0, 6).map(([cat]) => cat);
+
+  if (!topCats.length) {
+    chipsEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">데이터 없음</div>';
+    chartEl.innerHTML = '';
+    return;
+  }
+
+  if (_trendSelectedCats.length === 0) _trendSelectedCats = topCats.slice(0, 2);
+
+  chipsEl.innerHTML = topCats.map(cat =>
+    `<button class="ledger-tag-btn${_trendSelectedCats.includes(cat) ? ' active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`
+  ).join('');
+
+  window._trendMonths = months;
+  _renderTrendChart();
+}
+
+function _renderTrendChart() {
+  const chartEl = document.getElementById('report-cat-trend-chart');
+  if (!chartEl) return;
+  const months = window._trendMonths;
+  if (!months?.length || !_trendSelectedCats.length) {
+    chartEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px 0">카테고리를 선택하세요</div>';
+    return;
+  }
+
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
+  const W = 320, H = 80, PAD = { t: 10, b: 24, l: 40, r: 10 };
+  const innerW = W - PAD.l - PAD.r;
+  const innerH = H - PAD.t - PAD.b;
+  const N = months.length;
+  const stepX = innerW / (N - 1);
+
+  const allVals = _trendSelectedCats.flatMap(cat => months.map(m => m.cats[cat] || 0));
+  const maxVal = Math.max(...allVals, 1);
+
+  let paths = '', dots = '', labels = '';
+
+  labels = months.map((m, i) =>
+    `<text x="${PAD.l + i * stepX}" y="${H}" fill="var(--text3)" font-size="8" text-anchor="middle" font-family="monospace">${m.label}</text>`
+  ).join('');
+
+  _trendSelectedCats.forEach((cat, ci) => {
+    const col = COLORS[ci % COLORS.length];
+    const pts = months.map((m, i) => {
+      const v = m.cats[cat] || 0;
+      const x = PAD.l + i * stepX;
+      const y = PAD.t + innerH - (v / maxVal) * innerH;
+      return { x, y, v };
+    });
+    paths += `<polyline points="${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    dots += pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${col}"><title>${cat}: ${fmtShort(p.v)}</title></circle>`).join('');
+  });
+
+  // 범례
+  const legend = _trendSelectedCats.map((cat, ci) =>
+    `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2)"><div style="width:10px;height:3px;background:${COLORS[ci % COLORS.length]};border-radius:2px"></div>${escapeHtml(cat)}</div>`
+  ).join('');
+
+  chartEl.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible">${labels}${paths}${dots}</svg>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">${legend}</div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 소비 성향 분석
+// ════════════════════════════════════════════════════════
+function _renderPersonality() {
+  const el = document.getElementById('report-personality');
+  if (!el) return;
+
+  const now = today();
+  const tagTotals = {}, tagCounts = {};
+  // 최근 3개월 태그 집계
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+    for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+      if (!dk.startsWith(prefix)) continue;
+      for (const item of items) {
+        if (item.type === 'expense' && item.tag) {
+          tagTotals[item.tag] = (tagTotals[item.tag] || 0) + item.amount;
+          tagCounts[item.tag] = (tagCounts[item.tag] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  const entries = Object.entries(tagTotals).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+
+  if (!entries.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0">소비 유형 태그를 가계부에 기록하면<br>성향 분석을 확인할 수 있어요</div>`;
+    return;
+  }
+
+  const TAG_CONFIG = {
+    '충동': { emoji: '💸', label: '충동형', desc: '즉흥적 구매가 많아요. 구매 전 24시간 고민하는 습관을 만들어보세요.', color: '#ef4444' },
+    '계획': { emoji: '📋', label: '계획형', desc: '지출을 잘 계획하는 타입이에요. 이 습관을 유지하세요!', color: '#3b82f6' },
+    '필수': { emoji: '✅', label: '알뜰형', desc: '필수 지출 위주로 소비하는 알뜰한 타입이에요.', color: '#10b981' },
+    '외식': { emoji: '🍽️', label: '미식형', desc: '외식을 즐기는 타입이에요. 홈쿡 챌린지를 시도해보세요!', color: '#f97316' },
+    '선물': { emoji: '🎁', label: '베풂형', desc: '주변 사람을 챙기는 따뜻한 소비 습관을 가졌어요.', color: '#a78bfa' },
+  };
+
+  const top = entries[0];
+  const cfg = TAG_CONFIG[top[0]] || { emoji: '🤔', label: '분석형', desc: '다양한 소비 패턴을 보여요.', color: '#6366f1' };
+
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a78bfa'];
+  const bars = entries.map(([tag, amt], i) => {
+    const pct = Math.round((amt / total) * 100);
+    const cnt = tagCounts[tag];
+    const tcfg = TAG_CONFIG[tag];
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+      <span style="font-size:14px;width:20px">${tcfg?.emoji || '▸'}</span>
+      <span style="font-size:11px;color:var(--text2);min-width:36px">${escapeHtml(tag)}</span>
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:6px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${COLORS[i % COLORS.length]};border-radius:6px;opacity:.85;transition:width 0.5s ease"></div>
+      </div>
+      <span style="font-size:10px;color:var(--text3);min-width:60px;text-align:right">${cnt}건 · ${pct}%</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:14px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);margin-bottom:14px">
+      <div style="font-size:32px">${cfg.emoji}</div>
+      <div>
+        <div style="font-size:15px;font-weight:900;color:${cfg.color}">나는 <span>${cfg.label}</span></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6">${cfg.desc}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">최근 3개월 소비 유형 분포</div>
+    ${bars}`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -2024,6 +2269,8 @@ export function renderReport() {
 
   renderSimulator();
   renderWeeklyCoachingCard();
+  _renderCategoryTrend();
+  _renderPersonality();
   renderAnnualReview();
 }
 

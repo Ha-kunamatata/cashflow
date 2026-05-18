@@ -285,7 +285,46 @@ ${summary}
   return callGemini(prompt, 1536);
 }
 
-// ── 4. 주간 소비 코칭 ─────────────────────────────────
+// ── 4. 영수증 OCR (Gemini Vision) ────────────────────
+export async function analyzeReceipt(imageBase64, mimeType = 'image/jpeg') {
+  const key = getGeminiKey();
+  if (!key) throw new Error('API 키가 없습니다');
+
+  const prompt = `이 영수증 이미지를 분석해서 다음 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+{
+  "amount": 숫자(원),
+  "memo": "가게명 또는 구매내용 (한국어, 20자 이내)",
+  "category": "카테고리 (식비/음료, 교통, 쇼핑, 의료/건강, 문화/취미, 기타 중 하나)",
+  "date": "YYYY-MM-DD 또는 null"
+}
+금액을 찾을 수 없으면 amount를 0으로 설정하세요.`;
+
+  const res = await fetch(`${GEMINI_API_BASE}?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mimeType, data: imageBase64 } }
+        ]
+      }],
+      generationConfig: { maxOutputTokens: 256, temperature: 0.1 },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `오류 (HTTP ${res.status})`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const json = text.match(/\{[\s\S]*\}/)?.[0] || '{}';
+  return JSON.parse(json);
+}
+
+// ── 5. 주간 소비 코칭 ─────────────────────────────────
 export async function getWeeklyCoachingInsight(state) {
   const now = new Date();
   const year = now.getFullYear();
