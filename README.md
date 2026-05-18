@@ -3,8 +3,9 @@
 개인 현금 흐름을 추적하고, 미래 잔고를 예측하며, AI로 소비를 분석하는 **PWA(Progressive Web App)**입니다.
 PC · 태블릿 · 모바일 어디서나 동일한 경험으로 사용할 수 있으며, 구글 계정으로 로그인 시 기기 간 실시간 동기화됩니다.
 
-> 🌐 **라이브 데모:** [https://ha-kunamatata.github.io/cashflow/v3/](https://ha-kunamatata.github.io/cashflow/v3/)
-> (Cloudflare Pages 마이그레이션 진행 중 — 자세한 내용은 [`DEPLOY.md`](DEPLOY.md))
+> 🌐 **라이브 데모:** [https://cashflow-6mn.pages.dev](https://cashflow-6mn.pages.dev)
+> (Cloudflare Pages, Vite + TypeScript 빌드 · 자동 배포)
+> 레거시 GitHub Pages 버전: [`ha-kunamatata.github.io/cashflow/v3/`](https://ha-kunamatata.github.io/cashflow/v3/) (단계적 제거 예정)
 
 ## ⚡ 빠른 시작 (개발)
 
