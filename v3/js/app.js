@@ -55,6 +55,8 @@ import {
   updateSimResult,
   renderWeeklyCoachingCard,
   setTrendCategory,
+  saveReportCard,
+  renderHomeBudgetBars,
 } from './render.js';
 
 import {
@@ -149,7 +151,9 @@ import {
   closeSheet,
   closeSheetOutside,
   showLoading,
-  hideLoading
+  hideLoading,
+  fmtShort,
+  escapeHtml,
 } from './utils.js';
 
 import { BADGE_DEFS, RARITY_CONFIG } from './streak.js';
@@ -504,11 +508,88 @@ document.getElementById('card-months-list')?.addEventListener('input', (e) => {
   if (input) updateCardData(input.dataset.ym, input.dataset.card, input.value);
 });
 
-// 가계부 달력 이벤트 위임
+// 가계부 달력 이벤트 위임 — 인라인 패널 토글
 document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
   const day = e.target.closest('.ledger-day:not(.empty)');
-  if (day?.dataset.dk) openLedgerDaySheet(day.dataset.dk);
+  if (!day?.dataset.dk) return;
+  _toggleLedgerInlinePanel(day.dataset.dk);
 });
+
+function _toggleLedgerInlinePanel(dk) {
+  const panel = document.getElementById('ledger-day-inline-panel');
+  if (!panel) { openLedgerDaySheet(dk); return; }
+
+  const isSame = panel.dataset.activeDk === dk && panel.style.display !== 'none';
+  if (isSame) {
+    panel.style.display = 'none';
+    panel.dataset.activeDk = '';
+    return;
+  }
+
+  panel.dataset.activeDk = dk;
+  _renderInlinePanel(dk);
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function _renderInlinePanel(dk) {
+  const panel = document.getElementById('ledger-day-inline-panel');
+  if (!panel) return;
+  const d = new Date(dk);
+  const items   = state.ledgerData?.[dk] || [];
+  const expense = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+  const income  = items.filter(i => i.type === 'income' ).reduce((s, i) => s + i.amount, 0);
+
+  const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
+  const itemsHtml = items.length ? items.map(item => {
+    const sign = item.type === 'expense' ? '-' : '+';
+    const cls  = item.type === 'expense' ? 'red' : 'green';
+    return `<div class="lday-item" data-id="${item.id}" style="padding:8px 4px">
+      <div class="lday-item-info">
+        <span class="lday-item-cat">${escapeHtml(item.category)}</span>
+        ${item.memo ? `<span class="lday-item-memo">${escapeHtml(item.memo)}</span>` : ''}
+        ${item.tag ? `<span class="lday-item-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+      </div>
+      <span class="lday-item-amt ${cls}">${sign}${fmtShort(item.amount)}</span>
+      <button class="icon-btn edit lday-edit-btn" data-id="${item.id}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+      </button>
+      <button class="icon-btn del lday-del-btn" data-id="${item.id}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      </button>
+    </div>`;
+  }).join('') : `<div style="font-size:12px;color:var(--text3);padding:12px 4px;text-align:center">기록 없음</div>`;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;border-top:1px solid var(--border2);margin-top:10px">
+      <div style="font-size:13px;font-weight:800;color:var(--text)">${d.getMonth() + 1}월 ${d.getDate()}일</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        ${expense > 0 ? `<span style="font-size:11px;color:var(--red2);font-family:var(--mono)">-${fmtShort(expense)}</span>` : ''}
+        ${income  > 0 ? `<span style="font-size:11px;color:var(--green2);font-family:var(--mono)">+${fmtShort(income)}</span>` : ''}
+        <button class="icon-btn" id="btn-inline-add-item" data-dk="${dk}" style="width:28px;height:28px;background:var(--accent);border-radius:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="inline-items-list">${itemsHtml}</div>`;
+
+  panel.querySelector('#btn-inline-add-item')?.addEventListener('click', (e) => {
+    openLedgerItemForm(e.currentTarget.dataset.dk, null);
+  });
+  panel.querySelectorAll('.lday-edit-btn').forEach(btn =>
+    btn.addEventListener('click', () => openLedgerItemForm(dk, btn.dataset.id))
+  );
+  panel.querySelectorAll('.lday-del-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      if (confirm('삭제할까요?')) {
+        deleteLedgerItem(dk, btn.dataset.id);
+        _renderInlinePanel(dk);
+      }
+    })
+  );
+}
 
 // 가계부 서브탭 (모두 인라인 — 예측도 페이지 이동 없이 표시)
 document.querySelectorAll('#page-ledger .ledger-sub-tab').forEach(btn =>
@@ -568,7 +649,15 @@ document.getElementById('ledger-tag-row')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.ledger-tag-btn');
   if (btn) selectLedgerTag(btn.dataset.tag);
 });
-document.getElementById('btn-ledger-item-save')?.addEventListener('click', saveLedgerItem);
+document.getElementById('btn-ledger-item-save')?.addEventListener('click', () => {
+  saveLedgerItem();
+  // 인라인 패널이 열려 있으면 갱신
+  const panel = document.getElementById('ledger-day-inline-panel');
+  const dk = panel?.dataset.activeDk;
+  if (dk && panel?.style.display !== 'none') {
+    setTimeout(() => _renderInlinePanel(dk), 80);
+  }
+});
 document.getElementById('btn-ledger-item-cancel')?.addEventListener('click', closeLedgerItemForm);
 document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
   if (e.target?.id === 'ledger-item-sheet') closeLedgerItemForm();
@@ -662,6 +751,7 @@ document.getElementById('budget-page-content')?.addEventListener('click', (e) =>
 });
 
 // AI 기능
+document.getElementById('btn-save-report-card')?.addEventListener('click', saveReportCard);
 document.getElementById('btn-coaching-refresh')?.addEventListener('click', () => renderWeeklyCoachingCard(true));
 document.getElementById('btn-save-gemini-key')?.addEventListener('click', saveGeminiKey);
 document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);

@@ -480,6 +480,7 @@ export function renderHome() {
 
   _renderSparkline();
   _renderTodayTimeline();
+  renderHomeBudgetBars();
   renderWeeklyCard();
 
   // ── 재정 건강 점수 미니 카드 (SVG 링 + 카운트업) ─────
@@ -1349,10 +1350,12 @@ function renderLedgerCalendar() {
       `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : ''}">${escapeHtml(e.name.slice(0, 4))}</div>`
     ).join('');
 
+    const itemCount = (state.ledgerData?.[dk] || []).length;
     html += `
       <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${heatLevel > 0 ? 'heat-' + heatLevel : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
           <div class="${numClass}">${day}</div>
+          ${itemCount > 0 ? `<div class="ledger-day-dot-count">${itemCount}</div>` : ''}
         </div>
         <div class="ledger-day-amounts">
           ${dayExp > 0 ? `<div class="ledger-day-expense">-${fmtShort(dayExp)}</div>` : ''}
@@ -3281,4 +3284,297 @@ export async function renderHouseholdSection() {
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px">멤버: ${escapeHtml(memberStr)}</div>
     <button class="btn" id="btn-leave-household" style="padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red2);border-radius:12px;font-size:13px;font-family:var(--font);width:100%;display:flex;align-items:center;gap:8px;justify-content:center">${isOwner ? '🚪 공유 모드 종료' : '🚪 가계에서 나가기'}</button>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 홈 예산 진행 바 위젯
+// ════════════════════════════════════════════════════════
+export function renderHomeBudgetBars() {
+  const el = document.getElementById('home-budget-widget');
+  if (!el) return;
+
+  const now = today();
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+
+  const cats = Object.keys(budget).filter(c => budget[c] > 0);
+  if (!cats.length) { el.innerHTML = ''; return; }
+
+  const totalBgt = cats.reduce((s, c) => s + budget[c], 0);
+  const totalAct = cats.reduce((s, c) => s + (actual[c] || 0), 0);
+  const totalPct = totalBgt > 0 ? Math.min(150, Math.round((totalAct / totalBgt) * 100)) : 0;
+  const totalColor = totalPct >= 100 ? 'var(--red2)' : totalPct >= 80 ? 'var(--orange)' : 'var(--green2)';
+
+  const topCats = [...cats].sort((a, b) => (budget[b] || 0) - (budget[a] || 0)).slice(0, 4);
+
+  const rows = topCats.map(cat => {
+    const bgt = budget[cat] || 0;
+    const act = actual[cat] || 0;
+    const pct = bgt > 0 ? Math.min(100, Math.round((act / bgt) * 100)) : 0;
+    const color = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--accent2)';
+    return `
+      <div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text2);font-weight:600">${escapeHtml(cat)}</span>
+          <span style="font-size:10px;font-family:var(--mono);font-weight:700;color:${color}">${fmtShort(act)}<span style="color:var(--text3);font-weight:400"> / ${fmtShort(bgt)}</span></span>
+        </div>
+        <div style="height:5px;background:var(--bg4);border-radius:6px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:6px;transition:width 0.5s ease"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card" style="padding:14px 16px;cursor:pointer" id="home-budget-widget-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:800;color:var(--text)">💰 이달 예산</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="height:5px;width:52px;background:var(--bg4);border-radius:6px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100, totalPct)}%;background:${totalColor};border-radius:6px"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${totalColor}">${totalPct}%</span>
+        </div>
+      </div>
+      ${rows}
+    </div>`;
+
+  document.getElementById('home-budget-widget-card')?.addEventListener('click', () => {
+    document.querySelector('.nav-btn[data-page="ledger"]')?.click();
+    setTimeout(() => document.querySelector('.ledger-sub-tab[data-tab="budget"]')?.click(), 200);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// 월간 리포트 카드 Canvas 이미지 저장
+// ════════════════════════════════════════════════════════
+export function saveReportCard() {
+  const canvas = document.getElementById('report-card-canvas');
+  if (!canvas) return;
+
+  const W = 640, H = 1040;
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  const now = today();
+  const cf  = _calcMonthCF(now);
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+
+  const catEntries = Object.entries(cf.catTotals || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const savingsRate = cf.income > 0
+    ? Math.round(((cf.income - cf.expense) / cf.income) * 100) : 0;
+
+  // ── 배경 그라디언트 ──────────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0f172a');
+  bg.addColorStop(0.45, '#1e1b4b');
+  bg.addColorStop(1, '#0f172a');
+  _roundRect(ctx, 0, 0, W, H, 0);
+  ctx.fillStyle = bg;
+  ctx.fill();
+
+  // ── 상단 노이즈/광택 효과 ────────────────────────────
+  const shine = ctx.createLinearGradient(0, 0, W, 0);
+  shine.addColorStop(0, 'rgba(99,102,241,0.08)');
+  shine.addColorStop(0.5, 'rgba(139,92,246,0.14)');
+  shine.addColorStop(1, 'rgba(99,102,241,0.05)');
+  _roundRect(ctx, 0, 0, W, H, 0);
+  ctx.fillStyle = shine;
+  ctx.fill();
+
+  // ── 헤더 로고 영역 ────────────────────────────────────
+  ctx.font = 'bold 13px monospace';
+  ctx.fillStyle = 'rgba(165,180,252,0.8)';
+  ctx.fillText('CASH FLOW', 40, 58);
+
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(`${now.getFullYear()}년 ${now.getMonth() + 1}월`, 40, 96);
+
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = 'rgba(148,163,184,0.9)';
+  ctx.fillText('Monthly Financial Report', 40, 118);
+
+  // ── 구분선 ──────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(99,102,241,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, 136); ctx.lineTo(W - 40, 136); ctx.stroke();
+
+  // ── 수입 / 지출 / 순현금 ────────────────────────────
+  const cols3 = [
+    { label: '수입', val: cf.income, color: '#34d399' },
+    { label: '지출', val: cf.expense, color: '#f87171' },
+    { label: '순현금', val: cf.net, color: cf.net >= 0 ? '#34d399' : '#f87171' },
+  ];
+  const col3W = (W - 80) / 3;
+  cols3.forEach((c, i) => {
+    const x = 40 + i * col3W;
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = 'rgba(148,163,184,0.8)';
+    ctx.fillText(c.label, x, 172);
+    ctx.font = 'bold 22px monospace';
+    ctx.fillStyle = c.color;
+    const valStr = (c.val >= 0 ? '' : '-') + _fmtCanvas(Math.abs(c.val));
+    ctx.fillText(valStr, x, 202);
+  });
+
+  // ── 저축률 바 ─────────────────────────────────────────
+  const srY = 228;
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = 'rgba(148,163,184,0.8)';
+  ctx.fillText('저축률', 40, srY);
+  ctx.font = 'bold 13px monospace';
+  ctx.fillStyle = savingsRate >= 20 ? '#34d399' : savingsRate >= 0 ? '#fbbf24' : '#f87171';
+  ctx.fillText(`${savingsRate}%`, W - 80, srY);
+  const barW = W - 80;
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  _roundRect(ctx, 40, srY + 8, barW, 8, 4);
+  ctx.fill();
+  const fillW = Math.max(0, Math.min(barW, barW * savingsRate / 100));
+  const srGrad = ctx.createLinearGradient(40, 0, 40 + fillW, 0);
+  srGrad.addColorStop(0, '#6366f1');
+  srGrad.addColorStop(1, '#34d399');
+  ctx.fillStyle = srGrad;
+  _roundRect(ctx, 40, srY + 8, fillW, 8, 4);
+  ctx.fill();
+
+  // ── 구분선 ─────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(99,102,241,0.2)';
+  ctx.beginPath(); ctx.moveTo(40, 264); ctx.lineTo(W - 40, 264); ctx.stroke();
+
+  // ── 카테고리 TOP ────────────────────────────────────────
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = 'rgba(165,180,252,0.9)';
+  ctx.fillText('지출 카테고리', 40, 290);
+
+  const maxCatAmt = catEntries[0]?.[1] || 1;
+  catEntries.forEach(([cat, amt], i) => {
+    const y = 314 + i * 56;
+    const pct = amt / (cf.expense || 1);
+    const barFillW = (W - 160) * (amt / maxCatAmt) * 0.9;
+
+    // 카테고리 배경
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    _roundRect(ctx, 36, y - 2, W - 72, 44, 8);
+    ctx.fill();
+
+    // 이름
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(cat.length > 6 ? cat.slice(0, 6) : cat, 52, y + 15);
+
+    // 금액
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#f87171';
+    ctx.fillText(_fmtCanvas(amt), W - 155, y + 15);
+
+    // 퍼센트
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = 'rgba(148,163,184,0.7)';
+    ctx.fillText(`${Math.round(pct * 100)}%`, W - 60, y + 15);
+
+    // 진행 바
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    _roundRect(ctx, 52, y + 24, W - 104, 5, 2);
+    ctx.fill();
+    const catColors = ['#6366f1', '#f87171', '#fbbf24', '#34d399'];
+    const cg = ctx.createLinearGradient(52, 0, 52 + barFillW, 0);
+    cg.addColorStop(0, catColors[i % catColors.length]);
+    cg.addColorStop(1, catColors[(i + 1) % catColors.length]);
+    ctx.fillStyle = cg;
+    _roundRect(ctx, 52, y + 24, barFillW, 5, 2);
+    ctx.fill();
+  });
+
+  const afterCats = 314 + catEntries.length * 56 + 16;
+
+  // ── 구분선 ─────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(99,102,241,0.2)';
+  ctx.beginPath(); ctx.moveTo(40, afterCats); ctx.lineTo(W - 40, afterCats); ctx.stroke();
+
+  // ── 소비 성향 & 재정 건강 ────────────────────────────────
+  const hs = _calcHealthScore(cf);
+
+  // 성향
+  const tagTotals = {};
+  for (let mi = 0; mi < 1; mi++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - mi, 1);
+    const pf = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+    for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+      if (!dk.startsWith(pf)) continue;
+      for (const it of items) {
+        if (it.type === 'expense' && it.tag) tagTotals[it.tag] = (tagTotals[it.tag] || 0) + it.amount;
+      }
+    }
+  }
+  const topTag = Object.entries(tagTotals).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const TAG_CONFIG_CARD = {
+    '충동': { emoji: '💸', label: '충동형', color: '#f87171' },
+    '계획': { emoji: '📋', label: '계획형', color: '#60a5fa' },
+    '필수': { emoji: '✅', label: '알뜰형', color: '#34d399' },
+    '외식': { emoji: '🍽️', label: '미식형', color: '#fb923c' },
+    '선물': { emoji: '🎁', label: '베풂형', color: '#c084fc' },
+  };
+  const tCfg = topTag ? (TAG_CONFIG_CARD[topTag] || null) : null;
+
+  const infoY = afterCats + 32;
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = 'rgba(165,180,252,0.9)';
+  ctx.fillText('소비 성향', 40, infoY);
+  ctx.font = 'bold 15px sans-serif';
+  ctx.fillStyle = tCfg?.color || 'rgba(148,163,184,0.8)';
+  ctx.fillText(tCfg ? `${tCfg.emoji} ${tCfg.label}` : '분석 중', 40, infoY + 24);
+
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = 'rgba(165,180,252,0.9)';
+  ctx.fillText('재정 건강', W / 2, infoY);
+  const scoreColor = hs.score >= 70 ? '#34d399' : hs.score >= 40 ? '#fbbf24' : '#f87171';
+  ctx.font = 'bold 28px monospace';
+  ctx.fillStyle = scoreColor;
+  ctx.fillText(`${hs.score}점`, W / 2, infoY + 28);
+
+  // ── 하단 브랜딩 ───────────────────────────────────────
+  const brandY = H - 48;
+  ctx.strokeStyle = 'rgba(99,102,241,0.25)';
+  ctx.beginPath(); ctx.moveTo(40, brandY - 16); ctx.lineTo(W - 40, brandY - 16); ctx.stroke();
+
+  ctx.font = 'bold 11px monospace';
+  ctx.fillStyle = 'rgba(165,180,252,0.5)';
+  ctx.fillText('CASH FLOW · 내 자금 흐름', 40, brandY + 4);
+
+  const dateStr = `${now.getFullYear()}.${p2(now.getMonth() + 1)}.${p2(now.getDate())}`;
+  ctx.fillText(dateStr, W - 40 - ctx.measureText(dateStr).width, brandY + 4);
+
+  // ── Canvas 표시 + 다운로드 ─────────────────────────────
+  canvas.style.display = 'block';
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cashflow-report-${now.getFullYear()}${p2(now.getMonth() + 1)}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  });
+}
+
+function _roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function _fmtCanvas(n) {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`;
+  if (n >= 10_000) return `${Math.round(n / 10_000)}만`;
+  return n.toLocaleString('ko-KR') + '원';
 }
