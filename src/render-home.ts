@@ -17,7 +17,8 @@ import {
 } from './utils';
 import { state } from './state';
 import { buildForecast } from './forecast';
-import { getLedgerDay, getLedgerMonth, _calcMonthCF, _calcHealthScore } from './render-ledger';
+import { getLedgerDay, getLedgerMonth } from './render-ledger';
+import { _calcMonthCF, _calcHealthScore } from './render-report';
 import { renderHouseLevel, renderStreak } from './render-goals';
 
 // ════════════════════════════════════════════════════════

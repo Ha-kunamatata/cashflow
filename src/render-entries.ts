@@ -12,11 +12,10 @@ import {
 } from './utils';
 import { state } from './state';
 import { getCards } from './forecast';
-import {
-  _entryFilter,
-  setEntryFilterState,
-} from './render-state';
 import { renderHome } from './render-home';
+
+let _entryFilter = '전체';
+function setEntryFilterState(v) { _entryFilter = v; }
 import { renderForecast, renderReport } from './render-report';
 import { renderLedger } from './render-ledger';
 import { renderGoals } from './render-goals';

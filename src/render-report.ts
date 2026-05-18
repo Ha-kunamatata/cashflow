@@ -16,23 +16,80 @@ import { buildForecast } from './forecast';
 import { DAYS_KR } from './config';
 import { getMonthBudget, getMonthActual } from './budget';
 import { hasGeminiKey, renderMarkdown, getWeeklyCoachingInsight } from './ai';
-import {
-  _chartPeriod,
-  setChartPeriodState,
-  _forecastFilter,
-  setForecastFilterState,
-  _trendSelectedCats,
-  setTrendSelectedCats,
-  _annualReviewYear,
-  setAnnualReviewYear,
-  _annualReviewListenerReady,
-  setAnnualReviewListenerReady,
-  _simCategory,
-  setSimCategoryState,
-  _simCurrentAvg,
-  setSimCurrentAvg,
-} from './render-state';
-import { _calcMonthCF, _calcHealthScore } from './render-ledger';
+import { computeStreak } from './streak';
+import { getLedgerMonth } from './render-ledger';
+
+// ── module-local state ───────────────────────────────────
+let _chartPeriod = 30;
+let _forecastFilter = 'all';
+let _trendSelectedCats = [];
+let _annualReviewYear = null;
+let _annualReviewListenerReady = false;
+let _simCategory = null;
+let _simCurrentAvg = 0;
+
+// ── helper setters (module-private) ─────────────────────
+function setChartPeriodState(v) { _chartPeriod = v; }
+function setForecastFilterState(v) { _forecastFilter = v; }
+function setTrendSelectedCats(v) { _trendSelectedCats = v; }
+function setAnnualReviewYear(v) { _annualReviewYear = v; }
+function setAnnualReviewListenerReady(v) { _annualReviewListenerReady = v; }
+function setSimCategoryState(v) { _simCategory = v; }
+function setSimCurrentAvg(v) { _simCurrentAvg = v; }
+
+// ════════════════════════════════════════════════════════
+// 재정 계산 헬퍼 (render-home.ts에서도 사용)
+// ════════════════════════════════════════════════════════
+export function _calcMonthCF(d) {
+  const ym = yyyymm(d);
+  const ymStr = String(ym);
+  const income = state.entries
+    .filter((e) => e.type === 'income' && e.repeat === '매월')
+    .reduce((s, e) => s + e.amount, 0);
+  const fixedExp = state.entries
+    .filter((e) => e.type === 'expense' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= ym))
+    .reduce((s, e) => s + e.amount, 0);
+  const cd = state.cardData[ymStr] || {};
+  const ledger = getLedgerMonth(d.getFullYear(), d.getMonth());
+  const expense = fixedExp + (cd.hyundai || 0) + (cd.kookmin || 0) + ledger.expense;
+  return { income, expense, net: income - expense, ym };
+}
+
+export function _calcHealthScore(cf) {
+  const { income, expense } = cf;
+  const now = today();
+  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  const savPts = savingsRate >= 20 ? 25 : savingsRate >= 10 ? 18 : savingsRate >= 0 ? 10 : 0;
+  const expenseRatio = income > 0 ? Math.round((expense / income) * 100) : 100;
+  const expPts = expenseRatio <= 70 ? 20 : expenseRatio <= 85 ? 12 : expenseRatio <= 100 ? 5 : 0;
+  const halbuAmt = state.entries
+    .filter(e => e.type === 'expense' && e.repeat === '매월' && e.category === '할부')
+    .reduce((s, e) => s + e.amount, 0);
+  const halbuPct = expense > 0 ? Math.round((halbuAmt / expense) * 100) : 0;
+  const halbuPts = halbuPct <= 10 ? 15 : halbuPct <= 25 ? 9 : halbuPct <= 40 ? 4 : 0;
+  const activeHalbu = state.entries.filter(
+    e => e.category === '할부' && e.repeat === '매월' && (!e.endMonth || parseInt(e.endMonth, 10) >= yyyymm(now))
+  ).length;
+  const halbuCntPts = activeHalbu <= 2 ? 10 : activeHalbu <= 5 ? 6 : 2;
+  const { count: streak } = computeStreak(state.ledgerData);
+  const streakPts = streak >= 14 ? 15 : streak >= 7 ? 10 : streak >= 3 ? 5 : 0;
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const budgetCats = Object.keys(budget);
+  let budgetPts = 8;
+  let budgetCompliance = null;
+  if (budgetCats.length > 0) {
+    const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+    const overCount = budgetCats.filter(cat => (actual[cat] || 0) > budget[cat]).length;
+    const ratio = overCount / budgetCats.length;
+    budgetPts = ratio === 0 ? 15 : ratio <= 0.2 ? 10 : ratio <= 0.5 ? 5 : 0;
+    budgetCompliance = Math.round((1 - ratio) * 100);
+  }
+  const score = Math.max(0, Math.min(100, savPts + expPts + halbuPts + halbuCntPts + streakPts + budgetPts));
+  const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 45 ? 'C' : score >= 30 ? 'D' : 'F';
+  const color = score >= 70 ? 'var(--green2)' : score >= 45 ? 'var(--yellow)' : 'var(--red2)';
+  const label = score >= 70 ? '우수' : score >= 45 ? '양호' : '주의';
+  return { score, grade, color, label, savingsRate, expenseRatio, halbuPct, streak, budgetCompliance };
+}
 
 // ── 카테고리 컬러 팔레트 ─────────────────────────────
 const REPORT_CAT_COLORS = {
