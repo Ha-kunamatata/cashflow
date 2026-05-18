@@ -1,6 +1,7 @@
 // ════════════════════════════════════════════════════════
-// ui.js — 폼 / 시트 / 네비게이션 / 인터랙션
+// ui.ts — 폼 / 시트 / 네비게이션 / 인터랙션
 // ════════════════════════════════════════════════════════
+// @ts-nocheck
 import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config';
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils';
 import { publishSharedGoal, fetchSharedGoalByCode, createHousehold, joinHousehold, leaveHousehold, getCurrentHouseholdCode } from './firebase';

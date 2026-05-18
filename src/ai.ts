@@ -1,16 +1,17 @@
 // ════════════════════════════════════════════════════════
-// ai.js — Gemini AI 연동
+// ai.ts — Gemini AI 연동
 // ════════════════════════════════════════════════════════
+import type { StateShape } from './state';
 
 const GEMINI_KEY_STORAGE = 'gemini_api_key';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // ── API 키 관리 ───────────────────────────────────────
-export function getGeminiKey() {
+export function getGeminiKey(): string {
   return localStorage.getItem(GEMINI_KEY_STORAGE) || '';
 }
 
-export function setGeminiKey(key) {
+export function setGeminiKey(key: string): void {
   const trimmed = key.trim();
   if (trimmed) {
     localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
@@ -19,12 +20,12 @@ export function setGeminiKey(key) {
   }
 }
 
-export function hasGeminiKey() {
+export function hasGeminiKey(): boolean {
   return !!getGeminiKey();
 }
 
 // ── 마크다운 → HTML 렌더러 ────────────────────────────
-export function renderMarkdown(text) {
+export function renderMarkdown(text: string): string {
   if (!text) return '';
   let h = text
     .replace(/&/g, '&amp;')
@@ -47,19 +48,18 @@ export function renderMarkdown(text) {
 }
 
 // ── Gemini API 호출 (재시도 포함) ─────────────────────
-async function callGemini(prompt, maxTokens = 2048) {
+async function callGemini(prompt: string, maxTokens = 2048): Promise<string> {
   const key = getGeminiKey();
   if (!key) throw new Error('API 키가 없습니다');
 
   const MAX_RETRIES = 2;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    // 재시도 시 대기 (2초, 4초)
     if (attempt > 0) {
       await new Promise(r => setTimeout(r, attempt * 2000));
     }
 
-    let res;
+    let res: Response;
     try {
       res = await fetch(`${GEMINI_API_BASE}?key=${key}`, {
         method: 'POST',
@@ -77,12 +77,10 @@ async function callGemini(prompt, maxTokens = 2048) {
       throw new Error('네트워크 연결을 확인해주세요.');
     }
 
-    // 재시도 가능한 서버 오류 (과부하, 일시적 오류)
     if ((res.status === 503 || res.status === 500 || res.status === 529) && attempt < MAX_RETRIES) {
       continue;
     }
 
-    // 429 Rate limit — 한 번 더 재시도
     if (res.status === 429 && attempt < MAX_RETRIES) {
       await new Promise(r => setTimeout(r, 3000));
       continue;
@@ -91,9 +89,8 @@ async function callGemini(prompt, maxTokens = 2048) {
     if (res.ok) {
       const data = await res.json();
       const candidate = data?.candidates?.[0];
-      const text = candidate?.content?.parts?.[0]?.text || '';
+      const text: string = candidate?.content?.parts?.[0]?.text || '';
 
-      // MAX_TOKENS로 잘린 경우 — 있는 것까지 반환
       if (candidate?.finishReason === 'MAX_TOKENS') {
         return text + '\n\n*(내용이 길어 일부만 표시됩니다. 더 자세한 분석은 다시 시도해주세요.)*';
       }
@@ -101,11 +98,10 @@ async function callGemini(prompt, maxTokens = 2048) {
       return text || '응답을 받지 못했습니다.';
     }
 
-    // 오류 처리
     const err = await res.json().catch(() => ({}));
-    const rawMsg = err?.error?.message || '';
+    const rawMsg: string = err?.error?.message || '';
     const status = res.status;
-    let userMsg;
+    let userMsg: string;
 
     if (status === 503 || rawMsg.toLowerCase().includes('demand') || rawMsg.toLowerCase().includes('overload')) {
       userMsg = 'Gemini가 현재 과부하 상태입니다. 잠시 후 다시 시도해주세요. 🔄';
@@ -118,16 +114,17 @@ async function callGemini(prompt, maxTokens = 2048) {
     }
     throw new Error(userMsg);
   }
+  throw new Error('요청에 실패했습니다.');
 }
 
 // ── 데이터 요약 빌더 ───────────────────────────────────
-function buildFinancialSummary(state) {
+function buildFinancialSummary(state: StateShape): string {
   const today = new Date();
   const year  = today.getFullYear();
   const month = today.getMonth();
-  const pad   = n => String(n).padStart(2, '0');
+  const pad   = (n: number) => String(n).padStart(2, '0');
 
-  const monthData = {};
+  const monthData: Record<string, number> = {};
   let ledgerTotal = 0;
   for (let d = 1; d <= 31; d++) {
     const dk = `${year}-${pad(month + 1)}-${pad(d)}`;
@@ -150,8 +147,8 @@ function buildFinancialSummary(state) {
     .join('\n') || '  (없음)';
 
   const totalAssets = (state.assets || []).reduce((s, a) => s + (a.amount || 0), 0);
-  const goalList = (state.goals || []).filter(g => !g.done).map(g =>
-    `  - ${g.name}: 목표 ${(g.targetAmount||0).toLocaleString('ko-KR')}원 / 저축 ${(g.savedAmount||0).toLocaleString('ko-KR')}원`
+  const goalList = (state.goals || []).filter(g => !(g as any).done).map(g =>
+    `  - ${g.name}: 목표 ${(g.targetAmount||0).toLocaleString('ko-KR')}원 / 저축 ${(g.currentAmount||0).toLocaleString('ko-KR')}원`
   ).join('\n') || '  (없음)';
 
   return `현재 잔고: ${(state.balance||0).toLocaleString('ko-KR')}원
@@ -167,7 +164,7 @@ ${goalList}`;
 }
 
 // ── 1. 홈 탭 AI 인사이트 ─────────────────────────────
-export async function getHomeInsight(state) {
+export async function getHomeInsight(state: StateShape): Promise<string> {
   const summary = buildFinancialSummary(state);
 
   const prompt = `당신은 개인 재무 분석 AI입니다.
@@ -193,14 +190,14 @@ ${summary}
 }
 
 // ── 2. 가계부탭 AI 상세 분석 ─────────────────────────
-export async function getLedgerAnalysis(state, year, month) {
-  const pad = n => String(n).padStart(2, '0');
+export async function getLedgerAnalysis(state: StateShape, year: number, month: number): Promise<string> {
+  const pad = (n: number) => String(n).padStart(2, '0');
   const monthStr = `${year}년 ${month + 1}월`;
 
-  const catTotals = {};
+  const catTotals: Record<string, number> = {};
   let totalExpense = 0;
   let totalIncome  = 0;
-  const dailyExpenses = [];
+  const dailyExpenses: { d: number; amt: number }[] = [];
 
   for (let d = 1; d <= 31; d++) {
     const dk = `${year}-${pad(month + 1)}-${pad(d)}`;
@@ -269,7 +266,7 @@ ${topDays}
 }
 
 // ── 3. 미니 채팅 ─────────────────────────────────────
-export async function chatWithAI(userMessage, state) {
+export async function chatWithAI(userMessage: string, state: StateShape): Promise<string> {
   const summary = buildFinancialSummary(state);
 
   const prompt = `당신은 개인 재무 도우미 AI입니다.
@@ -286,7 +283,12 @@ ${summary}
 }
 
 // ── 4. 영수증 OCR (Gemini Vision) ────────────────────
-export async function analyzeReceipt(imageBase64, mimeType = 'image/jpeg') {
+export async function analyzeReceipt(imageBase64: string, mimeType = 'image/jpeg'): Promise<{
+  amount: number;
+  memo: string;
+  category: string;
+  date: string | null;
+}> {
   const key = getGeminiKey();
   if (!key) throw new Error('API 키가 없습니다');
 
@@ -319,19 +321,20 @@ export async function analyzeReceipt(imageBase64, mimeType = 'image/jpeg') {
   }
 
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
   const json = text.match(/\{[\s\S]*\}/)?.[0] || '{}';
   return JSON.parse(json);
 }
 
 // ── 5. 주간 소비 코칭 ─────────────────────────────────
-export async function getWeeklyCoachingInsight(state) {
+export async function getWeeklyCoachingInsight(state: StateShape): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const pad = n => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, '0');
 
-  const catThis = {}, catLast = {};
+  const catThis: Record<string, number> = {};
+  const catLast: Record<string, number> = {};
   const thisPrefix = `${year}-${pad(month + 1)}`;
   const lastDate = new Date(year, month - 1, 1);
   const lastPrefix = `${lastDate.getFullYear()}-${pad(lastDate.getMonth() + 1)}`;
@@ -353,7 +356,7 @@ export async function getWeeklyCoachingInsight(state) {
     .filter(e => e.type === 'income' && e.repeat === '매월')
     .reduce((s, e) => s + e.amount, 0);
 
-  const anomalies = [];
+  const anomalies: { cat: string; amt: number; prev: number; change: number }[] = [];
   for (const [cat, amt] of Object.entries(catThis)) {
     const prev = catLast[cat] || 0;
     if (prev === 0 && amt > 10000) {

@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 
-// firebase/gstatic은 URL import이므로 번들에서 제외 (런타임에 브라우저가 fetch)
 export default defineConfig({
   base: '/',
   build: {
@@ -12,5 +11,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+  },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
   },
 });
