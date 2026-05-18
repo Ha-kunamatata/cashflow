@@ -726,7 +726,12 @@ export function renderEntries() {
   }
 
   if (!entries.length) {
-    container.innerHTML = '<div class="empty-state">항목이 없습니다<br>위 버튼으로 추가하세요!</div>';
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-title">고정 항목 없음</div>
+      <div class="empty-state-desc">월급·구독·보험 등 매달 반복되는<br>수입/지출을 여기에 등록하세요</div>
+      <div class="empty-state-hint">+ 추가 버튼으로 시작하세요</div>
+    </div>`;
     return;
   }
 
@@ -1623,12 +1628,12 @@ export function renderGoals() {
 
   const goals = state.goals || [];
   if (!goals.length) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:40px 20px">
-        <div style="font-size:48px;margin-bottom:12px">🎯</div>
-        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">목표가 없습니다</div>
-        <div style="font-size:13px;color:var(--text3);line-height:1.6">저축 목표를 설정하고<br>달성까지 추적해보세요</div>
-      </div>`;
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">🎯</div>
+      <div class="empty-state-title">목표가 없습니다</div>
+      <div class="empty-state-desc">저축 목표를 설정하면 달성률과<br>예상 완료일을 자동으로 계산해드려요</div>
+      <div class="empty-state-hint">+ 목표 추가 버튼을 탭하세요</div>
+    </div>`;
     return;
   }
 
@@ -1916,7 +1921,12 @@ export function renderAssets() {
 
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">자산 목록</div>
-      ${assets.length === 0 ? '<div class="empty-state" style="padding:24px 0">등록된 자산이 없습니다<br>아래 버튼으로 추가하세요</div>' : `<div class="assets-list">${assetItems}</div>`}
+      ${assets.length === 0 ? `<div class="empty-state">
+        <div class="empty-state-icon">🏦</div>
+        <div class="empty-state-title">자산 없음</div>
+        <div class="empty-state-desc">예금·투자·부동산 등 자산을 등록하면<br>순자산과 집 레벨을 추적할 수 있어요</div>
+        <div class="empty-state-hint">+ 자산 추가 버튼을 탭하세요</div>
+      </div>` : `<div class="assets-list">${assetItems}</div>`}
     </div>
 
     <!-- 배지 섹션 -->
@@ -2123,13 +2133,12 @@ export function renderWishlist() {
   }
 
   if (!filtered.length) {
-    const msg = _wishFilter === 'bought'
-      ? '구매 완료된 항목 없음'
-      : wishlist.length ? '해당 필터에 아이템 없음' : '위에서 + 추가 버튼으로<br>사고 싶은 것들을 기록해보세요';
-    container.innerHTML = `<div class="empty-state" style="padding:40px 20px;text-align:center">
-      <div style="font-size:40px;margin-bottom:12px">🛒</div>
-      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">아이템 없음</div>
-      <div style="font-size:12px;color:var(--text3);line-height:1.6">${msg}</div>
+    const isEmpty = !wishlist.length;
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">${_wishFilter === 'bought' ? '✅' : '🛍️'}</div>
+      <div class="empty-state-title">${_wishFilter === 'bought' ? '구매 완료 항목 없음' : '위시리스트 비어있음'}</div>
+      <div class="empty-state-desc">${isEmpty ? '사고 싶은 물건을 추가하면<br>구매 가능일과 잔고 영향을 계산해드려요' : '해당 필터에 해당하는 항목이 없습니다'}</div>
+      ${isEmpty ? '<div class="empty-state-hint">+ 추가 버튼으로 시작하세요</div>' : ''}
     </div>`;
     return;
   }
@@ -2215,10 +2224,11 @@ export function renderFinance() {
   if (!container) return;
 
   if (!watchlist.length) {
-    container.innerHTML = `<div class="empty-state" style="padding:40px 20px;text-align:center">
-      <div style="font-size:40px;margin-bottom:12px">📈</div>
-      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">관심종목 없음</div>
-      <div style="font-size:12px;color:var(--text3);line-height:1.6">+ 추가 버튼으로 주식, ETF,<br>암호화폐 종목을 추적해보세요</div>
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">📈</div>
+      <div class="empty-state-title">관심종목 없음</div>
+      <div class="empty-state-desc">주식·ETF·암호화폐를 추가하면<br>실시간 시세와 수익률을 추적합니다</div>
+      <div class="empty-state-hint">우측 상단 + 추가 버튼을 탭하세요</div>
     </div>`;
     updateFinanceSummary();
     return;
@@ -2344,12 +2354,30 @@ export async function fetchStockPrice(item) {
 
   _financeLoading[symbol] = true;
 
+  const CORS_PROXIES = [
+    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  ];
+
   const _yahooFetch = async (yahooUrl) => {
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
-    const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error('proxy error');
-    const wrapper = await res.json();
-    return JSON.parse(wrapper.contents);
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+      try {
+        const proxyUrl = CORS_PROXIES[i](yahooUrl);
+        const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('proxy error');
+        if (i === 1) {
+          // allorigins.win wraps the response in { contents: "..." }
+          const wrapper = await res.json();
+          return JSON.parse(wrapper.contents);
+        } else {
+          // corsproxy.io and codetabs.com return direct JSON
+          return await res.json();
+        }
+      } catch (err) {
+        if (i === CORS_PROXIES.length - 1) throw err;
+      }
+    }
   };
 
   try {
@@ -2398,9 +2426,15 @@ export async function fetchStockPrice(item) {
   }
 }
 
+let _lastRefreshTime = 0;
+
 export async function refreshAllStocks() {
   const watchlist = state.watchlist || [];
   if (!watchlist.length) return;
+
+  const now = Date.now();
+  if (now - _lastRefreshTime < 30000) return;
+  _lastRefreshTime = now;
 
   const infoEl = document.getElementById('finance-refresh-info');
   if (infoEl) infoEl.textContent = '새로고침 중...';

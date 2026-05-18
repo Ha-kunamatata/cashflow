@@ -11,7 +11,7 @@
 <title>💰 내 자금 흐름</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=6">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -672,39 +672,6 @@
   <div id="watchlist-container"></div>
 </div>
 
-<!-- ── 뷰탭 (게임화면) ── -->
-<div class="page" id="page-view">
-  <!-- 캔버스 + 오버레이 UI -->
-  <div id="game-wrap" style="position:relative;width:100%;height:360px;border-radius:16px;overflow:hidden;background:#0a0f1e;border:1px solid rgba(59,130,246,0.2)">
-    <canvas id="game-canvas" style="display:block;width:100%;height:100%;touch-action:none"></canvas>
-    <!-- 우측 상단 급여 카운터 (캔버스 위 오버레이) -->
-    <div id="salary-counter-wrap" style="position:absolute;top:10px;right:10px;z-index:10;text-align:right;pointer-events:none;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);border-radius:10px;padding:5px 9px;border:1px solid rgba(74,222,128,0.25)">
-      <div style="font-size:8px;color:#4ade80;font-weight:700;opacity:0.8;letter-spacing:0.8px">💰 초당 수입</div>
-      <div id="salary-counter" style="font-family:monospace;font-size:13px;font-weight:900;color:#4ade80;text-shadow:0 0 8px #4ade8066;letter-spacing:0.3px">+0원</div>
-    </div>
-  </div>
-  <!-- 하단 설명 -->
-  <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15)">
-    <div style="font-size:12px;font-weight:800;color:var(--accent2);margin-bottom:6px">⚔️ 재정 배틀</div>
-    <div style="font-size:11px;color:var(--text3);line-height:1.7">
-      고정 지출 항목들이 <strong style="color:#ef4444">몬스터</strong>로 등장합니다.<br>
-      월급은 초당 <strong style="color:#4ade80">힐</strong>로 캐릭터 머리 위에 표시됩니다.<br>
-      지출을 줄일수록 몬스터가 사라집니다!
-    </div>
-  </div>
-  <!-- 스탯 요약 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="game-stats-grid">
-    <div style="padding:10px 12px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)">
-      <div style="font-size:10px;color:#ef4444;font-weight:700;margin-bottom:3px">👾 적군 (고정지출)</div>
-      <div style="font-family:monospace;font-size:16px;font-weight:900;color:var(--text)" id="game-monster-count">-</div>
-    </div>
-    <div style="padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2)">
-      <div style="font-size:10px;color:#10b981;font-weight:700;margin-bottom:3px">💰 월 수입 (힐)</div>
-      <div style="font-family:monospace;font-size:16px;font-weight:900;color:var(--text)" id="game-income-stat">-</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── 바텀 탭 (9개 — 스크롤 가능) ── -->
 
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
@@ -715,8 +682,6 @@
   <button class="nav-btn" data-page="goals"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>목표</span></button>
   <button class="nav-btn" data-page="wishlist"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span>위시</span></button>
   <button class="nav-btn" data-page="finance"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>재테크</span></button>
-  <!-- 뷰탭 — 칼 엑스자 아이콘 -->
-  <button class="nav-btn" data-page="view"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/><path d="M3 3l2 2M19 19l2 2M21 3l-2 2M5 19l-2 2" stroke-width="1.5"/></svg><span>뷰</span></button>
   <button class="nav-btn" data-page="report"><div class="nav-indicator"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>리포트</span></button>
 </nav>
 
@@ -1211,6 +1176,32 @@
 <!-- ── JS 진입점 ── -->
 
 <script type="module" src="js/app.js"></script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // 새 서비스워커가 설치되면 즉시 활성화 요청
+      reg.addEventListener('updatefound', () => {
+        const next = reg.installing;
+        next.addEventListener('statechange', () => {
+          // 새 SW가 activated 되면 controllerchange가 발생
+          // → 아래 리스너가 페이지를 자동 리로드
+        });
+      });
+    }).catch(() => {});
+
+    // 새 SW가 제어권을 가져오는 순간 → 자동 새로고침
+    // skipWaiting + clients.claim() 조합으로 설치 직후 바로 실행됨
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
+}
+</script>
 
 </body>
 </html>
