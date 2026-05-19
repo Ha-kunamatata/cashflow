@@ -90,12 +90,13 @@ export function navigate(page, btn) {
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active', 'nav-right', 'nav-left'));
   const nextEl = document.getElementById(PAGE_MAP[page]);
   if (nextEl) {
+    // 방향 클래스를 active 보다 먼저 추가 → active 추가 순간 이미 셀렉터가 매칭돼
+    // 브라우저가 display:block + 애니메이션을 동시에 적용, 한 프레임 flash 없음
+    const dirCls = (prevIdx >= 0 && nextIdx >= 0 && prevIdx !== nextIdx)
+      ? (nextIdx > prevIdx ? 'nav-right' : 'nav-left') : '';
+    if (dirCls) nextEl.classList.add(dirCls);
     nextEl.classList.add('active');
-    if (prevIdx >= 0 && nextIdx >= 0 && prevIdx !== nextIdx) {
-      const cls = nextIdx > prevIdx ? 'nav-right' : 'nav-left';
-      nextEl.classList.add(cls);
-      nextEl.addEventListener('animationend', () => nextEl.classList.remove(cls), { once: true });
-    }
+    if (dirCls) nextEl.addEventListener('animationend', () => nextEl.classList.remove(dirCls), { once: true });
   }
 
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
@@ -118,7 +119,7 @@ export function navigate(page, btn) {
     renderModule.refreshAllStocks();
   }
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
 }
 
 // ── 테마 ───────────────────────────────────────────────
