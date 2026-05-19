@@ -1508,9 +1508,11 @@ function renderLedgerCalendar() {
       e.repeat === '매월' && e.day === day &&
       (!e.endMonth || parseInt(e.endMonth) >= yyyymm(new Date(y, m, 1)))
     );
-    const fixedHtml = fixedForDay.slice(0, 2).map(e =>
-      `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : ''}">${escapeHtml(e.name.slice(0, 4))}</div>`
-    ).join('');
+    const fixedHtml = fixedForDay.slice(0, 2).map(e => {
+      const sign = e.type === 'income' ? '+' : '-';
+      const amt = (e.amount || 0).toLocaleString('ko-KR');
+      return `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : 'ledger-day-fixed-exp'}">${sign}${amt}</div>`;
+    }).join('');
 
     const itemCount = (state.ledgerData?.[dk] || []).length;
     html += `
@@ -1520,8 +1522,8 @@ function renderLedgerCalendar() {
           ${itemCount > 0 ? `<div class="ledger-day-dot-count">${itemCount}</div>` : ''}
         </div>
         <div class="ledger-day-amounts">
-          ${dayExp > 0 ? `<div class="ledger-day-expense">-${fmtShort(dayExp)}</div>` : ''}
-          ${dayInc > 0 ? `<div class="ledger-day-income">+${fmtShort(dayInc)}</div>` : ''}
+          ${dayExp > 0 ? `<div class="ledger-day-expense">-${dayExp.toLocaleString('ko-KR')}</div>` : ''}
+          ${dayInc > 0 ? `<div class="ledger-day-income">+${dayInc.toLocaleString('ko-KR')}</div>` : ''}
           ${fixedHtml}
         </div>
       </div>
