@@ -1045,10 +1045,13 @@ export function renderEntries() {
 
   if (!entries.length) {
     container.innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-illu">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+        </svg>
+      </div>
       <div class="empty-state-title">고정 항목 없음</div>
       <div class="empty-state-desc">월급·구독·보험 등 매달 반복되는<br>수입/지출을 여기에 등록하세요</div>
-      <div class="empty-state-hint">+ 추가 버튼으로 시작하세요</div>
     </div>`;
     return;
   }
@@ -2172,50 +2175,95 @@ export function renderReport() {
     const savingsRate = curMonth.income > 0
       ? Math.round(((curMonth.income - curMonth.expense) / curMonth.income) * 100)
       : 0;
-    const srColor = savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)';
+    const srColor = savingsRate >= 20 ? '#22c55e' : savingsRate >= 0 ? '#facc15' : '#f87171';
+    const netColor = curMonth.net >= 0 ? '#22c55e' : '#f87171';
+    const vsInc = prevMonth.income > 0 ? Math.round(((curMonth.income - prevMonth.income) / prevMonth.income) * 100) : 0;
+    const vsExp = prevMonth.expense > 0 ? Math.round(((curMonth.expense - prevMonth.expense) / prevMonth.expense) * 100) : 0;
+    const trendBadge = (pct, inv = false) => {
+      if (pct === 0) return '';
+      const good = inv ? pct < 0 : pct > 0;
+      const col = good ? '#22c55e' : '#f87171';
+      const arrow = pct > 0 ? '▲' : '▼';
+      return `<span style="font-size:10px;color:${col};font-weight:700;margin-left:4px">${arrow}${Math.abs(pct)}%</span>`;
+    };
     headerEl.innerHTML = `
-      <div class="report-header-month">${now.getFullYear()}년 ${now.getMonth() + 1}월 재정 요약</div>
-      <div class="report-header-grid">
-        <div class="report-header-item">
-          <div class="report-header-label">수입</div>
-          <div class="report-header-val green">${fmtShort(curMonth.income)}</div>
+      <div class="report-hdr-title">${now.getFullYear()}년 ${now.getMonth() + 1}월</div>
+      <div class="report-hdr-grid">
+        <div class="report-hdr-cell">
+          <div class="report-hdr-label">수입</div>
+          <div class="report-hdr-val" style="color:#4ade80">${fmtShort(curMonth.income)}${trendBadge(vsInc)}</div>
         </div>
-        <div class="report-header-item">
-          <div class="report-header-label">지출</div>
-          <div class="report-header-val red">${fmtShort(curMonth.expense)}</div>
+        <div class="report-hdr-cell">
+          <div class="report-hdr-label">지출</div>
+          <div class="report-hdr-val" style="color:#f87171">${fmtShort(curMonth.expense)}${trendBadge(vsExp, true)}</div>
         </div>
-        <div class="report-header-item">
-          <div class="report-header-label">순현금</div>
-          <div class="report-header-val" style="color:${curMonth.net >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(curMonth.net)}</div>
+        <div class="report-hdr-cell">
+          <div class="report-hdr-label">순현금</div>
+          <div class="report-hdr-val" style="color:${netColor}">${fmtSigned(curMonth.net)}</div>
         </div>
-        <div class="report-header-item">
-          <div class="report-header-label">저축률</div>
-          <div class="report-header-val" style="color:${srColor}">${savingsRate}%</div>
+        <div class="report-hdr-cell">
+          <div class="report-hdr-label">저축률</div>
+          <div class="report-hdr-val" style="color:${srColor}">${savingsRate}%</div>
         </div>
       </div>`;
   }
 
-  // ── 6개월 현금 흐름 차트 ─────────────────────────────
+  // ── 6개월 현금 흐름 SVG 차트 ──────────────────────────
   const netEl = document.getElementById('report-net-chart');
   if (netEl) {
+    const isLight = document.body.classList.contains('light-theme');
     const maxAmt = Math.max(...months.flatMap(m => [m.income, m.expense]), 1);
-    netEl.innerHTML = `
-      <div class="monthly-chart-bar">
-        ${months.map((m) => `
-          <div>
-            <div style="font-size:9px;color:var(--text3);margin-bottom:4px;font-weight:700">${m.label}</div>
-            <div class="bar-row">
-              <span class="bar-label" style="color:var(--green2)">수</span>
-              <div class="bar-track"><div class="bar-fill income" style="width:${((m.income / maxAmt) * 100).toFixed(1)}%"></div></div>
-              <span class="bar-value" style="color:var(--green2)">${fmtShort(m.income)}</span>
-            </div>
-            <div class="bar-row">
-              <span class="bar-label" style="color:var(--red2)">지</span>
-              <div class="bar-track"><div class="bar-fill expense" style="width:${((m.expense / maxAmt) * 100).toFixed(1)}%"></div></div>
-              <span class="bar-value" style="color:var(--red2)">${fmtShort(m.expense)}</span>
-            </div>
-          </div>`).join('<div style="height:4px"></div>')}
-      </div>`;
+    const W = 560, H = 160;
+    const pT = 30, pR = 12, pB = 34, pL = 10;
+    const chartW = W - pL - pR;
+    const chartH = H - pT - pB;
+    const mW = chartW / months.length;
+    const bW = Math.min(mW * 0.33, 26);
+    const gap = 4;
+    const gridCol  = isLight ? 'rgba(30,58,138,0.07)'  : 'rgba(255,255,255,0.06)';
+    const labelCol = isLight ? 'rgba(30,58,138,0.45)'  : 'rgba(255,255,255,0.38)';
+    const incCol   = 'rgba(74,222,128,0.85)';
+    const expCol   = 'rgba(248,113,113,0.85)';
+    const incTxt   = 'rgba(74,222,128,0.95)';
+    const expTxt   = 'rgba(248,113,113,0.95)';
+    const FONT     = 'Noto Sans KR,sans-serif';
+
+    let grid = '';
+    [0.25, 0.5, 0.75, 1].forEach(r => {
+      const y = (pT + chartH * (1 - r)).toFixed(1);
+      grid += `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="${gridCol}" stroke-width="1"/>`;
+      grid += `<text x="${pL}" y="${(pT + chartH*(1-r)-3).toFixed(1)}" font-size="8" fill="${labelCol}" font-family="${FONT}">${fmtShort(maxAmt * r)}</text>`;
+    });
+
+    let bars = '', labels = '';
+    months.forEach((m, i) => {
+      const cx = pL + (i + 0.5) * mW;
+      const incH = m.income  > 0 ? Math.max((m.income  / maxAmt) * chartH, 4) : 0;
+      const expH = m.expense > 0 ? Math.max((m.expense / maxAmt) * chartH, 4) : 0;
+      const incX = cx - gap / 2 - bW;
+      const expX = cx + gap / 2;
+
+      if (incH > 0) {
+        const iy = (pT + chartH - incH).toFixed(1);
+        bars += `<rect x="${incX.toFixed(1)}" y="${iy}" width="${bW}" height="${incH.toFixed(1)}" rx="4" fill="${incCol}"/>`;
+        if (incH > 18) bars += `<text x="${(incX + bW/2).toFixed(1)}" y="${(pT + chartH - incH - 4).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${incTxt}" font-family="${FONT}" font-weight="700">${fmtShort(m.income)}</text>`;
+      }
+      if (expH > 0) {
+        const ey = (pT + chartH - expH).toFixed(1);
+        bars += `<rect x="${expX.toFixed(1)}" y="${ey}" width="${bW}" height="${expH.toFixed(1)}" rx="4" fill="${expCol}"/>`;
+        if (expH > 18) bars += `<text x="${(expX + bW/2).toFixed(1)}" y="${(pT + chartH - expH - 4).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${expTxt}" font-family="${FONT}" font-weight="700">${fmtShort(m.expense)}</text>`;
+      }
+      labels += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${labelCol}" font-family="${FONT}" font-weight="600">${m.label}</text>`;
+    });
+
+    const lx = W - pR;
+    const legend = `
+      <circle cx="${lx-74}" cy="16" r="4.5" fill="${incCol}"/>
+      <text x="${lx-67}" y="20" font-size="10" fill="${labelCol}" font-family="${FONT}">수입</text>
+      <circle cx="${lx-34}" cy="16" r="4.5" fill="${expCol}"/>
+      <text x="${lx-27}" y="20" font-size="10" fill="${labelCol}" font-family="${FONT}">지출</text>`;
+
+    netEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;overflow:visible">${grid}${bars}${labels}${legend}</svg>`;
   }
 
   // ── 카테고리별 지출 도넛 (클릭 시 모달) ──────────────
@@ -2519,10 +2567,13 @@ export function renderGoals() {
   const goals = state.goals || [];
   if (!goals.length) {
     container.innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">🎯</div>
+      <div class="empty-state-illu">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        </svg>
+      </div>
       <div class="empty-state-title">목표가 없습니다</div>
       <div class="empty-state-desc">저축 목표를 설정하면 달성률과<br>예상 완료일을 자동으로 계산해드려요</div>
-      <div class="empty-state-hint">+ 목표 추가 버튼을 탭하세요</div>
     </div>`;
     return;
   }
@@ -2816,10 +2867,13 @@ export function renderAssets() {
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">자산 목록</div>
       ${assets.length === 0 ? `<div class="empty-state">
-        <div class="empty-state-icon">🏦</div>
+        <div class="empty-state-illu">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
         <div class="empty-state-title">자산 없음</div>
         <div class="empty-state-desc">예금·투자·부동산 등 자산을 등록하면<br>순자산과 집 레벨을 추적할 수 있어요</div>
-        <div class="empty-state-hint">+ 자산 추가 버튼을 탭하세요</div>
       </div>` : `<div class="assets-list">${assetItems}</div>`}
     </div>
 
@@ -3166,7 +3220,10 @@ export function renderFinance() {
 
     let priceHtml = '';
     if (isLoading) {
-      priceHtml = `<div class="fin-loading"><div class="fin-loading-dot"></div><div class="fin-loading-dot"></div><div class="fin-loading-dot"></div></div>`;
+      priceHtml = `<div class="fin-price-skeleton">
+        <div class="skeleton" style="width:80px;height:20px;border-radius:6px;margin-bottom:5px"></div>
+        <div class="skeleton" style="width:55px;height:13px;border-radius:5px"></div>
+      </div>`;
     } else if (data && data.price != null) {
       const curr = data.currency || 'USD';
       const cs = _currSym(curr);

@@ -78,10 +78,25 @@ const PAGE_MAP = {
   view: 'page-view',
   settings: 'page-settings',
 };
+// 바텀 탭 순서 (슬라이드 방향 결정용)
+const NAV_ORDER = ['home','assets','ledger','entries','goals','wishlist','finance','report'];
+let _curNavPage = 'home';
 
 export function navigate(page, btn) {
-  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
-  document.getElementById(PAGE_MAP[page])?.classList.add('active');
+  const prevIdx = NAV_ORDER.indexOf(_curNavPage);
+  const nextIdx = NAV_ORDER.indexOf(page);
+  _curNavPage = page;
+
+  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active', 'nav-right', 'nav-left'));
+  const nextEl = document.getElementById(PAGE_MAP[page]);
+  if (nextEl) {
+    nextEl.classList.add('active');
+    if (prevIdx >= 0 && nextIdx >= 0 && prevIdx !== nextIdx) {
+      const cls = nextIdx > prevIdx ? 'nav-right' : 'nav-left';
+      nextEl.classList.add(cls);
+      nextEl.addEventListener('animationend', () => nextEl.classList.remove(cls), { once: true });
+    }
+  }
 
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
   if (btn) {
@@ -255,11 +270,34 @@ function updateTypeButtons(type) {
   document.getElementById('type-expense-btn').className = `type-btn ${type === 'expense' ? 'expense-active' : 'inactive'}`;
 }
 
+const FORM_CAT_ICONS = {
+  '월급':'💰','수당':'💼','기타수입':'📦',
+  '카드':'💳','할부':'📅','공과금':'💡','보험':'🛡️','기타지출':'📦',
+};
 function updateCatOptions(type, selected) {
   const cats = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
-  document.getElementById('f-category').innerHTML = cats
-    .map((c) => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`)
-    .join('');
+  const first = selected || cats[0];
+  // hidden input 값 초기화
+  const hiddenInput = document.getElementById('f-category') as HTMLInputElement;
+  if (hiddenInput) hiddenInput.value = first;
+
+  const grid = document.getElementById('f-cat-grid');
+  if (!grid) return;
+  grid.innerHTML = cats.map(c => {
+    const icon = FORM_CAT_ICONS[c] || '📦';
+    const isSel = c === first;
+    return `<button type="button" class="form-cat-chip${isSel ? ' selected' : ''}" data-cat="${c}">
+      <span>${icon}</span><span>${c}</span>
+    </button>`;
+  }).join('');
+
+  grid.querySelectorAll('.form-cat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      grid.querySelectorAll('.form-cat-chip').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if (hiddenInput) hiddenInput.value = (btn as HTMLElement).dataset.cat || '';
+    });
+  });
 }
 
 export function onRepeatChange() {

@@ -785,9 +785,16 @@
       <div><div class="form-label">항목명</div><input class="form-input" id="f-name" placeholder="예: 월급"></div>
       <div><div class="form-label">금액 (원)</div><input class="form-input" id="f-amount" type="number" placeholder="0" inputmode="numeric"></div>
     </div>
+    <div class="form-row" style="grid-template-columns:1fr">
+      <div>
+        <div class="form-label">분류</div>
+        <div class="form-cat-grid" id="f-cat-grid"></div>
+        <input type="hidden" id="f-category" value="">
+      </div>
+    </div>
     <div class="form-row">
-      <div><div class="form-label">분류</div><select class="form-select" id="f-category"></select></div>
       <div><div class="form-label">반복</div><select class="form-select" id="f-repeat"><option value="매월">매월</option><option value="1회성">1회성</option><option value="격주">격주</option></select></div>
+      <div></div>
     </div>
     <div class="form-row">
       <div><div class="form-label" id="day-label">기준일 (매월 며칠)</div><input class="form-input" id="f-day" type="number" placeholder="25" min="1" max="31" inputmode="numeric"></div>
