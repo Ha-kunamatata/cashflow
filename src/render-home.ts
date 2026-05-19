@@ -213,32 +213,54 @@ export function renderWeeklyCard() {
   const actualTotal = Object.values(actual).reduce((s: number, v: number) => s + v, 0);
   const remaining = budgetTotal - actualTotal;
 
+  // 이번 주 카테고리별 합산
+  const weekCatAmts: Record<string, number> = {};
+  for (let i = 0; i < 7; i++) {
+    const diffToMon = dow === 0 ? -6 : 1 - dow;
+    const d = new Date(now);
+    d.setDate(now.getDate() + diffToMon + i);
+    if (d > now) break;
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    (state.ledgerData?.[dk] || []).forEach(it => {
+      if (it.type === 'expense') weekCatAmts[it.category] = (weekCatAmts[it.category] || 0) + it.amount;
+    });
+  }
+  const topWeekCats = Object.entries(weekCatAmts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
   el.innerHTML = `
     <div class="card" style="padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span style="font-size:15px">📅</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:14px">📊</span>
         <div style="font-size:12px;font-weight:800;color:var(--text)">이번 주 지출</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-          <span style="font-size:13px;font-weight:800;font-family:var(--mono);color:#a5b4fc">${fmtShort(thisWeek)}</span>
-          <span style="font-size:10px;color:${diffColor};font-weight:700">${diff <= 0 ? '▼' : '▲'}${fmtShort(Math.abs(diff))}</span>
+          <span style="font-size:14px;font-weight:900;font-family:var(--mono);color:#a5b4fc">${fmtShort(thisWeek)}</span>
+          ${lastWeek > 0 ? `<span style="font-size:10px;color:${diffColor};font-weight:700;padding:1px 6px;border-radius:6px;background:${diff<=0?'rgba(52,211,153,.1)':'rgba(248,113,113,.1)'}">${diff <= 0 ? '▼' : '▲'}${fmtShort(Math.abs(diff))}</span>` : ''}
         </div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:44px;margin-bottom:4px">
+      <div style="display:flex;align-items:flex-end;gap:3px;height:52px;margin-bottom:3px">
         ${weekDays.map(d => {
-          const pct = d.isFuture ? 0 : Math.max(d.exp > 0 ? 15 : 0, Math.round((d.exp / maxDay) * 100));
-          const col = d.isToday ? 'var(--accent2)' : d.isFuture ? 'rgba(255,255,255,0.05)' : 'rgba(248,113,113,0.6)';
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          const pct = d.isFuture ? 0 : Math.max(d.exp > 0 ? 12 : 0, Math.round((d.exp / maxDay) * 100));
+          const col = d.isToday ? '#818cf8' : d.isFuture ? 'rgba(255,255,255,0.04)' : 'rgba(248,113,113,0.55)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">
+            ${!d.isFuture && d.exp > 0 ? `<div style="font-size:7px;color:var(--text3);font-family:var(--mono);margin-bottom:1px">${fmtShort(d.exp).replace('만','만\n')}</div>` : '<div style="height:12px"></div>'}
             <div style="flex:1;width:100%;display:flex;align-items:flex-end">
-              <div style="width:100%;height:${pct}%;background:${col};border-radius:3px 3px 0 0;min-height:${d.exp > 0 ? '4px' : '0'};transition:height 0.4s ease"></div>
+              <div style="width:100%;height:${pct}%;background:${col};border-radius:3px 3px 0 0;min-height:${d.exp > 0 ? '3px' : '0'};transition:height .4s ease"></div>
             </div>
           </div>`;
         }).join('')}
       </div>
-      <div style="display:flex;gap:4px">
-        ${weekDays.map(d => `<div style="flex:1;text-align:center;font-size:9px;color:${d.isToday ? 'var(--accent2)' : 'var(--text3)'}${d.isToday ? ';font-weight:700' : ''}">${d.label}</div>`).join('')}
+      <div style="display:flex;gap:3px;margin-bottom:${topWeekCats.length ? '10px' : '0'}">
+        ${weekDays.map(d => `<div style="flex:1;text-align:center;font-size:9px;color:${d.isToday ? '#818cf8' : 'var(--text3)'}${d.isToday ? ';font-weight:800' : ''}">${d.label}</div>`).join('')}
       </div>
+      ${topWeekCats.length > 0 ? `
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${topWeekCats.map(([cat, amt]) => {
+          const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+          return `<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${col}18;color:${col};font-weight:600">${escapeHtml(cat)} ${fmtShort(amt)}</span>`;
+        }).join('')}
+      </div>` : ''}
       ${hasBudget ? `
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:7px 10px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);margin-top:8px">
         <span style="color:var(--text3)">이번달 예산 잔여</span>
         <span style="font-weight:800;font-family:var(--mono);color:${remaining >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(remaining)}</span>
       </div>` : ''}
@@ -565,12 +587,29 @@ export function renderHome() {
 
   const insightEl = document.getElementById('balance-insight');
   if (insightEl) {
-    insightEl.textContent =
-      state.balance < state.dangerLine
-        ? '주의가 필요해요. 잔고가 위험 기준선 아래입니다.'
-        : net > 0
-          ? '좋아요. 월 순현금이 플러스 흐름을 유지하고 있어요.'
-          : '고정 지출 비중이 높아요. 지출 구조를 점검해보세요.';
+    const now2 = today();
+    const daysLeft = new Date(now2.getFullYear(), now2.getMonth() + 1, 0).getDate() - now2.getDate();
+    let insightText = '';
+    if (state.balance < state.dangerLine) {
+      insightText = `⚠️ 잔고가 위험선 아래예요. ${daysLeft}일 남았어요.`;
+    } else if (checkTotal > 0 && prevCheckTotal > 0) {
+      const diff = checkTotal - prevCheckTotal;
+      const diffPct = Math.round(Math.abs(diff) / prevCheckTotal * 100);
+      if (diffPct >= 5) {
+        insightText = diff < 0
+          ? `📉 이번달 지출이 전월보다 ${diffPct}% 줄었어요!`
+          : `📈 이번달 지출이 전월보다 ${diffPct}% 늘었어요.`;
+      } else {
+        insightText = net > 0 ? `✅ 이번달 현금흐름이 플러스예요.` : `⚡ 이번달 지출이 수입을 초과했어요.`;
+      }
+    } else {
+      insightText = net > 0
+        ? `✅ 월 순현금 플러스 흐름이에요.`
+        : monthlyExpense > 0
+          ? `⚡ 고정 지출 비중을 점검해보세요.`
+          : `💡 가계부에 수입·지출을 기록해보세요.`;
+    }
+    insightEl.textContent = insightText;
   }
 
   // ── 정보 칩 (월급 D-Day, 할부 종료 임박, 예산 여유) ──────
@@ -632,12 +671,31 @@ export function renderHome() {
   const scSub = document.getElementById('sum-checkcard-sub');
   if (scSub) scSub.textContent = `${checkDays}일 기록`;
 
-  // 오늘 지출 chip 추가
+  // 오늘 지출 chip 추가 + 무지출 축하
   const todayKey  = dateKey(today());
   const { expense: todayExp, income: todayInc } = getLedgerDay(todayKey);
   if (todayExp > 0 || todayInc > 0) {
     const todayChip = `<span class="info-chip" data-chip="today" style="cursor:pointer">💸 오늘 ${todayExp > 0 ? fmtShort(todayExp) + ' 지출' : '무지출'}${todayInc > 0 ? (todayExp > 0 ? ' / ' : '') + fmtShort(todayInc) + ' 수입' : ''}</span>`;
     if (chipsEl) chipsEl.innerHTML = todayChip + (chipsEl.innerHTML || '');
+  } else {
+    // 오늘 아무 기록 없음 = 무지출 가능성 → 자정이 넘은 경우만
+    const h = today().getHours();
+    if (h >= 6) {
+      const noSpendChip = `<span class="info-chip success" data-chip="nospend" style="cursor:pointer">🎉 오늘 아직 무지출!</span>`;
+      if (chipsEl) chipsEl.innerHTML = noSpendChip + (chipsEl.innerHTML || '');
+    }
+  }
+
+  // 스마트 지출 인사이트 chip
+  if (chipsEl && prevCheckTotal > 0 && checkTotal > 0) {
+    const diff = checkTotal - prevCheckTotal;
+    const diffPct = Math.round(Math.abs(diff) / prevCheckTotal * 100);
+    if (diffPct >= 10) {
+      const insightChip = diff < 0
+        ? `<span class="info-chip success" data-chip="insight">📉 지출 ${diffPct}% 절약 중</span>`
+        : `<span class="info-chip warning" data-chip="insight">📈 지출 전월비 +${diffPct}%</span>`;
+      if (chipsEl) chipsEl.innerHTML += insightChip;
+    }
   }
 
   const fillEl = document.getElementById('checkcard-budget-fill');

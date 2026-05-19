@@ -396,20 +396,9 @@ function _renderMonthlyStats() {
       angle += a;
     });
     donutSvg += `<circle cx="${CX}" cy="${CY}" r="26" fill="var(--bg2)"/>`;
-    donutSvg += `<text x="${CX}" y="${CY+4}" fill="var(--text)" font-size="10" text-anchor="middle" font-family="monospace" font-weight="700">${Math.round((expense/total)*100)}%</text>`;
+    donutSvg += `<text x="${CX}" y="${CY-2}" fill="var(--text3)" font-size="7" text-anchor="middle" font-family="monospace">지출</text>`;
+    donutSvg += `<text x="${CX}" y="${CY+8}" fill="var(--text)" font-size="8.5" text-anchor="middle" font-family="monospace" font-weight="700">${fmtShort(expense)}</text>`;
   }
-
-  cats.slice(0, 7).forEach(([cat, amt]) => {
-    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
-    const pct = Math.round((amt / total) * 100);
-    donutLegend += `
-      <div class="lstat-cat-row">
-        <span class="lstat-cat-dot" style="background:${col}"></span>
-        <span class="lstat-cat-name">${cat}</span>
-        <div class="lstat-cat-bar"><div style="width:${pct}%;background:${col};height:100%;border-radius:4px;opacity:.85"></div></div>
-        <span class="lstat-cat-amt">${fmtShort(amt)}</span>
-      </div>`;
-  });
 
   const sortedDays = Object.entries(dayMap).sort((a, b) => a[0] - b[0]);
   const maxDayAmt  = Math.max(...sortedDays.map(([, v]) => v), 1);

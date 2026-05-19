@@ -2430,3 +2430,35 @@ body.light-theme .search-result-card { border-bottom-color: rgba(0,0,0,.05); }
 .lstat-summary-val { font-size: 15px; font-weight: 900; font-family: var(--mono); }
 .lstat-summary-val.red { color: var(--red2); }
 .lstat-summary-val.green { color: var(--green2); }
+
+/* ── lday-card 스와이프 삭제 UX ─────────────────────── */
+.lday-card-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+}
+.lday-card-wrap:last-child { border-radius: 0 0 12px 12px; }
+.lday-card-swipe-bg {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  background: linear-gradient(90deg, transparent, rgba(239,68,68,.85));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 18px;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.lday-card-wrap.swiping .lday-card-swipe-bg { opacity: 1; }
+.lday-card-wrap .lday-card {
+  transition: transform .15s;
+  background: var(--bg2);
+}
+.lday-card-wrap.swiped .lday-card { transform: translateX(-80px); }
