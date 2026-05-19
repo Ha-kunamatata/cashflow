@@ -504,6 +504,128 @@ function _renderRecurringHint() {
 }
 
 // ════════════════════════════════════════════════════════
+// 이달 카테고리별 소비 도넛 링 (뱅크샐러드 스타일)
+// ════════════════════════════════════════════════════════
+export function renderHomeCategoryRing() {
+  const el = document.getElementById('home-cat-ring');
+  if (!el) return;
+  const now = today();
+  const { expense, catTotals } = getLedgerMonth(now.getFullYear(), now.getMonth());
+  if (!expense || !catTotals) { el.innerHTML = ''; return; }
+
+  const topCats: [string, number][] = (Object.entries(catTotals) as [string, number][])
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!topCats.length) { el.innerHTML = ''; return; }
+
+  const R = 40, cx = 50, cy = 50, sw = 13;
+  const circ = 2 * Math.PI * R;
+  let off = 0;
+  const GAP = 1.5;
+  const paths = topCats.map(([cat, amt]) => {
+    const dash = (amt / expense) * circ;
+    const seg = `<circle r="${R}" cx="${cx}" cy="${cy}" fill="none"
+      stroke="${LEDGER_CAT_COLORS[cat] || '#64748b'}" stroke-width="${sw}"
+      stroke-dasharray="${Math.max(0, dash - GAP)} ${circ - Math.max(0, dash - GAP)}"
+      stroke-dashoffset="${circ - off}"
+      stroke-linecap="butt"
+      transform="rotate(-90 ${cx} ${cy})"/>`;
+    off += dash;
+    return seg;
+  }).join('');
+
+  const legend = topCats.map(([cat, amt]) => {
+    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    const icon = CAT_ICONS[cat] || '📌';
+    const pct = Math.round((amt / expense) * 100);
+    return `<div class="hring-legend-row">
+      <span class="hring-legend-dot" style="background:${col}"></span>
+      <span class="hring-legend-icon">${icon}</span>
+      <span class="hring-legend-cat">${escapeHtml(cat)}</span>
+      <span class="hring-legend-bar-wrap"><span class="hring-legend-bar" style="width:${pct}%;background:${col}"></span></span>
+      <span class="hring-legend-amt" style="color:${col}">${fmtShort(amt)}</span>
+    </div>`;
+  }).join('');
+
+  const savingsRate = (() => {
+    const { income } = getLedgerMonth(now.getFullYear(), now.getMonth());
+    return income > 0 ? Math.round(((income - expense) / income) * 100) : null;
+  })();
+
+  el.innerHTML = `<div class="card hring-card">
+    <div class="hring-header">
+      <span style="font-size:12px;font-weight:800;color:var(--text)">📊 이달 카테고리별 지출</span>
+      ${savingsRate !== null ? `<span class="hring-sr-chip" style="color:${savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)'}">저축 ${savingsRate}%</span>` : ''}
+    </div>
+    <div class="hring-body">
+      <div class="hring-donut-wrap">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle r="${R}" cx="${cx}" cy="${cy}" fill="none" stroke="var(--bg4)" stroke-width="${sw}"/>
+          ${paths}
+        </svg>
+        <div class="hring-donut-center">
+          <div class="hring-donut-label">지출</div>
+          <div class="hring-donut-amt">${fmtShort(expense)}</div>
+        </div>
+      </div>
+      <div class="hring-legend">${legend}</div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 스마트 카테고리 인사이트 배너
+// ════════════════════════════════════════════════════════
+function _renderCatInsightBanner() {
+  const anchor = document.getElementById('home-cat-ring');
+  if (!anchor) return;
+  const now = today();
+  const { catTotals: thisCat } = getLedgerMonth(now.getFullYear(), now.getMonth());
+  const thisCatMap = (thisCat || {}) as Record<string, number>;
+
+  const pastAvg: Record<string, number> = {};
+  for (let m = 1; m <= 3; m++) {
+    const pd = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const { catTotals: pc } = getLedgerMonth(pd.getFullYear(), pd.getMonth());
+    Object.entries(pc || {}).forEach(([cat, amt]: [string, number]) => {
+      pastAvg[cat] = (pastAvg[cat] || 0) + amt / 3;
+    });
+  }
+
+  const spikes = (Object.entries(thisCatMap) as [string, number][])
+    .filter(([cat, amt]) => {
+      const avg = pastAvg[cat] || 0;
+      return avg > 5000 && amt > avg * 1.25 && amt > 15000;
+    })
+    .map(([cat, amt]) => ({ cat, amt, avg: pastAvg[cat], ratio: amt / pastAvg[cat] }))
+    .sort((a, b) => b.ratio - a.ratio).slice(0, 2);
+
+  const existing = document.getElementById('home-cat-insight');
+  if (!spikes.length) { existing?.remove(); return; }
+
+  const rows = spikes.map(s => {
+    const col = LEDGER_CAT_COLORS[s.cat] || '#f59e0b';
+    const icon = CAT_ICONS[s.cat] || '📌';
+    const pct = Math.round(((s.amt - s.avg) / s.avg) * 100);
+    return `<div class="cat-insight-row">
+      <span class="cat-insight-icon">${icon}</span>
+      <div class="cat-insight-body">
+        <div class="cat-insight-msg" style="color:${col}">${escapeHtml(s.cat)} 지출이 평소보다 <strong>+${pct}%</strong> 많아요</div>
+        <div class="cat-insight-sub">이번달 ${fmtShort(s.amt)} · 3개월 평균 ${fmtShort(Math.round(s.avg))}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const bannerHtml = `<div id="home-cat-insight" class="cat-insight-banner">
+    <div class="cat-insight-title">💡 지출 패턴 알림</div>
+    ${rows}
+  </div>`;
+
+  if (existing) { existing.outerHTML = bannerHtml; }
+  else { anchor.insertAdjacentHTML('afterend', bannerHtml); }
+}
+
+// ════════════════════════════════════════════════════════
 // 이번 주 가로 날짜 스트립 (뱅크샐러드 시그니처)
 // ════════════════════════════════════════════════════════
 export function renderWeekStrip() {
@@ -752,6 +874,16 @@ export function renderHome() {
   renderMonthProgress();
   renderCashflowCard();
   _renderTodayTimeline();
+  renderHomeCategoryRing();
+  _renderCatInsightBanner();
+
+  // FAB 펄스: 오늘 기록이 없을 때만 표시
+  const fabBtn = document.getElementById('btn-fab-main');
+  if (fabBtn) {
+    const dk = dateKey(today());
+    const hasTodayEntry = (state.ledgerData?.[dk] || []).length > 0;
+    fabBtn.classList.toggle('pulse', !hasTodayEntry);
+  }
   renderHomeBudgetBars();
   renderWeeklyCard();
   renderHomeForecastWidget();

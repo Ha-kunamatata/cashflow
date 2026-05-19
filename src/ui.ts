@@ -428,8 +428,16 @@ export function openLedgerItemForm(dateStr, itemId) {
 
   _ledgerItemType  = existing?.type     || 'expense';
   _ledgerCategory  = existing?.category || LEDGER_CATEGORIES[_ledgerCatGroup]?.[0] || '기타';
-  for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
-    if (cats.includes(_ledgerCategory)) { _ledgerCatGroup = grp; break; }
+  if (existing) {
+    for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
+      if (cats.includes(_ledgerCategory)) { _ledgerCatGroup = grp; break; }
+    }
+  } else {
+    const recentCats = _getRecentCats();
+    if (recentCats.length) {
+      _ledgerCatGroup = _RECENT_GROUP;
+      _ledgerCategory = recentCats[0];
+    }
   }
 
   // 계산기 금액 초기화
@@ -474,7 +482,11 @@ export function getCatIcon(cat: string): string {
 
 export function selectLedgerCatGroup(groupName) {
   _ledgerCatGroup = groupName;
-  _ledgerCategory = LEDGER_CATEGORIES[groupName]?.[0] || '기타';
+  if (groupName === _RECENT_GROUP) {
+    _ledgerCategory = _getRecentCats()[0] || '기타';
+  } else {
+    _ledgerCategory = LEDGER_CATEGORIES[groupName]?.[0] || '기타';
+  }
   _renderCatChips();
   _renderCatGroupTabs();
 }
@@ -496,14 +508,22 @@ function _updateCalcDisplay() {
 }
 
 function _handleCalcKey(key: string) {
-  if (key === 'save') { saveLedgerItem(); return; }
-  if (key === 'del') { _calcAmountStr = _calcAmountStr.slice(0, -1); }
-  else if (key === 'clear') { _calcAmountStr = ''; }
-  else if (key === '00') { if (_calcAmountStr) _calcAmountStr += '00'; }
-  else { // digit
-    if (_calcAmountStr.length >= 10) return; // 최대 10자리
+  if (key === 'save') {
+    if (navigator.vibrate) navigator.vibrate([30, 20, 30]);
+    saveLedgerItem();
+    return;
+  }
+  if (key === 'del' || key === 'clear') {
+    if (navigator.vibrate) navigator.vibrate(15);
+    if (key === 'del') _calcAmountStr = _calcAmountStr.slice(0, -1);
+    else _calcAmountStr = '';
+  } else if (key === '00') {
+    if (_calcAmountStr) { _calcAmountStr += '00'; if (navigator.vibrate) navigator.vibrate(8); }
+  } else {
+    if (_calcAmountStr.length >= 10) return;
     if (_calcAmountStr === '0') _calcAmountStr = key;
     else _calcAmountStr += key;
+    if (navigator.vibrate) navigator.vibrate(8);
   }
   _updateCalcDisplay();
 }
@@ -513,11 +533,22 @@ let _calcKeypadReady = false;
 function _setupCalcKeypad() {
   if (_calcKeypadReady) return;
   _calcKeypadReady = true;
-  document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
+  const sheet = document.getElementById('ledger-item-sheet');
+  sheet?.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
     if (!btn) return;
     const key = btn.dataset.key;
     if (key) _handleCalcKey(key);
+  });
+  sheet?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-quick]') as HTMLElement;
+    if (!btn) return;
+    const add = parseInt(btn.dataset.quick || '0', 10);
+    if (!add) return;
+    const cur = parseInt(_calcAmountStr || '0', 10) || 0;
+    _calcAmountStr = String(cur + add);
+    if (navigator.vibrate) navigator.vibrate(8);
+    _updateCalcDisplay();
   });
 }
 
@@ -533,11 +564,29 @@ function _renderItemFormType() {
   _setupCalcKeypad();
 }
 
+const _RECENT_CATS_KEY = 'recentCats';
+const _RECENT_CATS_MAX = 8;
+
+function _getRecentCats(): string[] {
+  try { return JSON.parse(localStorage.getItem(_RECENT_CATS_KEY) || '[]'); } catch { return []; }
+}
+function _pushRecentCat(cat: string) {
+  const arr = _getRecentCats().filter(c => c !== cat);
+  arr.unshift(cat);
+  localStorage.setItem(_RECENT_CATS_KEY, JSON.stringify(arr.slice(0, _RECENT_CATS_MAX)));
+}
+
+const _RECENT_GROUP = '최근';
+
 function _renderCatGroupTabs() {
   const el = document.getElementById('ledger-cat-groups');
   if (!el) return;
   if (_ledgerItemType === 'income') { el.innerHTML = ''; return; }
-  el.innerHTML = Object.keys(LEDGER_CATEGORIES).map(grp => `
+  const recentCats = _getRecentCats();
+  const groups = recentCats.length
+    ? [_RECENT_GROUP, ...Object.keys(LEDGER_CATEGORIES)]
+    : Object.keys(LEDGER_CATEGORIES);
+  el.innerHTML = groups.map(grp => `
     <button class="calc-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">${grp}</button>
   `).join('');
 }
@@ -545,9 +594,14 @@ function _renderCatGroupTabs() {
 function _renderCatChips() {
   const el = document.getElementById('ledger-cat-chips');
   if (!el) return;
-  const cats = _ledgerItemType === 'income'
-    ? LEDGER_INCOME_CATEGORIES
-    : (LEDGER_CATEGORIES[_ledgerCatGroup] || []);
+  let cats: string[];
+  if (_ledgerItemType === 'income') {
+    cats = LEDGER_INCOME_CATEGORIES;
+  } else if (_ledgerCatGroup === _RECENT_GROUP) {
+    cats = _getRecentCats();
+  } else {
+    cats = LEDGER_CATEGORIES[_ledgerCatGroup] || [];
+  }
 
   el.className = 'calc-cat-grid';
   el.innerHTML = cats.map(cat => {
@@ -607,6 +661,8 @@ export function saveLedgerItem() {
   } else {
     state.ledgerData[_ledgerItemDate].push(item);
   }
+
+  if (item.type === 'expense') _pushRecentCat(item.category);
 
   syncLedgerToBalance();
   save();

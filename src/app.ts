@@ -169,6 +169,62 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak';
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
+// ── 홈 풀-투-리프레시 ──────────────────────────────────
+{
+  let _ptr_startY = 0, _ptr_pulling = false, _ptr_indicator: HTMLElement | null = null;
+  const _PTR_THRESHOLD = 68;
+
+  function _getPtrEl() {
+    if (!_ptr_indicator) {
+      _ptr_indicator = document.createElement('div');
+      _ptr_indicator.id = 'ptr-indicator';
+      _ptr_indicator.innerHTML = '<div class="ptr-spinner"></div><span>새로고침</span>';
+      document.body.appendChild(_ptr_indicator);
+    }
+    return _ptr_indicator;
+  }
+
+  document.addEventListener('touchstart', e => {
+    const homePage = document.getElementById('page-home');
+    if (!homePage?.classList.contains('active')) return;
+    if (window.scrollY > 10) return;
+    _ptr_startY = e.touches[0].clientY;
+    _ptr_pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_ptr_pulling) return;
+    const dy = e.touches[0].clientY - _ptr_startY;
+    if (dy < 10) return;
+    const pct = Math.min(1, dy / _PTR_THRESHOLD);
+    const el = _getPtrEl();
+    el.style.opacity = String(pct);
+    el.style.transform = `translateY(${Math.min(dy * 0.4, 28)}px)`;
+    el.classList.toggle('ready', dy >= _PTR_THRESHOLD);
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!_ptr_pulling) return;
+    _ptr_pulling = false;
+    const dy = e.changedTouches[0].clientY - _ptr_startY;
+    const el = _getPtrEl();
+    if (dy >= _PTR_THRESHOLD) {
+      el.classList.add('refreshing');
+      if (navigator.vibrate) navigator.vibrate([30, 20, 30]);
+      setTimeout(() => {
+        renderAll();
+        el.classList.remove('refreshing', 'ready');
+        el.style.opacity = '0';
+        el.style.transform = '';
+      }, 700);
+    } else {
+      el.style.opacity = '0';
+      el.style.transform = '';
+      el.classList.remove('ready');
+    }
+  }, { passive: true });
+}
+
 // ══════════════════════════════════════════════════════════════
 // 커스텀 테마 컬러
 // ══════════════════════════════════════════════════════════════
@@ -680,24 +736,31 @@ function _renderInlinePanel(dk) {
     const icon = getCatIcon(item.category);
     const sign = item.type === 'expense' ? '-' : '+';
     const amtCls = item.type === 'expense' ? 'red' : 'green';
-    return `<div class="lday-card" data-id="${item.id}">
-      <div class="lday-card-icon-wrap" style="background:${col}18;border-color:${col}38;color:${col}">${icon}</div>
-      <div class="lday-card-body">
-        <div class="lday-card-name">${escapeHtml(item.memo || item.category)}</div>
-        <div class="lday-card-meta">
-          <span>${escapeHtml(item.category)}</span>
-          ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+    return `<div class="lday-card-wrap" data-id="${item.id}">
+      <div class="lday-card-swipe-bg">🗑️ 삭제</div>
+      <div class="lday-card" data-id="${item.id}">
+        <div class="lday-card-icon-wrap" style="background:${col}18;border-color:${col}38;color:${col}">${icon}</div>
+        <div class="lday-card-body">
+          <div class="lday-card-name">${escapeHtml(item.memo || item.category)}</div>
+          <div class="lday-card-meta">
+            <span>${escapeHtml(item.category)}</span>
+            ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+          </div>
         </div>
-      </div>
-      <div class="lday-card-right">
-        <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
-        <div class="lday-card-actions">
-          <button class="lday-card-action-btn lday-edit-btn" data-id="${item.id}">수정</button>
-          <button class="lday-card-action-btn del lday-del-btn" data-id="${item.id}">삭제</button>
+        <div class="lday-card-right">
+          <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
+          <div class="lday-card-actions">
+            <button class="lday-card-action-btn lday-edit-btn" data-id="${item.id}">수정</button>
+            <button class="lday-card-action-btn del lday-del-btn" data-id="${item.id}">삭제</button>
+          </div>
         </div>
       </div>
     </div>`;
-  }).join('') : `<div style="font-size:12px;color:var(--text3);padding:16px 4px;text-align:center">기록 없음<br><span style="font-size:10px;color:var(--text3)">+ 버튼으로 추가하세요</span></div>`;
+  }).join('') : `<div class="lday-empty-state">
+    <div style="font-size:32px;margin-bottom:8px">📭</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">기록이 없어요</div>
+    <div style="font-size:11px;color:var(--text3)">+ 버튼으로 추가해보세요</div>
+  </div>`;
 
   // 카테고리 미니 요약
   const catAmts = {};
@@ -746,6 +809,54 @@ function _renderInlinePanel(dk) {
       }
     })
   );
+
+  const list = panel.querySelector('#inline-items-list');
+  if (list) _initSwipeDelete(list, (id) => {
+    deleteLedgerItem(dk, id);
+    _renderInlinePanel(dk);
+  });
+}
+
+function _initSwipeDelete(container, onDelete) {
+  container.querySelectorAll('.lday-card-wrap').forEach(wrap => {
+    const card = wrap.querySelector('.lday-card');
+    if (!card) return;
+    let startX = 0, startY = 0, dx = 0, tracking = false;
+
+    wrap.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0; tracking = false;
+      card.style.transition = 'none';
+    }, { passive: true });
+
+    wrap.addEventListener('touchmove', e => {
+      const mx = e.touches[0].clientX - startX;
+      const my = e.touches[0].clientY - startY;
+      if (!tracking && Math.abs(my) > Math.abs(mx) + 4) return;
+      tracking = true;
+      dx = Math.min(0, mx);
+      if (dx < 0) {
+        e.preventDefault();
+        const t = Math.max(-88, dx);
+        card.style.transform = `translateX(${t}px)`;
+        wrap.classList.toggle('swiping', t < -12);
+      }
+    }, { passive: false });
+
+    wrap.addEventListener('touchend', () => {
+      card.style.transition = '';
+      if (dx < -52) {
+        wrap.classList.add('swiped');
+        wrap.classList.remove('swiping');
+        if (navigator.vibrate) navigator.vibrate(50);
+        setTimeout(() => onDelete(wrap.dataset.id), 380);
+      } else {
+        card.style.transform = '';
+        wrap.classList.remove('swiping');
+      }
+    });
+  });
 }
 
 // 가계부 서브탭 (모두 인라인 — 예측도 페이지 이동 없이 표시)
@@ -768,6 +879,26 @@ document.getElementById('btn-lf-month-next')?.addEventListener('click', () => sh
 // 가계부 달력 월 이동
 document.getElementById('btn-ledger-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
 document.getElementById('btn-ledger-next')?.addEventListener('click', () => changeLedgerMonth(1));
+
+// 달력 스와이프로 월 이동
+{
+  let _calSwipeX = 0, _calSwiping = false;
+  const calView = document.getElementById('ledger-view-calendar');
+  calView?.addEventListener('touchstart', e => {
+    if ((e.target as Element).closest('.ledger-day[data-dk]')) return;
+    _calSwipeX = e.touches[0].clientX;
+    _calSwiping = true;
+  }, { passive: true });
+  calView?.addEventListener('touchend', e => {
+    if (!_calSwiping) return;
+    _calSwiping = false;
+    const dx = e.changedTouches[0].clientX - _calSwipeX;
+    if (Math.abs(dx) > 55) {
+      changeLedgerMonth(dx < 0 ? 1 : -1);
+      if (navigator.vibrate) navigator.vibrate(20);
+    }
+  }, { passive: true });
+}
 
 // 가계부 통계 월 이동 — renderLedgerStats() 가 내부에서 레이블을 직접 업데이트하므로 별도 조작 불필요
 document.getElementById('btn-ledger-stats-prev')?.addEventListener('click', () => changeLedgerMonth(-1));
