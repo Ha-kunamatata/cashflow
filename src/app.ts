@@ -558,6 +558,10 @@ document.getElementById('btn-google-login')?.addEventListener('click', signInWit
 document.getElementById('btn-open-profile')?.addEventListener('click', openProfileSheet);
 document.getElementById('btn-open-balance')?.addEventListener('click', openBalanceSheet);
 document.getElementById('btn-open-settings-page')?.addEventListener('click', () => navigate('settings'));
+document.getElementById('btn-topbar-home')?.addEventListener('click', () => {
+  const homeBtn = document.querySelector('.nav-btn[data-page="home"]');
+  navigate('home', homeBtn);
+});
 
 // 홈 예측 위젯은 renderHomeForecastWidget()에서 클릭 이벤트 등록
 

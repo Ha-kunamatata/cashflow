@@ -60,7 +60,40 @@ export function renderMonthProgress() {
 }
 
 // ════════════════════════════════════════════════════════
-// 이번달 현금흐름 요약 카드
+// 히어로 카드 내 이번달 수입/지출/저축률 3분할
+// ════════════════════════════════════════════════════════
+function _renderHeroMonthStats() {
+  const el = document.getElementById('hero-month-stats');
+  if (!el) return;
+  const now = today();
+  const { income, expense } = getLedgerMonth(now.getFullYear(), now.getMonth());
+  const net = income - expense;
+  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null;
+  const srColor = savingsRate !== null
+    ? (savingsRate >= 20 ? '#34d399' : savingsRate >= 0 ? '#fbbf24' : '#f87171')
+    : 'rgba(255,255,255,0.4)';
+
+  el.innerHTML = `
+    <div class="hero-stats-row">
+      <div class="hero-stat-item">
+        <div class="hero-stat-lbl">수입</div>
+        <div class="hero-stat-val" style="color:#34d399">${income > 0 ? '+' + fmtShort(income) : '-'}</div>
+      </div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-lbl">지출</div>
+        <div class="hero-stat-val" style="color:#f87171">${expense > 0 ? '-' + fmtShort(expense) : '-'}</div>
+      </div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-lbl">저축률</div>
+        <div class="hero-stat-val" style="color:${srColor}">${savingsRate !== null ? savingsRate + '%' : '-'}</div>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 이번달 현금흐름 요약 카드 (하위호환 유지)
 // ════════════════════════════════════════════════════════
 export function renderCashflowCard() {
   const el = document.getElementById('home-cashflow-card');
@@ -228,13 +261,13 @@ export function renderWeeklyCard() {
   const topWeekCats = Object.entries(weekCatAmts).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   el.innerHTML = `
+    <div class="home-section-hdr">이번 주</div>
     <div class="card" style="padding:14px 16px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:14px">📊</span>
-        <div style="font-size:12px;font-weight:800;color:var(--text)">이번 주 지출</div>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">주간 지출</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-          <span style="font-size:14px;font-weight:900;font-family:var(--mono);color:#a5b4fc">${fmtShort(thisWeek)}</span>
-          ${lastWeek > 0 ? `<span style="font-size:10px;color:${diffColor};font-weight:700;padding:1px 6px;border-radius:6px;background:${diff<=0?'rgba(52,211,153,.1)':'rgba(248,113,113,.1)'}">${diff <= 0 ? '▼' : '▲'}${fmtShort(Math.abs(diff))}</span>` : ''}
+          <span style="font-size:15px;font-weight:900;font-family:var(--mono);color:#a5b4fc">${fmtShort(thisWeek)}</span>
+          ${lastWeek > 0 ? `<span style="font-size:10px;color:${diffColor};font-weight:700;padding:2px 7px;border-radius:8px;background:${diff<=0?'rgba(52,211,153,.1)':'rgba(248,113,113,.1)'}">${diff <= 0 ? '▼' : '▲'}${fmtShort(Math.abs(diff))}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;align-items:flex-end;gap:3px;height:52px;margin-bottom:3px">
@@ -335,10 +368,14 @@ export function _renderTodayTimeline() {
     </div>`;
   }).join('');
 
+  const nowD = today();
+  const dateLabel = `${nowD.getMonth() + 1}월 ${nowD.getDate()}일`;
+
   el.innerHTML = `
+    <div class="home-section-hdr">오늘의 소비</div>
     <div class="card today-timeline-card">
       <div class="today-timeline-header">
-        <span class="today-timeline-title">오늘의 기록</span>
+        <span class="today-timeline-title">${dateLabel}</span>
         <div class="today-timeline-totals">
           ${totalInc > 0 ? `<span class="today-total-inc">+${fmtShort(totalInc)}</span>` : ''}
           ${totalExp > 0 ? `<span class="today-total-exp">-${fmtShort(totalExp)}</span>` : ''}
@@ -387,9 +424,10 @@ export function renderHomeBudgetBars() {
   }).join('');
 
   el.innerHTML = `
+    <div class="home-section-hdr">예산 현황</div>
     <div class="card" style="padding:14px 16px;cursor:pointer" id="home-budget-widget-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:800;color:var(--text)">💰 이달 예산</div>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">이달 예산</div>
         <div style="display:flex;align-items:center;gap:6px">
           <div style="height:5px;width:52px;background:var(--bg4);border-radius:6px;overflow:hidden">
             <div style="height:100%;width:${Math.min(100, totalPct)}%;background:${totalColor};border-radius:6px"></div>
@@ -552,9 +590,9 @@ export function renderHomeCategoryRing() {
     return income > 0 ? Math.round(((income - expense) / income) * 100) : null;
   })();
 
-  el.innerHTML = `<div class="card hring-card">
+  el.innerHTML = `<div class="home-section-hdr">이달 카테고리</div><div class="card hring-card">
     <div class="hring-header">
-      <span style="font-size:12px;font-weight:800;color:var(--text)">📊 이달 카테고리별 지출</span>
+      <span style="font-size:12px;font-weight:800;color:var(--text)">카테고리별 지출</span>
       ${savingsRate !== null ? `<span class="hring-sr-chip" style="color:${savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)'}">저축 ${savingsRate}%</span>` : ''}
     </div>
     <div class="hring-body">
@@ -869,10 +907,14 @@ export function renderHome() {
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
 
+  // 히어로 카드 월 배지
+  const heroMonthBadge = document.getElementById('hero-month-badge');
+  if (heroMonthBadge) heroMonthBadge.textContent = `${today().getMonth() + 1}월`;
+
   renderWeekStrip();
   _renderSparkline();
   renderMonthProgress();
-  renderCashflowCard();
+  _renderHeroMonthStats();
   _renderTodayTimeline();
   renderHomeCategoryRing();
   _renderCatInsightBanner();

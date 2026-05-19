@@ -224,9 +224,77 @@ body {
   animation: orbFloat 11s ease-in-out infinite reverse;
   pointer-events: none;
 }
-.balance-label { font-size:12px; font-weight:800; color:#bfdbfe; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
-.balance-amount { font-family:var(--mono); font-size:clamp(36px,8vw,54px); font-weight:900; letter-spacing:-1.5px; line-height:1; margin-bottom:14px; transition:color 0.3s; color:#e0f2fe; text-shadow:0 4px 24px rgba(96,165,250,0.45), 0 1px 0 rgba(255,255,255,0.10); white-space:nowrap; overflow:hidden; }
+/* ── 히어로 카드 헤더 리디자인 ──────────────────────── */
+.hero-account-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.hero-acct-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 6px #34d399;
+  flex-shrink: 0;
+}
+.hero-month-badge {
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 1px 8px;
+  letter-spacing: 0.3px;
+}
+.balance-label { font-size:12px; font-weight:800; color:rgba(255,255,255,0.6); letter-spacing:0.5px; }
+.balance-amount { font-family:var(--mono); font-size:clamp(36px,8vw,52px); font-weight:900; letter-spacing:-2px; line-height:1; margin-bottom:8px; transition:color 0.3s; color:#e0f2fe; text-shadow:0 4px 24px rgba(96,165,250,0.45), 0 1px 0 rgba(255,255,255,0.10); white-space:nowrap; overflow:hidden; }
 .balance-amount.danger { color:var(--red2); }
+/* ── 히어로 이번달 3분할 통계 ────────────────────────── */
+.hero-month-stats { margin: 10px 0 4px; }
+.hero-stats-row {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.hero-stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px 6px;
+}
+.hero-stat-sep {
+  width: 1px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.hero-stat-lbl {
+  font-size: 9px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.hero-stat-val {
+  font-size: 14px;
+  font-weight: 900;
+  font-family: var(--mono);
+  letter-spacing: -0.5px;
+}
+/* ── 홈 섹션 헤더 ──────────────────────────────────── */
+.home-section-hdr {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text3);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin: 16px 0 8px 2px;
+}
 .balance-warning { font-size:12px; color:var(--orange); margin-top:6px; display:flex; align-items:center; gap:4px; }
 .balance-edit { display:flex; gap:8px; margin-top:20px; }
 .balance-input { flex:1; background:rgba(0,0,0,0.28); border:1px solid rgba(59,130,246,0.3); color:var(--text); border-radius:12px; padding:11px 14px; font-size:16px; font-family:var(--mono); font-weight:500; text-align:right; outline:none; transition:border-color 0.2s; min-height:48px; }
@@ -238,16 +306,28 @@ body {
 .alert-banner { background:rgba(127,29,29,0.3); border:1px solid rgba(239,68,68,0.4); border-radius:14px; padding:12px 16px; font-size:12px; color:var(--red2); line-height:1.6; margin-bottom:12px; animation:slideDown 0.3s ease; }
 
 /* ── 요약 그리드 ── */
-.summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-.summary-item { background:rgba(17,24,39,0.95); border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:18px 18px 16px; min-height:124px; position:relative; overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s; }
-.summary-item::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg, rgba(255,255,255,0.06), transparent 36%); }
-.summary-item:hover { border-color:rgba(96,165,250,0.18); }
-.summary-item-label { font-size:12px; font-weight:700; letter-spacing:0.4px; color:rgba(148,163,184,0.88); margin-bottom:14px; }
-.summary-item-value { font-family:var(--mono); font-size:clamp(20px,4.5vw,30px); font-weight:900; letter-spacing:-0.8px; transition:color 0.3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.summary-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px 13px;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.summary-item::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg, rgba(255,255,255,0.04), transparent 50%); }
+.summary-item:active { transform: scale(0.97); }
+.summary-item-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.summary-item-label { font-size:11px; font-weight:700; letter-spacing:0.3px; color:var(--text3); }
+.summary-item-icon { font-size:16px; line-height:1; }
+.summary-item-value { font-family:var(--mono); font-size:clamp(18px,4vw,26px); font-weight:900; letter-spacing:-0.8px; transition:color 0.3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .summary-item-value.green { color:var(--green2); }
 .summary-item-value.red { color:var(--red2); }
 .summary-item-value.blue { color:var(--accent2); }
 .summary-item-value.orange { color:var(--orange); }
+body.light-theme .summary-item { background:#fff; }
 
 /* ── 이벤트 ── */
 .event-row { display:flex; justify-content:space-between; align-items:center; padding:14px 10px; border-radius:16px; margin-bottom:6px; gap:10px; transition:background 0.15s; }
@@ -535,10 +615,15 @@ body.light-theme .forecast-table td { border-bottom-color:rgba(203,213,225,0.5);
 body.light-theme .forecast-table tr:hover td { background:rgba(226,232,240,0.35); }
 body.light-theme .forecast-table tr.danger td { background:rgba(254,226,226,0.5); }
 body.light-theme .forecast-table tr.income-row td { background:rgba(220,252,231,0.4); }
-body.light-theme .balance-label { color:#1e40af; }
+body.light-theme .balance-label { color:rgba(30,64,175,0.8); }
+body.light-theme .hero-month-badge { color:#1e40af; background:rgba(37,99,235,0.1); border-color:rgba(37,99,235,0.18); }
+body.light-theme .hero-stats-row { background:rgba(37,99,235,0.06); border-color:rgba(37,99,235,0.12); }
+body.light-theme .hero-stat-lbl { color:rgba(30,58,138,0.55); }
 body.light-theme .balance-amount { color:#1e3a8a; text-shadow:0 2px 12px rgba(37,99,235,0.18); }
 body.light-theme .balance-amount.danger { color:var(--red); text-shadow:0 2px 12px rgba(220,38,38,0.18); }
 body.light-theme .balance-card-edit-chip { color:#1d4ed8; background:rgba(37,99,235,0.08); border-color:rgba(37,99,235,0.15); }
+body.light-theme .home-section-hdr { color:#64748b; }
+body.light-theme .topbar-left:active { background:rgba(0,0,0,0.05); }
 body.light-theme .topbar-balance { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.1); }
 body.light-theme .event-date { color:var(--text); }
 body.light-theme .event-tag { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:var(--text2); }
@@ -902,12 +987,23 @@ body.light-theme .topbar-balance-pill { background:rgba(0,0,0,0.04); border-colo
    ════════════════════════════════════════════════════════ */
 .topbar-sub { font-size:9px; color:var(--text3); font-weight:600; letter-spacing:0.8px; line-height:1; margin-bottom:1px; }
 .topbar-title { font-size:18px; font-weight:900; color:var(--text); letter-spacing:2px; line-height:1; font-family:var(--mono); }
-.topbar-left { display:flex; flex-direction:column; justify-content:center; }
+.topbar-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 8px 4px 0;
+  border-radius: 10px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.topbar-left:active { background: rgba(255,255,255,0.07); }
 
 /* ════════════════════════════════════════════════════════
    잔고 카드 — 숨기기/보이기 토글
    ════════════════════════════════════════════════════════ */
-.balance-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.balance-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.balance-insight-text { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px; min-height:16px; line-height:1.4; }
+body.light-theme .balance-insight-text { color:rgba(30,58,138,0.5); }
 .balance-card-label { font-size:11px; color:var(--text3); font-weight:700; letter-spacing:0.4px; text-transform:uppercase; }
 .balance-eye-btn { background:none; border:none; cursor:pointer; padding:6px; border-radius:50%; color:var(--text3); display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; flex-shrink:0; }
 .balance-eye-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); }

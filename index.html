@@ -46,7 +46,7 @@
 <!-- ── 탑바 ── -->
 
 <div class="topbar" id="topbar" style="display:none">
-  <div class="topbar-left">
+  <div class="topbar-left" id="btn-topbar-home" style="cursor:pointer">
     <div class="topbar-sub">내 자금 흐름</div>
     <div class="topbar-title">CASH FLOW</div>
   </div>
@@ -73,13 +73,18 @@
 <div class="page active" id="page-home">
   <div class="home-grid">
     <div class="home-main">
-      <!-- 이번 주 가로 날짜 스트립 -->
+
+      <!-- ── 이번 주 날짜 스트립 ── -->
       <div id="home-week-strip" style="margin-bottom:10px"></div>
+
+      <!-- ── 잔고 히어로 카드 ── -->
       <div class="balance-card" id="btn-open-balance">
+        <!-- 카드 헤더 -->
         <div class="balance-card-header">
-          <div>
-            <div class="balance-label">💳 현재 잔고</div>
-            <div class="balance-card-sub">오늘 기준 내 현금 흐름 상태</div>
+          <div class="hero-account-row">
+            <span class="hero-acct-dot"></span>
+            <span class="balance-label">내 잔고</span>
+            <span class="hero-month-badge" id="hero-month-badge">5월</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <button class="balance-eye-btn" id="btn-toggle-balance" onclick="event.stopPropagation()" title="잔고 숨기기/보기">
@@ -89,7 +94,8 @@
             <div class="balance-live-badge">LIVE</div>
           </div>
         </div>
-        <!-- 잔고 표시 (토글) -->
+
+        <!-- 잔고 금액 -->
         <div class="balance-display-wrap">
           <div class="balance-amount" id="balance-display">-</div>
           <div class="balance-hidden-mask" id="balance-hidden-mask" style="display:none">
@@ -97,114 +103,116 @@
             <span class="balance-mask-hint">탭해서 확인</span>
           </div>
         </div>
+
+        <!-- 인사이트 텍스트 -->
+        <div id="balance-insight" class="balance-insight-text"></div>
+
+        <!-- 이번달 수입/지출/저축률 3분할 -->
+        <div id="hero-month-stats" class="hero-month-stats"></div>
+
         <!-- 스파크라인: 최근 14일 지출 패턴 -->
-        <div id="balance-sparkline" style="margin:6px 0 2px"></div>
+        <div id="balance-sparkline" style="margin:10px 0 0"></div>
+
+        <!-- 월 진행률 바 -->
+        <div id="month-progress-wrap" style="margin-top:10px"></div>
+
+        <!-- 경고 -->
         <div class="balance-warning" id="balance-warning" style="display:none">
           <span>⚠️</span><span id="balance-warning-text"></span>
         </div>
-        <div id="balance-insight" class="balance-insight-text"></div>
-        <!-- 월 진행률 바 -->
-        <div id="month-progress-wrap" style="margin-top:10px"></div>
+
         <div class="balance-card-edit-chip">✏️ 터치해서 잔고 수정</div>
-        <div id="balance-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
       </div>
-  <div class="alert-banner" id="alert-banner" style="display:none"></div>
 
-  <!-- 이번달 현금흐름 요약 카드 (NEW) -->
-  <div id="home-cashflow-card" style="margin-bottom:12px"></div>
+      <!-- 알림 배너 -->
+      <div class="alert-banner" id="alert-banner" style="display:none"></div>
 
-  <!-- 오늘의 소비 타임라인 -->
-  <div id="today-timeline" style="margin-bottom:12px"></div>
+      <!-- 정보 칩 행 (D-day, 오늘 지출, 인사이트) -->
+      <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
+      </div>
 
-  <!-- 이달 카테고리별 소비 도넛 링 -->
-  <div id="home-cat-ring" style="margin-bottom:12px"></div>
+      <!-- ── 섹션: 오늘의 소비 ── -->
+      <div id="today-timeline" style="margin-bottom:14px"></div>
 
-  <!-- 예산 진행 바 위젯 -->
-  <div id="home-budget-widget" style="margin-bottom:12px"></div>
+      <!-- ── 섹션: 이달 카테고리별 지출 ── -->
+      <div id="home-cat-ring" style="margin-bottom:14px"></div>
 
-  <!-- 주간 요약 카드 -->
-  <div id="weekly-summary-card" style="margin-bottom:12px"></div>
+      <!-- ── 섹션: 이번 주 ── -->
+      <div id="weekly-summary-card" style="margin-bottom:14px"></div>
 
-  <!-- 재정 건강 점수 -->
-  <div id="health-score-mini" style="margin-bottom:12px;cursor:pointer" data-action="report"></div>
+      <!-- ── 섹션: 예산 현황 ── -->
+      <div id="home-budget-widget" style="margin-bottom:14px"></div>
 
-  <!-- 홈 예측 미니 위젯 -->
-  <div id="home-forecast-widget" style="margin-bottom:12px"></div>
+      <!-- ── 섹션: 월말 잔고 예측 ── -->
+      <div id="home-forecast-widget" style="margin-bottom:14px"></div>
 
-  <div id="home-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-    <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
-  </div>
+      <!-- 재정 건강 점수 -->
+      <div id="health-score-mini" style="margin-bottom:14px;cursor:pointer" data-action="report"></div>
 
-  <!-- 하우스 레벨 카드 -->
-  <div class="card house-level-card" id="house-level-card" style="margin-bottom:12px"></div>
+      <!-- 하우스 레벨 카드 -->
+      <div class="card house-level-card" id="house-level-card" style="margin-bottom:14px"></div>
 
-  <!-- AI 인사이트 카드 -->
-  <div class="card ai-insight-card" id="ai-insight-card" style="margin-bottom:12px;padding:0;overflow:hidden">
-    <div class="ai-card-header">
-      <div class="ai-header-left">
-        <div class="ai-robot-icon">🤖</div>
-        <div>
-          <div class="ai-card-title">AI 재무 인사이트</div>
-          <div class="ai-model-badge">Gemini 2.5 Flash</div>
+      <!-- AI 인사이트 카드 -->
+      <div class="card ai-insight-card" id="ai-insight-card" style="margin-bottom:14px;padding:0;overflow:hidden">
+        <div class="ai-card-header">
+          <div class="ai-header-left">
+            <div class="ai-robot-icon">🤖</div>
+            <div>
+              <div class="ai-card-title">AI 재무 인사이트</div>
+              <div class="ai-model-badge">Gemini 2.5 Flash</div>
+            </div>
+          </div>
+          <button class="btn ai-refresh-btn" id="btn-ai-insight-refresh" title="새로고침">
+            <div class="ripple-container"></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+        <div class="ai-card-body" id="ai-insight-content">
+          <div class="ai-skeleton-wrap">
+            <div class="ai-skeleton" style="width:88%"></div>
+            <div class="ai-skeleton" style="width:70%"></div>
+            <div class="ai-skeleton" style="width:80%"></div>
+          </div>
+        </div>
+        <div class="ai-card-footer">
+          <span class="ai-updated-at" id="ai-insight-time"></span>
+          <button class="ai-insight-expand-btn" id="btn-ai-insight-expand">전체 보기 ↗</button>
         </div>
       </div>
-      <button class="btn ai-refresh-btn" id="btn-ai-insight-refresh" title="새로고침">
-        <div class="ripple-container"></div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      </button>
-    </div>
-    <div class="ai-card-body" id="ai-insight-content">
-      <div class="ai-skeleton-wrap">
-        <div class="ai-skeleton" style="width:88%"></div>
-        <div class="ai-skeleton" style="width:70%"></div>
-        <div class="ai-skeleton" style="width:80%"></div>
-      </div>
-    </div>
-    <div class="ai-card-footer">
-      <span class="ai-updated-at" id="ai-insight-time"></span>
-      <button class="ai-insight-expand-btn" id="btn-ai-insight-expand">전체 보기 ↗</button>
-    </div>
-  </div>
 
-  <div class="summary-grid">
-    <div class="summary-item" data-action="entries-income" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">월 수입</div><div style="font-size:15px">📈</div>
+      <!-- ── 고정 수입/지출 요약 그리드 ── -->
+      <div class="home-section-hdr" id="home-fixed-hdr">고정 현금흐름</div>
+      <div class="summary-grid">
+        <div class="summary-item" data-action="entries-income" style="cursor:pointer">
+          <div class="summary-item-top"><div class="summary-item-label">월 수입</div><div class="summary-item-icon">📈</div></div>
+          <div class="summary-item-value green" id="sum-income">-</div>
+          <div class="summary-item-sub" id="sum-income-sub"></div>
+        </div>
+        <div class="summary-item" data-action="entries-expense" style="cursor:pointer">
+          <div class="summary-item-top"><div class="summary-item-label">월 지출</div><div class="summary-item-icon">📉</div></div>
+          <div class="summary-item-value red" id="sum-expense">-</div>
+          <div class="summary-item-sub" id="sum-expense-sub"></div>
+        </div>
+        <div class="summary-item" data-action="entries-halbu" style="cursor:pointer">
+          <div class="summary-item-top"><div class="summary-item-label">이번달 할부</div><div class="summary-item-icon">💳</div></div>
+          <div class="summary-item-value blue" id="sum-halbu">-</div>
+          <div class="summary-item-sub" id="sum-halbu-sub"></div>
+        </div>
+        <div class="summary-item" data-action="forecast" style="cursor:pointer">
+          <div class="summary-item-top"><div class="summary-item-label">월 순현금</div><div class="summary-item-icon">💹</div></div>
+          <div class="summary-item-value" id="sum-net">-</div>
+          <div class="summary-item-sub" id="sum-net-sub"></div>
+        </div>
+        <div class="summary-item" data-action="ledger" style="cursor:pointer">
+          <div class="summary-item-top"><div class="summary-item-label">이번달 가계부</div><div class="summary-item-icon">📒</div></div>
+          <div class="summary-item-value orange" id="sum-checkcard">-</div>
+          <div class="summary-item-sub" id="sum-checkcard-sub"></div>
+          <div class="budget-bar"><div class="budget-bar-fill" id="checkcard-budget-fill" style="width:0%;background:var(--green2)"></div></div>
+        </div>
       </div>
-      <div class="summary-item-value green" id="sum-income">-</div>
-      <div class="summary-item-sub" id="sum-income-sub"></div>
-    </div>
-    <div class="summary-item" data-action="entries-expense" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">월 지출</div><div style="font-size:15px">📉</div>
-      </div>
-      <div class="summary-item-value red" id="sum-expense">-</div>
-      <div class="summary-item-sub" id="sum-expense-sub"></div>
-    </div>
-    <div class="summary-item" data-action="entries-halbu" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">이번달 할부</div><div style="font-size:15px">💳</div>
-      </div>
-      <div class="summary-item-value blue" id="sum-halbu">-</div>
-      <div class="summary-item-sub" id="sum-halbu-sub"></div>
-    </div>
-    <div class="summary-item" data-action="forecast" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">월 순현금</div><div style="font-size:15px">💹</div>
-      </div>
-      <div class="summary-item-value" id="sum-net">-</div>
-      <div class="summary-item-sub" id="sum-net-sub"></div>
-    </div>
-    <div class="summary-item" data-action="ledger" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div class="summary-item-label">이번달 가계부</div><div style="font-size:15px">📒</div>
-      </div>
-      <div class="summary-item-value orange" id="sum-checkcard">-</div>
-      <div class="summary-item-sub" id="sum-checkcard-sub"></div>
-      <div class="budget-bar"><div class="budget-bar-fill" id="checkcard-budget-fill" style="width:0%;background:var(--green2)"></div></div>
-    </div>
-  </div>
-</div>
+
+    </div><!-- /home-main -->
 
 <div class="home-side">
   <!-- 다음 7일 캘린더 (NEW) -->
