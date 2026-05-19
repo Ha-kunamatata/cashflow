@@ -2209,53 +2209,77 @@ export function renderReport() {
   }
 
   // ── 6개월 현금 흐름 SVG 차트 ──────────────────────────
+  // 설계: Y축 눈금(좌측)으로 scale 제공 → 바 위 텍스트 불필요 → 겹침 해결
+  //       하단 이중 라벨: 월 이름 + 순현금(+/-) → 정보 손실 없음
   const netEl = document.getElementById('report-net-chart');
   if (netEl) {
     const isLight = document.body.classList.contains('light-theme');
     const maxAmt = Math.max(...months.flatMap(m => [m.income, m.expense]), 1);
-    const W = 560, H = 160;
-    const pT = 30, pR = 12, pB = 34, pL = 10;
+    const W = 560, H = 186;
+    const pT = 14, pR = 12, pB = 52, pL = 48; // 좌측 Y축 공간 48px
     const chartW = W - pL - pR;
     const chartH = H - pT - pB;
     const mW = chartW / months.length;
-    const bW = Math.min(mW * 0.36, 30);
+    const bW = Math.min(mW * 0.36, 28);
     const gap = 5;
-    const gridCol  = isLight ? 'rgba(30,58,138,0.07)'  : 'rgba(255,255,255,0.06)';
-    const labelCol = isLight ? 'rgba(30,58,138,0.45)'  : 'rgba(255,255,255,0.38)';
-    const incCol   = 'rgba(74,222,128,0.85)';
-    const expCol   = 'rgba(248,113,113,0.85)';
+
+    const gridCol  = isLight ? 'rgba(30,58,138,0.08)'  : 'rgba(255,255,255,0.07)';
+    const axisCol  = isLight ? 'rgba(30,58,138,0.18)'  : 'rgba(255,255,255,0.15)';
+    const labelCol = isLight ? 'rgba(30,58,138,0.50)'  : 'rgba(255,255,255,0.40)';
+    const incCol   = isLight ? 'rgba(22,163,74,0.85)'  : 'rgba(74,222,128,0.85)';
+    const expCol   = isLight ? 'rgba(220,38,38,0.85)'  : 'rgba(248,113,113,0.85)';
     const FONT     = 'Noto Sans KR,sans-serif';
 
-    // 가로 그리드 라인만 (텍스트 없음 — 겹침 방지)
-    let grid = '';
-    [0.33, 0.66, 1].forEach(r => {
-      const y = (pT + chartH * (1 - r)).toFixed(1);
-      grid += `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="${gridCol}" stroke-width="1"/>`;
-    });
+    // ── Y축 라인 ─────────────────────────────────────────
+    let grid = `<line x1="${pL}" y1="${pT}" x2="${pL}" y2="${pT+chartH}" stroke="${axisCol}" stroke-width="1.5"/>`;
 
+    // ── Y축 눈금 4개 + 가로 그리드 라인 ─────────────────
+    const TICKS = 4;
+    for (let t = 1; t <= TICKS; t++) {
+      const val = maxAmt * (t / TICKS);
+      const y   = (pT + chartH - chartH * (t / TICKS)).toFixed(1);
+      // 그리드 라인
+      grid += `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="${gridCol}" stroke-width="1" stroke-dasharray="3 4"/>`;
+      // Y축 눈금 텍스트 (우측 정렬, 바와 겹치지 않음)
+      grid += `<text x="${pL - 5}" y="${(parseFloat(y) + 3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="${labelCol}" font-family="${FONT}">${fmtShort(val)}</text>`;
+    }
+
+    // ── 바 + 하단 이중 라벨 ──────────────────────────────
     let bars = '', labels = '';
     months.forEach((m, i) => {
-      const cx = pL + (i + 0.5) * mW;
+      const cx  = pL + (i + 0.5) * mW;
       const incH = m.income  > 0 ? Math.max((m.income  / maxAmt) * chartH, 3) : 0;
       const expH = m.expense > 0 ? Math.max((m.expense / maxAmt) * chartH, 3) : 0;
-      const incX = cx - gap / 2 - bW;
-      const expX = cx + gap / 2;
+      const incX = (cx - gap / 2 - bW).toFixed(1);
+      const expX = (cx + gap / 2).toFixed(1);
+      const baseY = pT + chartH;
 
-      // 바만 그림 (바 위 값 라벨 없음 — 겹침 방지)
-      if (incH > 0) bars += `<rect x="${incX.toFixed(1)}" y="${(pT + chartH - incH).toFixed(1)}" width="${bW}" height="${incH.toFixed(1)}" rx="4" fill="${incCol}"/>`;
-      if (expH > 0) bars += `<rect x="${expX.toFixed(1)}" y="${(pT + chartH - expH).toFixed(1)}" width="${bW}" height="${expH.toFixed(1)}" rx="4" fill="${expCol}"/>`;
+      // 수입 바
+      if (incH > 0) bars += `<rect x="${incX}" y="${(baseY - incH).toFixed(1)}" width="${bW}" height="${incH.toFixed(1)}" rx="4" fill="${incCol}"/>`;
+      // 지출 바
+      if (expH > 0) bars += `<rect x="${expX}" y="${(baseY - expH).toFixed(1)}" width="${bW}" height="${expH.toFixed(1)}" rx="4" fill="${expCol}"/>`;
 
-      // 월 라벨만 하단에
-      labels += `<text x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="10" fill="${labelCol}" font-family="${FONT}" font-weight="600">${m.label}</text>`;
+      // 하단 라벨 1: 월 이름
+      const monthY = (baseY + 18).toFixed(1);
+      labels += `<text x="${cx.toFixed(1)}" y="${monthY}" text-anchor="middle" font-size="10.5" fill="${labelCol}" font-family="${FONT}" font-weight="700">${m.label}</text>`;
+
+      // 하단 라벨 2: 순현금 (+/-) — 월 이름 아래
+      const net     = m.income - m.expense;
+      const netSign = net >= 0 ? '+' : '';
+      const netCol  = net >= 0
+        ? (isLight ? 'rgba(22,163,74,0.9)' : 'rgba(74,222,128,0.9)')
+        : (isLight ? 'rgba(220,38,38,0.9)' : 'rgba(248,113,113,0.9)');
+      const netY = (baseY + 34).toFixed(1);
+      labels += `<text x="${cx.toFixed(1)}" y="${netY}" text-anchor="middle" font-size="9" fill="${netCol}" font-family="${FONT}" font-weight="700">${netSign}${fmtShort(net)}</text>`;
     });
 
-    // 범례 (우상단)
+    // ── 범례 (우상단) ────────────────────────────────────
     const lx = W - pR;
     const legend = `
-      <circle cx="${lx-68}" cy="14" r="4" fill="${incCol}"/>
-      <text x="${lx-61}" y="18" font-size="10" fill="${labelCol}" font-family="${FONT}">수입</text>
-      <circle cx="${lx-28}" cy="14" r="4" fill="${expCol}"/>
-      <text x="${lx-21}" y="18" font-size="10" fill="${labelCol}" font-family="${FONT}">지출</text>`;
+      <circle cx="${lx-76}" cy="12" r="4.5" fill="${incCol}"/>
+      <text x="${lx-68}" y="16" font-size="10" fill="${labelCol}" font-family="${FONT}">수입</text>
+      <circle cx="${lx-36}" cy="12" r="4.5" fill="${expCol}"/>
+      <text x="${lx-28}" y="16" font-size="10" fill="${labelCol}" font-family="${FONT}">지출</text>`;
 
     netEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${bars}${labels}${legend}</svg>`;
   }

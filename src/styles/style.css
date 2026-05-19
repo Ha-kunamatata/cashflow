@@ -303,13 +303,13 @@ body {
   position: relative;
   z-index: 1;
 }
-/* 기본: 애니메이션 없이 표시 (flickering 방지) */
+/* 기본: 애니메이션 없이 표시 */
 .page.active            { display:block; }
-/* 탭 방향 슬라이드 — transform만 (opacity 변화 없어야 깜빡임 없음) */
-.page.active.nav-right  { animation: pageSlideRight .22s cubic-bezier(.25,.46,.45,.94) both; }
-.page.active.nav-left   { animation: pageSlideLeft  .22s cubic-bezier(.25,.46,.45,.94) both; }
-@keyframes pageSlideRight { from { transform: translateX(20px); opacity:0.6; } to { transform: translateX(0); opacity:1; } }
-@keyframes pageSlideLeft  { from { transform: translateX(-20px); opacity:0.6; } to { transform: translateX(0); opacity:1; } }
+/* 탭 방향 슬라이드 — 방향 클래스가 active 전에 붙으므로 첫 프레임부터 올바른 from 상태 */
+.page.active.nav-right  { animation: pageSlideRight .30s cubic-bezier(.22,1,.36,1) both; }
+.page.active.nav-left   { animation: pageSlideLeft  .30s cubic-bezier(.22,1,.36,1) both; }
+@keyframes pageSlideRight { from { transform:translateX(48px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes pageSlideLeft  { from { transform:translateX(-48px); opacity:0; } to { transform:translateX(0); opacity:1; } }
 
 /* ── 버튼 ── */
 .btn { position:relative; overflow:hidden; border:none; cursor:pointer; font-family:var(--font); transition:transform 0.15s, box-shadow 0.15s; user-select:none; }
