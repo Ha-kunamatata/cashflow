@@ -2,7 +2,7 @@
 // ════════════════════════════════════════════════════════
 // render-home.ts — home screen rendering
 // ════════════════════════════════════════════════════════
-import { DAYS_KR } from './config';
+import { DAYS_KR, LEDGER_CAT_COLORS, CAT_ICONS } from './config';
 import { getMonthBudget, getMonthActual } from './budget';
 import {
   today,
@@ -279,61 +279,50 @@ export function _renderSparkline() {
 }
 
 // ════════════════════════════════════════════════════════
-// 오늘의 소비 타임라인
+// 오늘의 소비 타임라인 (뱅크샐러드 스타일 카드)
 // ════════════════════════════════════════════════════════
-const _CAT_DOTS: Record<string, string> = {
-  '식비': '#f97316', '교통': '#38bdf8', '카드': '#f87171', '할부': '#fb923c',
-  '공과금': '#facc15', '보험': '#c084fc', '통신': '#a78bfa', '구독': '#f472b6',
-  '의료': '#4ade80', '주거': '#fbbf24', '문화': '#e879f9', '교육': '#22d3ee',
-  '생활': '#94a3b8', '기타지출': '#64748b',
-};
+const TAG_EMOJI_HOME: Record<string, string> = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
 
 export function _renderTodayTimeline() {
   const el = document.getElementById('today-timeline');
   if (!el) return;
   const dk = dateKey(today());
   const allItems = state.ledgerData?.[dk] || [];
-  const expenses = allItems.filter(i => i.type === 'expense');
-  const incomes = allItems.filter(i => i.type === 'income');
   if (!allItems.length) { el.innerHTML = ''; return; }
 
-  const totalExp = expenses.reduce((s, i) => s + i.amount, 0);
-  const totalInc = incomes.reduce((s, i) => s + i.amount, 0);
+  const totalExp = allItems.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+  const totalInc = allItems.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
 
-  // 카테고리별 합산
-  const catMap: Record<string, number> = {};
-  expenses.forEach(i => { catMap[i.category] = (catMap[i.category] || 0) + i.amount; });
-  const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-  el.innerHTML = `
-    <div class="card" style="padding:12px 14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:14px">🕐</span>
-        <div style="font-size:12px;font-weight:800;color:var(--text)">오늘의 기록</div>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-          ${totalInc > 0 ? `<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--green2)">+${fmtShort(totalInc)}</span>` : ''}
-          ${totalExp > 0 ? `<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--red2)">-${fmtShort(totalExp)}</span>` : ''}
+  const cardsHtml = allItems.slice().reverse().map(i => {
+    const col  = LEDGER_CAT_COLORS[i.category] || '#64748b';
+    const icon = CAT_ICONS[i.category] || (i.type === 'income' ? '💰' : '📦');
+    const sign = i.type === 'income' ? '+' : '-';
+    const amtCls = i.type === 'income' ? 'green' : 'red';
+    return `<div class="lday-card">
+      <div class="lday-card-icon-wrap" style="background:${col}15;border-color:${col}35;color:${col}">${icon}</div>
+      <div class="lday-card-body">
+        <div class="lday-card-name">${escapeHtml(i.memo || i.category)}</div>
+        <div class="lday-card-meta">
+          <span>${escapeHtml(i.category)}</span>
+          ${i.tag ? `<span class="lday-card-tag">${TAG_EMOJI_HOME[i.tag] || ''}${escapeHtml(i.tag)}</span>` : ''}
         </div>
       </div>
-      ${topCats.length > 0 ? `
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-        ${topCats.map(([cat, amt]) => {
-          const dot = _CAT_DOTS[cat] || '#64748b';
-          return `<span style="font-size:10px;padding:3px 8px;border-radius:20px;background:${dot}18;border:1px solid ${dot}40;color:${dot};font-weight:600">${escapeHtml(cat)} ${fmtShort(amt)}</span>`;
-        }).join('')}
-      </div>` : ''}
-      ${[...expenses.slice(-5).reverse(), ...incomes.slice(-2).reverse()].slice(0, 5).map(i => {
-        const dot = i.type === 'income' ? 'var(--green2)' : (_CAT_DOTS[i.category] || '#64748b');
-        return `
-          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border)">
-            <div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0"></div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(i.memo || i.category || '-')}</div>
-              <div style="font-size:10px;color:var(--text3)">${escapeHtml(i.category)}</div>
-            </div>
-            <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:${i.type === 'income' ? 'var(--green2)' : 'var(--red2)'};flex-shrink:0">${i.type === 'income' ? '+' : '-'}${fmtShort(i.amount)}</div>
-          </div>`;
-      }).join('')}
+      <div class="lday-card-right">
+        <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(i.amount)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card today-timeline-card">
+      <div class="today-timeline-header">
+        <span class="today-timeline-title">오늘의 기록</span>
+        <div class="today-timeline-totals">
+          ${totalInc > 0 ? `<span class="today-total-inc">+${fmtShort(totalInc)}</span>` : ''}
+          ${totalExp > 0 ? `<span class="today-total-exp">-${fmtShort(totalExp)}</span>` : ''}
+        </div>
+      </div>
+      ${cardsHtml}
     </div>`;
 }
 

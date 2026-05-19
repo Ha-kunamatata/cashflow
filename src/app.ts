@@ -147,7 +147,10 @@ import {
   saveCurrentAsTemplate,
   handleReceiptOCR,
   applyMemoSuggestion,
+  getCatIcon,
 } from './ui';
+
+import { LEDGER_CAT_COLORS } from './config';
 
 import {
   initRipple,
@@ -663,23 +666,47 @@ function _renderInlinePanel(dk) {
 
   const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
   const itemsHtml = items.length ? items.map(item => {
+    const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
+    const icon = getCatIcon(item.category);
     const sign = item.type === 'expense' ? '-' : '+';
-    const cls  = item.type === 'expense' ? 'red' : 'green';
-    return `<div class="lday-item" data-id="${item.id}" style="padding:8px 4px">
-      <div class="lday-item-info">
-        <span class="lday-item-cat">${escapeHtml(item.category)}</span>
-        ${item.memo ? `<span class="lday-item-memo">${escapeHtml(item.memo)}</span>` : ''}
-        ${item.tag ? `<span class="lday-item-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+    const amtCls = item.type === 'expense' ? 'red' : 'green';
+    return `<div class="lday-card" data-id="${item.id}">
+      <div class="lday-card-icon-wrap" style="background:${col}18;border-color:${col}38;color:${col}">${icon}</div>
+      <div class="lday-card-body">
+        <div class="lday-card-name">${escapeHtml(item.memo || item.category)}</div>
+        <div class="lday-card-meta">
+          <span>${escapeHtml(item.category)}</span>
+          ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+        </div>
       </div>
-      <span class="lday-item-amt ${cls}">${sign}${fmtShort(item.amount)}</span>
-      <button class="icon-btn edit lday-edit-btn" data-id="${item.id}">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
-      </button>
-      <button class="icon-btn del lday-del-btn" data-id="${item.id}">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-      </button>
+      <div class="lday-card-right">
+        <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
+        <div class="lday-card-actions">
+          <button class="lday-card-action-btn lday-edit-btn" data-id="${item.id}">수정</button>
+          <button class="lday-card-action-btn del lday-del-btn" data-id="${item.id}">삭제</button>
+        </div>
+      </div>
     </div>`;
-  }).join('') : `<div style="font-size:12px;color:var(--text3);padding:12px 4px;text-align:center">기록 없음</div>`;
+  }).join('') : `<div style="font-size:12px;color:var(--text3);padding:16px 4px;text-align:center">기록 없음<br><span style="font-size:10px;color:var(--text3)">+ 버튼으로 추가하세요</span></div>`;
+
+  // 카테고리 미니 요약
+  const catAmts = {};
+  items.forEach(item => {
+    if (item.type === 'expense') catAmts[item.category] = (catAmts[item.category] || 0) + item.amount;
+  });
+  const topCats = Object.entries(catAmts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const catSummaryHtml = expense > 0 && topCats.length > 1 ? `
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      ${topCats.map(([cat, amt]) => {
+        const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+        const pct = Math.round((amt / expense) * 100);
+        return `<div style="display:flex;align-items:center;gap:4px;background:${col}18;border-radius:8px;padding:3px 8px">
+          <span style="width:6px;height:6px;border-radius:50%;background:${col};flex-shrink:0"></span>
+          <span style="font-size:10px;font-weight:700;color:${col}">${escapeHtml(cat)}</span>
+          <span style="font-size:10px;color:var(--text3)">${pct}%</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   panel.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;border-top:1px solid var(--border2);margin-top:10px">
@@ -692,6 +719,7 @@ function _renderInlinePanel(dk) {
         </button>
       </div>
     </div>
+    ${catSummaryHtml}
     <div id="inline-items-list">${itemsHtml}</div>`;
 
   panel.querySelector('#btn-inline-add-item')?.addEventListener('click', (e) => {
@@ -757,11 +785,11 @@ document.getElementById('ledger-day-items-list')?.addEventListener('click', (e) 
 document.getElementById('ledger-type-expense')?.addEventListener('click', () => setLedgerItemType('expense'));
 document.getElementById('ledger-type-income')?.addEventListener('click',  () => setLedgerItemType('income'));
 document.getElementById('ledger-cat-groups')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.ledger-cat-group-btn');
+  const btn = e.target.closest('.calc-cat-group-tab');
   if (btn) selectLedgerCatGroup(btn.dataset.group);
 });
 document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.ledger-cat-chip');
+  const btn = e.target.closest('.calc-cat-item');
   if (btn) selectLedgerCat(btn.dataset.cat);
 });
 document.getElementById('ledger-tag-row')?.addEventListener('click', (e) => {
@@ -1588,12 +1616,6 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
   const openBtn  = document.getElementById('btn-open-search');
   if (!overlay) return;
 
-  const CAT_COLORS = {
-    '월급':'#34d399','부수입':'#6ee7b7','식비':'#60a5fa','교통':'#38bdf8',
-    '카드':'#f87171','할부':'#fb923c','공과금':'#facc15','보험':'#c084fc',
-    '통신':'#a78bfa','구독':'#f472b6','기타지출':'#94a3b8','주거':'#fbbf24',
-    '의료':'#4ade80','문화':'#e879f9','기타':'#64748b',
-  };
 
   function openSearch() {
     overlay.style.display = 'flex';
@@ -1617,50 +1639,67 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
 
   function _renderResults(query) {
     const q = query.trim().toLowerCase();
-    const items = [];
+    const allItems = [];
 
     for (const [dk, entries] of Object.entries(state.ledgerData || {})) {
       for (const item of entries) {
         const catMatch  = item.category?.toLowerCase().includes(q);
         const memoMatch = item.memo?.toLowerCase().includes(q);
-        const amtStr    = String(item.amount);
-        const amtMatch  = amtStr.includes(q);
+        const amtMatch  = String(item.amount).includes(q);
         const dateMatch = dk.includes(q);
         if (!q || catMatch || memoMatch || amtMatch || dateMatch) {
-          items.push({ dk, item });
+          allItems.push({ dk, item });
         }
       }
     }
 
-    // 최신 날짜 순 정렬, 최대 60건
-    items.sort((a, b) => b.dk.localeCompare(a.dk));
-    const slice = items.slice(0, 60);
+    allItems.sort((a, b) => b.dk.localeCompare(a.dk));
+    const slice = allItems.slice(0, 120);
 
     if (!slice.length) {
       results.innerHTML = `<div class="search-empty">${q ? '검색 결과가 없어요' : '가계부에 기록된 내역이 없어요'}<br><span style="font-size:20px;margin-top:8px;display:block">🔍</span></div>`;
       return;
     }
 
-    const d0 = new Date();
-    const p2 = n => String(n).padStart(2, '0');
-    results.innerHTML = slice.map(({ dk, item }) => {
+    // 날짜별 그룹
+    const groups = {};
+    slice.forEach(({ dk, item }) => {
+      if (!groups[dk]) groups[dk] = [];
+      groups[dk].push(item);
+    });
+
+    const now = new Date();
+    const _p2 = n => String(n).padStart(2, '0');
+    const todayDk = `${now.getFullYear()}-${_p2(now.getMonth()+1)}-${_p2(now.getDate())}`;
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    const yestDk = `${yest.getFullYear()}-${_p2(yest.getMonth()+1)}-${_p2(yest.getDate())}`;
+
+    results.innerHTML = Object.entries(groups).map(([dk, dayItems]) => {
       const d = new Date(dk);
-      const isToday = dk === `${d0.getFullYear()}-${p2(d0.getMonth()+1)}-${p2(d0.getDate())}`;
-      const dateLabel = isToday ? '오늘' : `${d.getMonth()+1}/${d.getDate()}`;
-      const sign = item.type === 'expense' ? '-' : '+';
-      const amtColor = item.type === 'expense' ? 'var(--red2)' : 'var(--green2)';
-      const dot = CAT_COLORS[item.category] || '#64748b';
-      return `<div class="search-result-item" data-dk="${dk}">
-        <div class="search-result-dot" style="background:${dot}"></div>
-        <div class="search-result-info">
-          <div class="search-result-cat">${highlight(item.category || '', query)}</div>
-          <div class="search-result-meta">
-            <span>${dateLabel}</span>
-            ${item.memo ? `<span>·</span><span>${highlight(item.memo, query)}</span>` : ''}
+      const dateLabel = dk === todayDk ? '오늘' : dk === yestDk ? '어제'
+        : `${d.getMonth()+1}월 ${d.getDate()}일`;
+      const dayExp = dayItems.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+      const dayInc = dayItems.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+
+      const cardsHtml = dayItems.map(item => {
+        const col = LEDGER_CAT_COLORS[item.category] || '#64748b';
+        const icon = getCatIcon(item.category);
+        const sign = item.type === 'expense' ? '-' : '+';
+        const amtColor = item.type === 'expense' ? 'var(--red2)' : 'var(--green2)';
+        return `<div class="search-result-card" data-dk="${dk}">
+          <div class="search-result-icon" style="background:${col}18;color:${col}">${icon}</div>
+          <div class="search-result-info">
+            <div class="search-result-cat">${highlight(item.category || '', query)}</div>
+            ${item.memo ? `<div class="search-result-memo">${highlight(item.memo, query)}</div>` : ''}
           </div>
-        </div>
-        <div class="search-result-amt" style="color:${amtColor}">${sign}${fmtShort(item.amount)}</div>
-      </div>`;
+          <div class="search-result-amt" style="color:${amtColor}">${sign}${fmtShort(item.amount)}</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="search-date-header">
+          <span class="search-date-label">${dateLabel}</span>
+          <span class="search-date-total">${dayExp > 0 ? `<span style="color:var(--red2)">-${fmtShort(dayExp)}</span>` : ''}${dayInc > 0 ? `<span style="color:var(--green2)"> +${fmtShort(dayInc)}</span>` : ''}</span>
+        </div>${cardsHtml}`;
     }).join('');
   }
 

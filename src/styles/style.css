@@ -2267,3 +2267,166 @@ body.light-theme .lday-card:active { background: rgba(0,0,0,.04); }
   60%     { transform: translateX(-5px); }
   80%     { transform: translateX(5px); }
 }
+
+/* ── 달력 카테고리 컬러 도트 ─────────────────────────── */
+.lday-cat-dots {
+  display: flex;
+  gap: 3px;
+  padding: 0 2px 2px;
+  min-height: 8px;
+}
+.lday-cat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* ── 달력 예산 진행 바 ─────────────────────────────── */
+.cal-budget-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+.cal-budget-bar-lbl { color: var(--text3); font-weight: 600; }
+.cal-budget-bar-pct { font-weight: 800; }
+.cal-budget-bar-amt { color: var(--text3); margin-left: auto; font-family: var(--mono); }
+.cal-budget-track {
+  height: 5px;
+  background: var(--bg4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cal-budget-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width .4s ease;
+}
+.cal-budget-fill.warn { background: linear-gradient(90deg, #f59e0b, #f97316); }
+.cal-budget-fill.over { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+/* ── 달력 셀 개선 ─────────────────────────────────── */
+.ledger-day-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1px; }
+.ledger-day-amounts { margin-top: 1px; }
+
+/* 인라인 패널 lday-card 패딩 조정 */
+#ledger-day-inline-panel .lday-card { padding: 10px 4px; }
+#ledger-day-inline-panel .lday-card-icon-wrap { width: 36px; height: 36px; font-size: 17px; border-radius: 11px; }
+
+/* 라이트 테마 예산바 */
+body.light-theme .cal-budget-track { background: rgba(0,0,0,.08); }
+
+/* ── 검색 결과 날짜 그룹 & 카드 디자인 ───────────────────── */
+.search-date-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 5px;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--border2);
+}
+.search-date-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text3);
+  letter-spacing: 0.5px;
+}
+.search-date-total {
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+  display: flex;
+  gap: 6px;
+}
+.search-result-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background .12s;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.search-result-card:active { background: var(--bg3); }
+.search-result-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.search-result-memo {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 라이트 테마 */
+body.light-theme .search-date-header { background: #f8fafc; }
+body.light-theme .search-result-card:active { background: rgba(0,0,0,.04); }
+body.light-theme .search-result-card { border-bottom-color: rgba(0,0,0,.05); }
+
+/* ── 홈 오늘의 기록 카드 ─────────────────────────────── */
+.today-timeline-card { padding: 14px 12px; }
+.today-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border2);
+}
+.today-timeline-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+.today-timeline-totals { display: flex; gap: 10px; align-items: center; }
+.today-total-exp {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--mono);
+  color: var(--red2);
+}
+.today-total-inc {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--mono);
+  color: var(--green2);
+}
+.today-timeline-card .lday-card { padding: 8px 4px; }
+.today-timeline-card .lday-card-icon-wrap { width: 36px; height: 36px; font-size: 17px; border-radius: 11px; }
+.today-timeline-card .lday-card-amount { font-size: 13px; }
+
+/* ── 통계 카테고리 트렌드 & 아이콘 ───────────────────── */
+.lstat-cat-icon-sm {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.lstat-cat-trend {
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 30px;
+  text-align: right;
+}
+.lstat-summary-item { flex: 1; text-align: center; }
+.lstat-summary-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; }
+.lstat-summary-val { font-size: 15px; font-weight: 900; font-family: var(--mono); }
+.lstat-summary-val.red { color: var(--red2); }
+.lstat-summary-val.green { color: var(--green2); }

@@ -2,7 +2,7 @@
 // ui.ts — 폼 / 시트 / 네비게이션 / 인터랙션
 // ════════════════════════════════════════════════════════
 // @ts-nocheck
-import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS } from './config';
+import { INCOME_CATS, EXPENSE_CATS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, LEDGER_CAT_COLORS, CAT_ICONS } from './config';
 import { uid, today, dateKey, fmtFull, fmtShort, fmtSigned, escapeHtml, showBadge, openSheet, closeSheet } from './utils';
 import { publishSharedGoal, fetchSharedGoalByCode, createHousehold, joinHousehold, leaveHousehold, getCurrentHouseholdCode } from './firebase';
 import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state';
@@ -341,32 +341,6 @@ let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
 let _ledgerItemTag   = null; // 소비 유형 태그
 let _calcAmountStr   = '';   // 계산기 입력 문자열
 
-// 카테고리 이모지 아이콘 맵
-const CAT_ICONS: Record<string, string> = {
-  '식비': '🍽️', '음료·카페': '☕', '배달': '🛵', '간식': '🍿',
-  '교통': '🚌', '주유': '⛽', '택시': '🚕', '주차': '🅿️',
-  '카드': '💳', '할부': '🔄',
-  '공과금': '💡', '관리비': '🏢', '수도': '💧', '가스': '🔥',
-  '보험': '🛡️',
-  '통신': '📱',
-  '구독': '📺', '스트리밍': '🎬',
-  '주거': '🏠', '월세': '🏡', '전세': '🏘️',
-  '의료': '🏥', '약': '💊', '치과': '🦷',
-  '문화': '🎭', '영화': '🎬', '공연': '🎵',
-  '교육': '📚', '학원': '✏️',
-  '생활': '🛒', '마트': '🛍️', '쇼핑': '👗',
-  '미용': '💇', '뷰티': '💄',
-  '운동': '💪', '헬스': '🏋️',
-  '여행': '✈️', '숙박': '🏨',
-  '경조사': '💌', '선물': '🎁',
-  '저축': '🐷', '투자': '📈',
-  '기타지출': '📦',
-  '월급': '💰', '급여': '💰',
-  '부수입': '💵', '아르바이트': '💼',
-  '이자': '🏦', '배당': '📊',
-  '환급': '💫', '환전': '💱',
-  '기타수입': '💴',
-};
 
 // 날짜 셀 클릭 → 날짜 시트 열기
 export function openLedgerDaySheet(dateStr) {
