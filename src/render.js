@@ -649,6 +649,45 @@ export function renderHome() {
     }
   }
 
+  // ── 최근 거래 (홈 탭) ──────────────────────────────────
+  const recentEl = document.getElementById('home-recent-tx');
+  if (recentEl && state.ledgerData) {
+    const RECENT_ICONS = {
+      '식비':'🍽️','카페':'☕','교통':'🚇','쇼핑':'🛍️','엔터':'🎬','병원':'🏥',
+      '편의점':'🏪','배달':'📦','술':'🍺','미용':'✂️','운동':'💪','통신':'📱',
+      '주거':'🏠','교육':'📚','여행':'✈️','문화':'🎭','구독':'📺',
+    };
+    const allItems = [];
+    for (const [dk, items] of Object.entries(state.ledgerData)) {
+      for (const item of items) {
+        allItems.push({ ...item, _dk: dk });
+      }
+    }
+    allItems.sort((a, b) => b._dk.localeCompare(a._dk));
+    const recent = allItems.slice(0, 5);
+    if (!recent.length) {
+      recentEl.style.display = 'none';
+    } else {
+      recentEl.style.display = '';
+      const rows = recent.map((item, i) => {
+        const icon = RECENT_ICONS[item.category] || (item.type === 'income' ? '💰' : '💳');
+        const label = item.memo || item.category || '기타';
+        const dateStr = item._dk.slice(5).replace('-', '/');
+        return `<div class="recent-tx-row" style="${i > 0 ? 'border-top:1px solid var(--border)' : ''}">
+          <span class="recent-tx-icon">${icon}</span>
+          <div class="recent-tx-info">
+            <div class="recent-tx-name">${escapeHtml(label)}</div>
+            <div class="recent-tx-meta">${dateStr} · ${escapeHtml(item.category || '')}</div>
+          </div>
+          <div class="recent-tx-amount ${item.type === 'income' ? 'green' : 'red'}">${item.type === 'income' ? '+' : '-'}${fmtShort(item.amount)}</div>
+        </div>`;
+      }).join('');
+      recentEl.innerHTML = `
+        <div class="home-section-hdr" style="cursor:pointer" data-action="ledger">최근 지출 <span style="color:var(--text3);font-size:10px;font-weight:400">가계부 →</span></div>
+        <div class="card" style="padding:0;overflow:hidden">${rows}</div>`;
+    }
+  }
+
   const upcoming = fc.slice(0, 30).filter((f) => f.income > 0 || f.expense > 0);
   const ul = document.getElementById('upcoming-list');
   if (!ul) return;
@@ -772,73 +811,102 @@ function renderForecastInsights() {
 }
 
 export function renderForecastChart() {
+  const el = document.getElementById('forecast-chart');
+  if (!el) return;
   const fc = buildForecast(_chartPeriod);
+  if (!fc.length) { el.innerHTML = ''; return; }
+
   const vals = fc.map((f) => f.balance);
   const min = Math.min(...vals, 0);
   const max = Math.max(...vals, state.dangerLine);
   const range = max - min || 1;
 
-  const W = 560;
-  const H = 120;
-  const PAD = 10;
-  const bw = W / fc.length;
+  const W = 560, H = 168;
+  const pT = 14, pR = 14, pB = 36, pL = 52;
+  const cW = W - pL - pR, cH = H - pT - pB;
 
-  const py = (v) => PAD + (H - PAD * 2) - ((v - min) / range) * (H - PAD * 2);
+  el.setAttribute('viewBox', `0 0 ${W} ${H}`);
 
-  const pts = fc
-    .map((f, i) => `${(i * bw + bw / 2).toFixed(1)},${py(f.balance).toFixed(1)}`)
-    .join(' ');
+  const px = (i) => pL + (i / Math.max(fc.length - 1, 1)) * cW;
+  const py = (v) => pT + cH - ((v - min) / range) * cH;
+
+  const coords = fc.map((f, i) => [px(i), py(f.balance)]);
+
+  function smoothPath(points) {
+    if (points.length < 2) return `M ${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+    let d = `M ${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(0, i - 1)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(points.length - 1, i + 2)];
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  }
+
+  const linePath = smoothPath(coords);
+  const bottomY = (pT + cH).toFixed(1);
+  const areaPath = `${linePath} L ${(pL + cW).toFixed(1)},${bottomY} L ${pL.toFixed(1)},${bottomY} Z`;
+
+  let gridHtml = '';
+  const tickCount = 4;
+  for (let t = 0; t <= tickCount; t++) {
+    const v = min + (range / tickCount) * t;
+    const y = py(v).toFixed(1);
+    gridHtml += `
+      <line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+      <text x="${pL - 6}" y="${(parseFloat(y) + 3.5).toFixed(1)}" fill="var(--text3)" font-size="9" text-anchor="end" font-family="monospace">${fmtShort(v)}</text>`;
+  }
+
+  const dangerY = py(state.dangerLine);
+  const zeroY = py(0);
+  let dangerHtml = '';
+  if (state.dangerLine > min && state.dangerLine <= max) {
+    dangerHtml = `
+      <rect x="${pL}" y="${dangerY.toFixed(1)}" width="${cW}" height="${Math.max(0, zeroY - dangerY).toFixed(1)}" fill="rgba(249,115,22,0.06)"/>
+      <line x1="${pL}" y1="${dangerY.toFixed(1)}" x2="${W - pR}" y2="${dangerY.toFixed(1)}" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="${pL + 4}" y="${(dangerY - 4).toFixed(1)}" fill="#f97316" font-size="8.5" font-family="monospace">위험</text>`;
+  }
+
+  const step = _chartPeriod <= 30 ? 7 : _chartPeriod <= 90 ? 14 : 30;
+  let dateLabels = '';
+  fc.forEach((f, i) => {
+    if (i % step !== 0 && i !== fc.length - 1) return;
+    dateLabels += `<text x="${px(i).toFixed(1)}" y="${H - 4}" fill="var(--text3)" font-size="9" text-anchor="middle" font-family="monospace">${f.date.getMonth() + 1}/${f.date.getDate()}</text>`;
+  });
 
   let dots = '';
   fc.forEach((f, i) => {
     if (!f.income && !f.expense) return;
-    const fill =
-      f.balance < state.dangerLine
-        ? '#ef4444'
-        : f.income > 0
-          ? '#10b981'
-          : '#f87171';
-
-    dots += `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${py(f.balance).toFixed(1)}" r="2.5" fill="${fill}" opacity="0.82"/>`;
+    const fill = f.balance < state.dangerLine ? '#ef4444' : f.income > 0 ? '#10b981' : '#f87171';
+    dots += `<circle cx="${px(i).toFixed(1)}" cy="${py(f.balance).toFixed(1)}" r="2.5" fill="${fill}" opacity="0.9"/>`;
   });
-
-  let labels = '';
-  const step = _chartPeriod <= 30 ? 7 : _chartPeriod <= 90 ? 14 : 30;
-
-  fc.filter((_, i) => i % step === 0).forEach((f, i) => {
-    labels += `<text x="${(i * step * bw + bw / 2).toFixed(1)}" y="${H + 2}" fill="#475569" font-size="9" font-family="monospace" text-anchor="middle">${f.date.getMonth() + 1}/${f.date.getDate()}</text>`;
-  });
-
-  const zeroY = py(0);
-  const dangerY = py(state.dangerLine);
-
-  const el = document.getElementById('forecast-chart');
-  if (!el) return;
 
   el.innerHTML = `
     <defs>
-      <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
-        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.03"/>
+      <linearGradient id="fcLineGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#818cf8"/>
       </linearGradient>
+      <linearGradient id="fcAreaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.01"/>
+      </linearGradient>
+      <clipPath id="fcClip">
+        <rect x="${pL}" y="${pT}" width="${cW}" height="${cH}"/>
+      </clipPath>
     </defs>
-    ${
-      state.dangerLine > min
-        ? `<rect x="0" y="${dangerY.toFixed(1)}" width="${W}" height="${(zeroY - dangerY).toFixed(1)}" fill="rgba(249,115,22,0.06)"/>`
-        : ''
-    }
-    <line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" stroke="#334155" stroke-width="1" stroke-dasharray="4 4"/>
-    ${
-      state.dangerLine > 0
-        ? `<line x1="0" y1="${dangerY.toFixed(1)}" x2="${W}" y2="${dangerY.toFixed(1)}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 3"/>
-           <text x="4" y="${(dangerY - 4).toFixed(1)}" fill="#f97316" font-size="8" font-family="monospace">${fmtShort(state.dangerLine)}</text>`
-        : ''
-    }
-    <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#ag)"/>
-    <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${gridHtml}
+    ${dangerHtml}
+    <path d="${areaPath}" fill="url(#fcAreaGrad)" clip-path="url(#fcClip)"/>
+    <path d="${linePath}" fill="none" stroke="url(#fcLineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#fcClip)"/>
     ${dots}
-    ${labels}
-  `;
+    ${dateLabels}`;
 }
 
 export function renderMonthlyChart() {
@@ -2578,6 +2646,24 @@ export function renderReportCatModal() {
 // ════════════════════════════════════════════════════════
 // 목표 탭
 // ════════════════════════════════════════════════════════
+function _goalRing(pct, color, size) {
+  const r = (size / 2) - 5;
+  const circ = 2 * Math.PI * r;
+  const dash = Math.min(pct / 100, 1) * circ;
+  const cx = size / 2, cy = size / 2;
+  return `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+        stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
+        style="transition:stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+      <span style="font-size:11px;font-weight:900;color:${color};font-family:var(--mono);line-height:1">${pct}%</span>
+    </div>`;
+}
+
 export function renderGoals() {
   const container = document.getElementById('goals-list');
   if (!container) return;
@@ -2676,22 +2762,19 @@ export function renderGoals() {
           </div>
         </div>
 
-        <!-- 금액 & 진행률 -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:10px 0 6px">
-          <div>
-            <div style="font-size:10px;color:var(--text3);font-weight:700;margin-bottom:2px">저축 현황</div>
-            <div style="display:flex;align-items:baseline;gap:4px">
+        <!-- 원형 링 + 저축 현황 -->
+        <div style="display:flex;align-items:center;gap:16px;margin:12px 0 10px">
+          <div style="position:relative;width:64px;height:64px;flex-shrink:0">
+            ${_goalRing(pct, barColor, 64)}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-bottom:4px">저축 현황</div>
+            <div style="display:flex;align-items:baseline;gap:5px;flex-wrap:wrap">
               <span style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--accent2)">${fmtFull(saved)}</span>
               <span style="font-size:11px;color:var(--text3)">/ ${fmtShort(target)}</span>
             </div>
+            ${pct < 100 ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtShort(remaining)} 남음</div>` : '<div style="font-size:12px;font-weight:700;color:var(--green2);margin-top:3px">🎉 달성 완료!</div>'}
           </div>
-          <div style="text-align:right">
-            <div style="font-size:28px;font-weight:900;font-family:var(--mono);color:${barColor};line-height:1">${pct}%</div>
-            ${pct < 100 ? `<div style="font-size:10px;color:var(--text3)">${fmtShort(remaining)} 남음</div>` : '<div style="font-size:10px;color:var(--green2)">달성 완료!</div>'}
-          </div>
-        </div>
-        <div class="goal-progress-track" style="height:8px;margin-bottom:10px">
-          <div class="goal-progress-fill" style="width:${pct}%;background:${pct >= 100 ? 'linear-gradient(90deg,var(--green2),#10b981)' : `linear-gradient(90deg,${barColor},${barColor}aa)`}"></div>
         </div>
 
         <!-- 월 필요 저축액 & 상태 -->
@@ -3128,8 +3211,12 @@ export function renderWishlist() {
         </div>`;
     }
 
+    const priBorderColor = w.bought ? 'var(--green2)' :
+      (w.priority === 'must' ? 'var(--red2)' : w.priority === 'want' ? 'var(--accent2)' : 'var(--text3)');
+
     return `
-      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}" data-idx="${idx}" draggable="true">
+      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}" data-idx="${idx}" draggable="true"
+           style="border-left:3px solid ${priBorderColor}">
         <div class="wish-card-top">
           <!-- 드래그 핸들 -->
           <div class="wish-drag-handle" data-id="${escapeHtml(w.id)}" title="드래그하여 순서 변경">
