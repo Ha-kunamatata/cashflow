@@ -76,9 +76,7 @@ body {
 @keyframes ripple { 0% { transform:scale(0); opacity:0.6; } 100% { transform:scale(2.5); opacity:0; } }
 @keyframes badgePop { 0% { transform:translateX(-50%) scale(0.85); opacity:0; } 60% { transform:translateX(-50%) scale(1.05); } 100% { transform:translateX(-50%) scale(1); opacity:1; } }
 @keyframes spin { to { transform:rotate(360deg); } }
-@keyframes premiumPageIn   { from { opacity:0; transform:translateY(14px); }   to { opacity:1; transform:translateY(0); } }
-@keyframes pageSlideRight  { from { opacity:0; transform:translateX(28px); }   to { opacity:1; transform:translateX(0); } }
-@keyframes pageSlideLeft   { from { opacity:0; transform:translateX(-28px); }  to { opacity:1; transform:translateX(0); } }
+@keyframes premiumPageIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
 @keyframes financePop { 0%{ transform:scale(.96); opacity:.55; } 60%{ transform:scale(1.02); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
 
 /* ── 로그인 ── */
@@ -305,9 +303,13 @@ body {
   position: relative;
   z-index: 1;
 }
-.page.active             { display:block; animation: premiumPageIn  .28s cubic-bezier(.25,.46,.45,.94) both; }
-.page.active.nav-right  { animation: pageSlideRight .24s cubic-bezier(.25,.46,.45,.94) both; }
-.page.active.nav-left   { animation: pageSlideLeft  .24s cubic-bezier(.25,.46,.45,.94) both; }
+/* 기본: 애니메이션 없이 표시 (flickering 방지) */
+.page.active            { display:block; }
+/* 탭 방향 슬라이드 — transform만 (opacity 변화 없어야 깜빡임 없음) */
+.page.active.nav-right  { animation: pageSlideRight .22s cubic-bezier(.25,.46,.45,.94) both; }
+.page.active.nav-left   { animation: pageSlideLeft  .22s cubic-bezier(.25,.46,.45,.94) both; }
+@keyframes pageSlideRight { from { transform: translateX(20px); opacity:0.6; } to { transform: translateX(0); opacity:1; } }
+@keyframes pageSlideLeft  { from { transform: translateX(-20px); opacity:0.6; } to { transform: translateX(0); opacity:1; } }
 
 /* ── 버튼 ── */
 .btn { position:relative; overflow:hidden; border:none; cursor:pointer; font-family:var(--font); transition:transform 0.15s, box-shadow 0.15s; user-select:none; }

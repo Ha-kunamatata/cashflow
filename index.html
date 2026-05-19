@@ -794,11 +794,10 @@
     </div>
     <div class="form-row">
       <div><div class="form-label">반복</div><select class="form-select" id="f-repeat"><option value="매월">매월</option><option value="1회성">1회성</option><option value="격주">격주</option></select></div>
-      <div></div>
-    </div>
-    <div class="form-row">
-      <div><div class="form-label" id="day-label">기준일 (매월 며칠)</div><input class="form-input" id="f-day" type="number" placeholder="25" min="1" max="31" inputmode="numeric"></div>
       <div><div class="form-label">카드 구분</div><select class="form-select" id="f-card"><option value="">없음</option></select></div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr">
+      <div><div class="form-label" id="day-label">기준일 (매월 며칠)</div><input class="form-input" id="f-day" type="number" placeholder="25" min="1" max="31" inputmode="numeric"></div>
     </div>
     <div id="endmonth-wrap"><div class="form-label">종료월 (할부 마지막 달 YYYYMM)</div><input class="form-input" id="f-endmonth" placeholder="예: 202608 (없으면 빈칸)" inputmode="numeric" style="width:100%;margin-bottom:10px"></div>
     <div id="date-wrap" style="display:none"><div class="form-label">날짜</div><input class="form-input" id="f-date" type="date" style="width:100%;margin-bottom:10px"></div>

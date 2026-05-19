@@ -2218,52 +2218,46 @@ export function renderReport() {
     const chartW = W - pL - pR;
     const chartH = H - pT - pB;
     const mW = chartW / months.length;
-    const bW = Math.min(mW * 0.33, 26);
-    const gap = 4;
+    const bW = Math.min(mW * 0.36, 30);
+    const gap = 5;
     const gridCol  = isLight ? 'rgba(30,58,138,0.07)'  : 'rgba(255,255,255,0.06)';
     const labelCol = isLight ? 'rgba(30,58,138,0.45)'  : 'rgba(255,255,255,0.38)';
     const incCol   = 'rgba(74,222,128,0.85)';
     const expCol   = 'rgba(248,113,113,0.85)';
-    const incTxt   = 'rgba(74,222,128,0.95)';
-    const expTxt   = 'rgba(248,113,113,0.95)';
     const FONT     = 'Noto Sans KR,sans-serif';
 
+    // 가로 그리드 라인만 (텍스트 없음 — 겹침 방지)
     let grid = '';
-    [0.25, 0.5, 0.75, 1].forEach(r => {
+    [0.33, 0.66, 1].forEach(r => {
       const y = (pT + chartH * (1 - r)).toFixed(1);
       grid += `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="${gridCol}" stroke-width="1"/>`;
-      grid += `<text x="${pL}" y="${(pT + chartH*(1-r)-3).toFixed(1)}" font-size="8" fill="${labelCol}" font-family="${FONT}">${fmtShort(maxAmt * r)}</text>`;
     });
 
     let bars = '', labels = '';
     months.forEach((m, i) => {
       const cx = pL + (i + 0.5) * mW;
-      const incH = m.income  > 0 ? Math.max((m.income  / maxAmt) * chartH, 4) : 0;
-      const expH = m.expense > 0 ? Math.max((m.expense / maxAmt) * chartH, 4) : 0;
+      const incH = m.income  > 0 ? Math.max((m.income  / maxAmt) * chartH, 3) : 0;
+      const expH = m.expense > 0 ? Math.max((m.expense / maxAmt) * chartH, 3) : 0;
       const incX = cx - gap / 2 - bW;
       const expX = cx + gap / 2;
 
-      if (incH > 0) {
-        const iy = (pT + chartH - incH).toFixed(1);
-        bars += `<rect x="${incX.toFixed(1)}" y="${iy}" width="${bW}" height="${incH.toFixed(1)}" rx="4" fill="${incCol}"/>`;
-        if (incH > 18) bars += `<text x="${(incX + bW/2).toFixed(1)}" y="${(pT + chartH - incH - 4).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${incTxt}" font-family="${FONT}" font-weight="700">${fmtShort(m.income)}</text>`;
-      }
-      if (expH > 0) {
-        const ey = (pT + chartH - expH).toFixed(1);
-        bars += `<rect x="${expX.toFixed(1)}" y="${ey}" width="${bW}" height="${expH.toFixed(1)}" rx="4" fill="${expCol}"/>`;
-        if (expH > 18) bars += `<text x="${(expX + bW/2).toFixed(1)}" y="${(pT + chartH - expH - 4).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${expTxt}" font-family="${FONT}" font-weight="700">${fmtShort(m.expense)}</text>`;
-      }
-      labels += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${labelCol}" font-family="${FONT}" font-weight="600">${m.label}</text>`;
+      // 바만 그림 (바 위 값 라벨 없음 — 겹침 방지)
+      if (incH > 0) bars += `<rect x="${incX.toFixed(1)}" y="${(pT + chartH - incH).toFixed(1)}" width="${bW}" height="${incH.toFixed(1)}" rx="4" fill="${incCol}"/>`;
+      if (expH > 0) bars += `<rect x="${expX.toFixed(1)}" y="${(pT + chartH - expH).toFixed(1)}" width="${bW}" height="${expH.toFixed(1)}" rx="4" fill="${expCol}"/>`;
+
+      // 월 라벨만 하단에
+      labels += `<text x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="10" fill="${labelCol}" font-family="${FONT}" font-weight="600">${m.label}</text>`;
     });
 
+    // 범례 (우상단)
     const lx = W - pR;
     const legend = `
-      <circle cx="${lx-74}" cy="16" r="4.5" fill="${incCol}"/>
-      <text x="${lx-67}" y="20" font-size="10" fill="${labelCol}" font-family="${FONT}">수입</text>
-      <circle cx="${lx-34}" cy="16" r="4.5" fill="${expCol}"/>
-      <text x="${lx-27}" y="20" font-size="10" fill="${labelCol}" font-family="${FONT}">지출</text>`;
+      <circle cx="${lx-68}" cy="14" r="4" fill="${incCol}"/>
+      <text x="${lx-61}" y="18" font-size="10" fill="${labelCol}" font-family="${FONT}">수입</text>
+      <circle cx="${lx-28}" cy="14" r="4" fill="${expCol}"/>
+      <text x="${lx-21}" y="18" font-size="10" fill="${labelCol}" font-family="${FONT}">지출</text>`;
 
-    netEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;overflow:visible">${grid}${bars}${labels}${legend}</svg>`;
+    netEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${grid}${bars}${labels}${legend}</svg>`;
   }
 
   // ── 카테고리별 지출 도넛 (클릭 시 모달) ──────────────
