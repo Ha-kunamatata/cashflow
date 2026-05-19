@@ -718,8 +718,26 @@ export function renderReport() {
       ? Math.round(((curMonth.income - curMonth.expense) / curMonth.income) * 100)
       : 0;
     const srColor = savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? 'var(--yellow)' : 'var(--red2)';
+    const expDiff = curMonth.expense - prevMonth.expense;
+    const expDiffPct = prevMonth.expense > 0 ? Math.round(Math.abs(expDiff) / prevMonth.expense * 100) : 0;
+
+    // 6개월 저축률 스파크라인
+    const srRates = months.map(m => m.income > 0 ? Math.round(((m.income - m.expense) / m.income) * 100) : 0);
+    const srMax = Math.max(...srRates.map(Math.abs), 1);
+    const sparkBars = srRates.map((sr, i) => {
+      const isLast = i === srRates.length - 1;
+      const h = Math.max(8, Math.round((Math.abs(sr) / srMax) * 28));
+      const col = sr >= 20 ? '#34d399' : sr >= 0 ? '#fbbf24' : '#f87171';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <div style="width:10px;height:${h}px;background:${col};border-radius:2px;opacity:${isLast ? '1' : '0.55'}"></div>
+        <div style="font-size:7px;color:var(--text3)">${months[i].label}</div>
+      </div>`;
+    }).join('');
+
     headerEl.innerHTML = `
-      <div class="report-header-month">${now.getFullYear()}년 ${now.getMonth() + 1}월 재정 요약</div>
+      <div class="report-header-month">${now.getFullYear()}년 ${now.getMonth() + 1}월 재정 요약
+        ${prevMonth.expense > 0 && expDiffPct >= 3 ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${expDiff>0?'rgba(248,113,113,.15)':'rgba(52,211,153,.15)'};color:${expDiff>0?'var(--red2)':'var(--green2)'};margin-left:6px">${expDiff>0?'▲':'▼'}${expDiffPct}% 전월</span>` : ''}
+      </div>
       <div class="report-header-grid">
         <div class="report-header-item">
           <div class="report-header-label">수입</div>
@@ -737,6 +755,10 @@ export function renderReport() {
           <div class="report-header-label">저축률</div>
           <div class="report-header-val" style="color:${srColor}">${savingsRate}%</div>
         </div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:6px;font-weight:600">6개월 저축률 추이</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:42px">${sparkBars}</div>
       </div>`;
   }
 

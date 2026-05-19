@@ -2,12 +2,13 @@
 // ════════════════════════════════════════════════════════
 // render-ledger.ts — 가계부/달력/통계 렌더링
 // ════════════════════════════════════════════════════════
-import { LEDGER_CAT_COLORS } from './config';
+import { LEDGER_CAT_COLORS, CAT_ICONS } from './config';
 import { today, dateKey, p2, fmtShort, fmtSigned, escapeHtml, yyyymm } from './utils';
 import { state } from './state';
 import { buildForecast } from './forecast';
 import { currentLedgerYear, currentLedgerMonth, _selectedLedgerDate, setCurrentLedgerYear, setCurrentLedgerMonth, setSelectedLedgerDate } from './render-state';
 import { renderBudget } from './render-assets';
+import { getMonthBudget } from './budget';
 
 let _ledgerSubTab   = 'calendar';
 let _ledgerStatsTab = 'monthly';
@@ -249,7 +250,7 @@ function renderLedgerCalendar() {
   const ml = document.getElementById('btn-ledger-month-label');
   if (ml) ml.textContent = `${y}년 ${m + 1}월`;
 
-  const { expense: monthExp, income: monthInc, dayMap } = getLedgerMonth(y, m);
+  const { expense: monthExp, income: monthInc, dayMap, catTotals: monthCatTotals } = getLedgerMonth(y, m);
   const spendDays = Object.keys(dayMap).length;
 
   const te = document.getElementById('ledger-total-spend');
@@ -265,6 +266,53 @@ function renderLedgerCalendar() {
   const ae = document.getElementById('ledger-avg-spend');
   if (ae) ae.textContent = spendDays > 0 ? fmtShort(Math.round(monthExp / spendDays)) : '-';
 
+  // 예산 진행 바
+  const budgetBar = document.getElementById('ledger-cal-budget-bar');
+  if (budgetBar) {
+    const budgets = getMonthBudget(state.budgets || {}, y, m);
+    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
+    if (totalBudget > 0) {
+      const pct = Math.min(100, Math.round((monthExp / totalBudget) * 100));
+      const over = monthExp > totalBudget;
+      budgetBar.style.display = '';
+      budgetBar.innerHTML = `
+        <div class="cal-budget-bar-row">
+          <span class="cal-budget-bar-lbl">이번달 예산</span>
+          <span class="cal-budget-bar-pct" style="color:${over ? 'var(--red2)' : 'var(--text2)'}">${pct}% ${over ? '초과' : '사용'}</span>
+          <span class="cal-budget-bar-amt">${fmtShort(monthExp)} / ${fmtShort(totalBudget)}</span>
+        </div>
+        <div class="cal-budget-track">
+          <div class="cal-budget-fill ${over ? 'over' : pct >= 80 ? 'warn' : ''}" style="width:${pct}%"></div>
+        </div>`;
+    } else {
+      budgetBar.style.display = 'none';
+    }
+  }
+
+  // 월 TOP 카테고리 스트립
+  const catStrip = document.getElementById('ledger-cal-cat-strip');
+  if (catStrip) {
+    const topMonthCats = Object.entries(monthCatTotals || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    if (topMonthCats.length > 0) {
+      catStrip.style.display = '';
+      catStrip.innerHTML = `<div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${topMonthCats.map(([cat, amt]) => {
+          const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+          const icon = CAT_ICONS[cat] || '📌';
+          const pct = monthExp > 0 ? Math.round((amt / monthExp) * 100) : 0;
+          return `<span class="cal-cat-strip-chip" style="background:${col}18;border-color:${col}38;color:${col}">
+            <span>${icon}</span>
+            <span style="font-weight:700">${escapeHtml(cat)}</span>
+            <span style="opacity:.7">${fmtShort(amt)}</span>
+            <span style="opacity:.5;font-size:9px">${pct}%</span>
+          </span>`;
+        }).join('')}
+      </div>`;
+    } else {
+      catStrip.style.display = 'none';
+    }
+  }
+
   const maxDay = Math.max(...Object.values(dayMap), 1);
   let html = '';
   for (let i = 0; i < startWd; i++) {
@@ -278,25 +326,34 @@ function renderLedgerCalendar() {
     const isSelected = dk === _selectedLedgerDate;
     const numClass   = 'ledger-day-num' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
 
-    const { expense: dayExp, income: dayInc } = getLedgerDay(dk);
+    const { expense: dayExp, income: dayInc, items: dayItems } = getLedgerDay(dk);
     const heatPct = maxDay > 0 ? dayExp / maxDay : 0;
     const heatLevel = heatPct > 0.8 ? 4 : heatPct > 0.5 ? 3 : heatPct > 0.25 ? 2 : heatPct > 0 ? 1 : 0;
+
+    // 카테고리 컬러 도트 (지출 상위 3개)
+    const catAmts = {};
+    dayItems.forEach(item => {
+      if (item.type === 'expense') catAmts[item.category] = (catAmts[item.category] || 0) + item.amount;
+    });
+    const topCats = Object.entries(catAmts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const catDotsHtml = topCats.length > 0
+      ? `<div class="lday-cat-dots">${topCats.map(([cat]) => `<span class="lday-cat-dot" style="background:${LEDGER_CAT_COLORS[cat] || '#64748b'}"></span>`).join('')}</div>`
+      : '';
 
     const fixedForDay = (state.entries || []).filter(e =>
       e.repeat === '매월' && e.day === day &&
       (!e.endMonth || parseInt(e.endMonth) >= yyyymm(new Date(y, m, 1)))
     );
-    const fixedHtml = fixedForDay.slice(0, 2).map(e =>
+    const fixedHtml = fixedForDay.slice(0, 1).map(e =>
       `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : ''}">${escapeHtml(e.name.slice(0, 4))}</div>`
     ).join('');
 
-    const itemCount = (state.ledgerData?.[dk] || []).length;
     html += `
       <div class="ledger-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${heatLevel > 0 ? 'heat-' + heatLevel : ''}" data-dk="${dk}">
         <div class="ledger-day-top">
           <div class="${numClass}">${day}</div>
-          ${itemCount > 0 ? `<div class="ledger-day-dot-count">${itemCount}</div>` : ''}
         </div>
+        ${catDotsHtml}
         <div class="ledger-day-amounts">
           ${dayExp > 0 ? `<div class="ledger-day-expense">-${fmtShort(dayExp)}</div>` : ''}
           ${dayInc > 0 ? `<div class="ledger-day-income">+${fmtShort(dayInc)}</div>` : ''}
@@ -363,20 +420,9 @@ function _renderMonthlyStats() {
       angle += a;
     });
     donutSvg += `<circle cx="${CX}" cy="${CY}" r="26" fill="var(--bg2)"/>`;
-    donutSvg += `<text x="${CX}" y="${CY+4}" fill="var(--text)" font-size="10" text-anchor="middle" font-family="monospace" font-weight="700">${Math.round((expense/total)*100)}%</text>`;
+    donutSvg += `<text x="${CX}" y="${CY-2}" fill="var(--text3)" font-size="7" text-anchor="middle" font-family="monospace">지출</text>`;
+    donutSvg += `<text x="${CX}" y="${CY+8}" fill="var(--text)" font-size="8.5" text-anchor="middle" font-family="monospace" font-weight="700">${fmtShort(expense)}</text>`;
   }
-
-  cats.slice(0, 7).forEach(([cat, amt]) => {
-    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
-    const pct = Math.round((amt / total) * 100);
-    donutLegend += `
-      <div class="lstat-cat-row">
-        <span class="lstat-cat-dot" style="background:${col}"></span>
-        <span class="lstat-cat-name">${cat}</span>
-        <div class="lstat-cat-bar"><div style="width:${pct}%;background:${col};height:100%;border-radius:4px;opacity:.85"></div></div>
-        <span class="lstat-cat-amt">${fmtShort(amt)}</span>
-      </div>`;
-  });
 
   const sortedDays = Object.entries(dayMap).sort((a, b) => a[0] - b[0]);
   const maxDayAmt  = Math.max(...sortedDays.map(([, v]) => v), 1);
@@ -389,16 +435,49 @@ function _renderMonthlyStats() {
 
   let prevM = m - 1, prevY = y;
   if (prevM < 0) { prevM = 11; prevY--; }
-  const { expense: prevExp, income: prevInc } = getLedgerMonth(prevY, prevM);
+  const { expense: prevExp, income: prevInc, catTotals: prevCatTotals } = getLedgerMonth(prevY, prevM);
   const expDiff  = expense - prevExp;
   const incDiff  = income  - prevInc;
 
+  // 카테고리별 전월 대비 트렌드
+  cats.slice(0, 7).forEach(([cat, amt]) => {
+    const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    const icon = CAT_ICONS[cat] || '📌';
+    const pct = Math.round((amt / total) * 100);
+    const prevAmt = prevCatTotals[cat] || 0;
+    const trend = prevAmt > 0 ? Math.round(((amt - prevAmt) / prevAmt) * 100) : null;
+    const trendHtml = trend !== null && Math.abs(trend) >= 5
+      ? `<span class="lstat-cat-trend" style="color:${trend > 0 ? 'var(--red2)' : 'var(--green2)'}">${trend > 0 ? '▲' : '▼'}${Math.abs(trend)}%</span>`
+      : '';
+    donutLegend += `
+      <div class="lstat-cat-row">
+        <span class="lstat-cat-icon-sm">${icon}</span>
+        <span class="lstat-cat-name">${cat}</span>
+        <div class="lstat-cat-bar"><div style="width:${pct}%;background:${col};height:100%;border-radius:4px;opacity:.85"></div></div>
+        <span class="lstat-cat-amt">${fmtShort(amt)}</span>
+        ${trendHtml}
+      </div>`;
+  });
+
+  const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null;
+  const srChip = savingsRate !== null
+    ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${savingsRate >= 20 ? 'rgba(52,211,153,0.15)' : savingsRate >= 0 ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)'};color:${savingsRate >= 20 ? 'var(--green2)' : savingsRate >= 0 ? '#fbbf24' : 'var(--red2)'};font-weight:700">저축률 ${savingsRate}%</span>`
+    : '';
+
   el.innerHTML = `
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">${y}년 ${m + 1}월 요약</div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">${y}년 ${m + 1}월 요약 ${srChip}</div>
       <div class="lstat-summary-row">
-        <div class="lstat-summary-item"><div class="lstat-summary-label">지출</div><div class="lstat-summary-val red">${fmtShort(expense)}</div></div>
-        <div class="lstat-summary-item"><div class="lstat-summary-label">수입</div><div class="lstat-summary-val green">${fmtShort(income)}</div></div>
+        <div class="lstat-summary-item">
+          <div class="lstat-summary-label">지출</div>
+          <div class="lstat-summary-val red">${fmtShort(expense)}</div>
+          ${prevExp > 0 ? `<div style="font-size:9px;color:${expDiff>0?'var(--red2)':'var(--green2)'};margin-top:2px">${expDiff>0?'▲':'▼'}${Math.abs(Math.round((expDiff/prevExp)*100))}% 전월</div>` : ''}
+        </div>
+        <div class="lstat-summary-item">
+          <div class="lstat-summary-label">수입</div>
+          <div class="lstat-summary-val green">${fmtShort(income)}</div>
+          ${prevInc > 0 ? `<div style="font-size:9px;color:${incDiff>=0?'var(--green2)':'var(--red2)'};margin-top:2px">${incDiff>=0?'▲':'▼'}${Math.abs(Math.round((incDiff/prevInc)*100))}% 전월</div>` : ''}
+        </div>
         <div class="lstat-summary-item"><div class="lstat-summary-label">순액</div><div class="lstat-summary-val" style="color:${net>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(net)}</div></div>
       </div>
     </div>
@@ -415,20 +494,6 @@ function _renderMonthlyStats() {
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">일별 지출</div>
       ${sortedDays.length === 0 ? '<div class="empty-state" style="padding:20px 0">기록 없음</div>' : `<div class="monthly-chart-bar">${dayBars}</div>`}
-    </div>
-
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title">전월 대비</div>
-      <div class="report-mom-item">
-        <span>지출</span>
-        <span style="color:${expDiff>0?'var(--red2)':'var(--green2)'}">${expDiff>=0?'+':''}${fmtSigned(expDiff)}</span>
-        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevExp)})</span>
-      </div>
-      <div class="report-mom-item" style="margin-top:8px">
-        <span>수입</span>
-        <span style="color:${incDiff>=0?'var(--green2)':'var(--red2)'}">${incDiff>=0?'+':''}${fmtSigned(incDiff)}</span>
-        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevInc)})</span>
-      </div>
     </div>
 
     ${tagEntries.length > 0 ? `
