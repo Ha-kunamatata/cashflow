@@ -493,6 +493,31 @@ export function renderHome() {
           : '고정 지출 비중이 높아요. 지출 구조를 점검해보세요.';
   }
 
+  // ── 이번달 가계부 통계 (잔고 카드 내 3분할) ──────────────
+  const heroStatsEl = document.getElementById('hero-month-stats');
+  if (heroStatsEl) {
+    const { expense: mExp, income: mInc } = getLedgerMonth(today().getFullYear(), today().getMonth());
+    const savRate = mInc > 0 ? Math.max(0, Math.round((1 - mExp / mInc) * 100)) : (mExp === 0 ? 0 : -1);
+    const savColor = savRate >= 20 ? 'var(--green2)' : savRate >= 0 ? '#fbbf24' : 'var(--red2)';
+    heroStatsEl.innerHTML = `
+      <div class="hero-stats-row">
+        <div class="hero-stat-item">
+          <div class="hero-stat-lbl">이번달 수입</div>
+          <div class="hero-stat-val" style="color:var(--green2)">+${mInc > 0 ? mInc.toLocaleString('ko-KR') : '0'}</div>
+        </div>
+        <div class="hero-stat-sep"></div>
+        <div class="hero-stat-item">
+          <div class="hero-stat-lbl">이번달 지출</div>
+          <div class="hero-stat-val" style="color:var(--red2)">-${mExp > 0 ? mExp.toLocaleString('ko-KR') : '0'}</div>
+        </div>
+        <div class="hero-stat-sep"></div>
+        <div class="hero-stat-item">
+          <div class="hero-stat-lbl">저축률</div>
+          <div class="hero-stat-val" style="color:${savColor}">${savRate >= 0 ? savRate + '%' : '-'}</div>
+        </div>
+      </div>`;
+  }
+
   // ── 정보 칩 (월급 D-Day, 할부 종료 임박, 예산 여유) ──────
   const chipsEl = document.getElementById('home-chips');
   if (chipsEl) {
@@ -1511,7 +1536,8 @@ function renderLedgerCalendar() {
     const fixedHtml = fixedForDay.slice(0, 2).map(e => {
       const sign = e.type === 'income' ? '+' : '-';
       const amt = (e.amount || 0).toLocaleString('ko-KR');
-      return `<div class="ledger-day-fixed ${e.type === 'income' ? 'ledger-day-fixed-inc' : 'ledger-day-fixed-exp'}">${sign}${amt}</div>`;
+      const cls = e.type === 'income' ? 'ledger-day-fixed-inc' : 'ledger-day-fixed-exp';
+      return `<div class="ledger-day-fixed ${cls}"><span class="ldf-pin">고</span>${sign}${amt}</div>`;
     }).join('');
 
     const itemCount = (state.ledgerData?.[dk] || []).length;
