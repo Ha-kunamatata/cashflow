@@ -273,23 +273,31 @@ function _renderSparkline() {
   const hasData = days.some(d => d.exp > 0 || d.inc > 0);
   if (!hasData) { el.innerHTML = ''; return; }
 
+  // 라이트/다크 테마 분기
+  const isLight = document.body.classList.contains('light-theme');
+  const tLabel   = isLight ? 'rgba(30,58,138,0.55)'  : 'rgba(255,255,255,0.55)';
+  const tDim     = isLight ? 'rgba(30,58,138,0.38)'  : 'rgba(255,255,255,0.38)';
+  const tWeekend = isLight ? 'rgba(37,99,235,0.7)'   : 'rgba(96,165,250,0.65)';
+  const tToday   = isLight ? 'rgba(99,102,241,1)'    : 'rgba(129,140,248,1)';
+  const avgStroke= isLight ? 'rgba(30,58,138,0.18)'  : 'rgba(255,255,255,0.15)';
+  const todayLine= isLight ? 'rgba(99,102,241,0.35)' : 'rgba(129,140,248,0.35)';
+  const todayDot = isLight ? '#6366f1' : '#818cf8';
+  const dotStroke= isLight ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)';
+
   const maxVal = Math.max(...days.map(d => Math.max(d.exp, d.inc)), 1);
   const avgDaily = days.reduce((s, d) => s + d.exp, 0) / 14;
   const todayExp = days[13].exp;
   const todayInc = days[13].inc;
 
-  // SVG 560×56
   const W = 560, H = 56, PT = 6, PB = 2;
   const chartH = H - PT - PB;
   const step = W / (days.length - 1);
 
-  // expense points
   const pts = days.map((d, i) => ({
     x: i * step,
     y: PT + chartH - (d.exp / maxVal) * chartH,
   }));
 
-  // cubic bezier smooth path
   let linePath = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const mx = (pts[i].x + pts[i + 1].x) / 2;
@@ -300,60 +308,61 @@ function _renderSparkline() {
   const avgY = PT + chartH - Math.min(1, avgDaily / maxVal) * chartH;
   const todayPt = pts[13];
 
-  // income dots
+  const areaOpacity = isLight ? '0.35' : '0.45';
+  const areaOpacity2 = isLight ? '0.06' : '0.03';
+
   const incDots = days.map((d, i) => {
     if (d.inc <= 0) return '';
     const cy = PT + chartH - (d.inc / maxVal) * chartH;
-    return `<circle cx="${(i * step).toFixed(1)}" cy="${cy.toFixed(1)}" r="3.5" fill="#34d399" opacity="0.85"/>`;
+    return `<circle cx="${(i * step).toFixed(1)}" cy="${cy.toFixed(1)}" r="3.5" fill="#34d399" opacity="0.9"/>`;
   }).join('');
 
   const svgHtml = `
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">
       <defs>
         <linearGradient id="spkGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#f87171" stop-opacity="0.45"/>
-          <stop offset="100%" stop-color="#f87171" stop-opacity="0.03"/>
+          <stop offset="0%" stop-color="#f87171" stop-opacity="${areaOpacity}"/>
+          <stop offset="100%" stop-color="#f87171" stop-opacity="${areaOpacity2}"/>
         </linearGradient>
         <linearGradient id="spkLine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#fb923c" stop-opacity="0.6"/>
+          <stop offset="0%" stop-color="#fb923c"/>
           <stop offset="60%" stop-color="#f87171"/>
-          <stop offset="100%" stop-color="#818cf8"/>
+          <stop offset="100%" stop-color="${isLight ? '#6366f1' : '#818cf8'}"/>
         </linearGradient>
       </defs>
       <path d="${areaPath}" fill="url(#spkGrad)"/>
-      ${avgDaily > 0 ? `<line x1="0" y1="${avgY.toFixed(1)}" x2="${W}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="4 3"/>` : ''}
+      ${avgDaily > 0 ? `<line x1="0" y1="${avgY.toFixed(1)}" x2="${W}" y2="${avgY.toFixed(1)}" stroke="${avgStroke}" stroke-width="1" stroke-dasharray="4 3"/>` : ''}
       <path d="${linePath}" fill="none" stroke="url(#spkLine)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       ${incDots}
-      <line x1="${todayPt.x.toFixed(1)}" y1="0" x2="${todayPt.x.toFixed(1)}" y2="${H}" stroke="rgba(129,140,248,0.3)" stroke-width="1.5" stroke-dasharray="3 2"/>
-      ${todayExp > 0 ? `<circle cx="${todayPt.x.toFixed(1)}" cy="${todayPt.y.toFixed(1)}" r="4.5" fill="#818cf8" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>` : ''}
+      <line x1="${todayPt.x.toFixed(1)}" y1="0" x2="${todayPt.x.toFixed(1)}" y2="${H}" stroke="${todayLine}" stroke-width="1.5" stroke-dasharray="3 2"/>
+      ${todayExp > 0 ? `<circle cx="${todayPt.x.toFixed(1)}" cy="${todayPt.y.toFixed(1)}" r="4.5" fill="${todayDot}" stroke="${dotStroke}" stroke-width="1.5"/>` : ''}
     </svg>`;
 
-  // day labels — show every 2nd
   const labelsHtml = days.map((d, i) => {
     if (i % 2 !== 0 && !d.isToday) return `<div style="flex:1"></div>`;
-    const col = d.isToday ? 'rgba(129,140,248,0.95)' : d.isWeekend ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.22)';
+    const col = d.isToday ? tToday : d.isWeekend ? tWeekend : tDim;
     const fw = d.isToday ? '800' : '600';
     return `<div style="flex:1;text-align:center;font-size:8.5px;font-weight:${fw};color:${col}">${d.isToday ? '오늘' : d.dow}</div>`;
   }).join('');
 
-  const todayColor = todayExp > 0 ? '#f87171' : todayInc > 0 ? '#34d399' : 'rgba(255,255,255,0.3)';
+  const todayColor = todayExp > 0 ? '#f87171' : todayInc > 0 ? '#34d399' : tDim;
   const todayStr = todayExp > 0 ? `-${fmtShort(todayExp)}` : todayInc > 0 ? `+${fmtShort(todayInc)}` : '없음';
 
   el.innerHTML = `
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:0.5px;text-transform:uppercase">14일 지출 패턴</span>
-          ${avgDaily > 0 ? `<span style="font-size:9px;color:rgba(255,255,255,0.18)">평균 ${fmtShort(avgDaily)}/일</span>` : ''}
+          <span style="font-size:9px;font-weight:700;color:${tLabel};letter-spacing:0.5px;text-transform:uppercase">14일 지출 패턴</span>
+          ${avgDaily > 0 ? `<span style="font-size:9px;color:${tDim}">평균 ${fmtShort(avgDaily)}/일</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="display:flex;align-items:center;gap:3px">
             <span style="display:inline-block;width:10px;height:2.5px;background:linear-gradient(90deg,#fb923c,#f87171);border-radius:2px"></span>
-            <span style="font-size:8.5px;color:rgba(255,255,255,0.22)">지출</span>
+            <span style="font-size:8.5px;color:${tLabel}">지출</span>
           </div>
           <div style="display:flex;align-items:center;gap:3px">
             <span style="display:inline-block;width:7px;height:7px;background:#34d399;border-radius:50%"></span>
-            <span style="font-size:8.5px;color:rgba(255,255,255,0.22)">수입</span>
+            <span style="font-size:8.5px;color:${tLabel}">수입</span>
           </div>
           <span style="font-size:9.5px;font-weight:800;color:${todayColor}">오늘 ${todayStr}</span>
         </div>
@@ -3190,7 +3199,7 @@ export function renderFinance() {
           ${pnlHtml}
         </div>`;
     } else if (data === null) {
-      priceHtml = `<div class="fin-card-no-data"><span>데이터 없음</span><span style="font-size:9px;margin-top:2px">API 한도 초과</span></div>`;
+      priceHtml = `<button class="fin-load-btn fin-load-trigger" data-symbol="${escapeHtml(item.symbol)}" style="font-size:10px;padding:5px 8px">↻ 재시도</button>`;
     } else {
       priceHtml = `<button class="fin-load-btn fin-load-trigger" data-symbol="${escapeHtml(item.symbol)}">시세 불러오기</button>`;
     }
@@ -3303,29 +3312,27 @@ function _updateFinancePortfolioCard(watchlist) {
     </div>`;
 }
 
-function updateFinanceSummary() { /* deprecated — use _updateFinancePortfolioCard */ }
+function updateFinanceSummary() { /* deprecated */ }
 
 /**
  * 종목 시세 로드
- *  - 암호화폐: CoinGecko 공개 API (CORS-free, 무제한)
- *  - 미국주식: Stooq CSV API (CORS-free)
- *  - 한국주식: Stooq CSV API (.KS/.KQ)
- *  - 그 외: Yahoo Finance v8 (CORS 프록시 경유)
+ *  1. 암호화폐 → CoinGecko (CORS-OK, 무료, 신뢰)
+ *  2. 주식/ETF → Yahoo Finance v8 (query1 + query2) × 3 CORS 프록시
+ *     KRX: .KS 실패 시 .KQ 추가 재시도
  */
 export async function fetchStockPrice(item) {
   const { symbol, market } = item;
   _financeLoading[symbol] = true;
 
-  // ── 헬퍼 ──────────────────────────────────────────────
   const setData = (price, change, changePct, currency, name) => {
-    _financeData[symbol] = { price, change, changePct, currency, name: name || item.name || symbol, lastUpdated: new Date().toLocaleTimeString('ko-KR') };
+    _financeData[symbol] = { price, change, changePct, currency,
+      name: name || item.name || symbol,
+      lastUpdated: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) };
   };
-  const setFail = () => { if (!_financeData[symbol]) _financeData[symbol] = null; };
 
   try {
-    // ── 1. 암호화폐: CoinGecko (CORS OK, 무료, 신뢰성 높음) ──────
+    // ── 1. 암호화폐: CoinGecko ──────────────────────────────
     if (market === 'CRYPTO') {
-      // BTC-USD → bitcoin, ETH-USD → ethereum (간단 매핑)
       const coinMap = {
         'BTC':'bitcoin','ETH':'ethereum','SOL':'solana','XRP':'ripple',
         'ADA':'cardano','DOGE':'dogecoin','DOT':'polkadot','AVAX':'avalanche-2',
@@ -3334,112 +3341,87 @@ export async function fetchStockPrice(item) {
         'TRX':'tron','ETC':'ethereum-classic','XLM':'stellar','VET':'vechain',
         'FIL':'filecoin','ICP':'internet-computer','HBAR':'hedera-hashgraph',
         'APT':'aptos','ARB':'arbitrum','OP':'optimism','SUI':'sui',
+        'TON':'the-open-network','SHIB':'shiba-inu','PEPE':'pepe',
       };
       const base = symbol.replace(/-USD$|-KRW$/i, '').toUpperCase();
       const coinId = coinMap[base] || base.toLowerCase();
-      const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd,krw&include_24hr_change=true`;
-      const r = await fetch(cgUrl, { signal: AbortSignal.timeout(8000) });
-      if (r.ok) {
-        const json = await r.json();
-        const d = json[coinId];
-        if (d) {
-          const inKRW = symbol.toUpperCase().endsWith('-KRW');
-          const price = inKRW ? (d.krw || 0) : (d.usd || 0);
-          const pct = inKRW ? (d.krw_24h_change || 0) : (d.usd_24h_change || 0);
-          const prev = price / (1 + pct / 100);
-          setData(price, price - prev, pct, inKRW ? 'KRW' : 'USD', item.name || base);
-          return;
-        }
-      }
-      throw new Error('CoinGecko 실패');
-    }
-
-    // ── 2. 미국·한국주식: Stooq CSV (CORS OK) ─────────────────────
-    let stooqSym = '';
-    if (market === 'US') {
-      stooqSym = symbol.toLowerCase();
-    } else if (market === 'KRX') {
-      // 코스피/코스닥 Stooq 심볼: 6자리숫자.KO
-      const code = symbol.replace(/\..+$/, '');
-      stooqSym = `${code}.KO`;
-    }
-
-    if (stooqSym) {
-      const stooqUrl = `https://stooq.com/q/l/?s=${stooqSym}&f=sd2t2ohlcvn&h&e=csv`;
       try {
-        const r2 = await fetch(stooqUrl, { signal: AbortSignal.timeout(8000) });
-        if (r2.ok) {
-          const text = await r2.text();
-          const lines = text.trim().split('\n');
-          if (lines.length >= 2) {
-            const cols = lines[1].split(',');
-            // Symbol,Date,Time,Open,High,Low,Close,Volume,Name
-            const close = parseFloat(cols[6]);
-            const open = parseFloat(cols[3]);
-            if (!isNaN(close) && close > 0) {
-              const change = close - open;
-              const changePct = open > 0 ? (change / open * 100) : 0;
-              const currency = market === 'KRX' ? 'KRW' : 'USD';
-              const name = cols[8]?.trim() || item.name || symbol;
-              setData(close, change, changePct, currency, name);
+        const r = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd,krw&include_24hr_change=true`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        if (r.ok) {
+          const json = await r.json();
+          const d = json[coinId];
+          if (d) {
+            const inKRW = symbol.toUpperCase().endsWith('-KRW');
+            const price = inKRW ? (d.krw || 0) : (d.usd || 0);
+            const pct   = inKRW ? (d.krw_24h_change || 0) : (d.usd_24h_change || 0);
+            const prev  = price / (1 + pct / 100);
+            setData(price, price - prev, pct, inKRW ? 'KRW' : 'USD', item.name || base);
+            return;
+          }
+        }
+      } catch {}
+      // CoinGecko 실패 → Yahoo Finance 폴백으로 이어짐
+    }
+
+    // ── 2. 주식/ETF: Yahoo Finance v8 × 다중 프록시 ────────────
+    // CORS 프록시 3종 × Yahoo 도메인 2종 = 최대 6번 시도
+    const PROXIES = [
+      (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+      (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    ];
+    const isAllOrigins = (i) => i === 1;
+
+    const parseYahoo = async (res, proxyIdx) => {
+      if (!res.ok) return null;
+      let json;
+      if (isAllOrigins(proxyIdx)) {
+        const w = await res.json();
+        json = JSON.parse(w.contents);
+      } else {
+        json = await res.json();
+      }
+      const meta = json?.chart?.result?.[0]?.meta;
+      if (!meta) return null;
+      const p = meta.regularMarketPrice || meta.previousClose;
+      const prev = meta.previousClose || meta.chartPreviousClose || p;
+      if (!p || p <= 0) return null;
+      return { p, change: p - prev, changePct: prev ? (p - prev) / prev * 100 : 0,
+               currency: meta.currency || 'USD', name: item.name || meta.shortName || symbol };
+    };
+
+    // 시도할 티커 목록 (KRX: .KS → .KQ → 원본)
+    const tickers = [symbol];
+    if (market === 'KRX') {
+      const code = symbol.replace(/\..+$/, '');
+      tickers.unshift(`${code}.KS`, `${code}.KQ`);
+    }
+
+    const YAHOO_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
+
+    for (const ticker of tickers) {
+      for (const host of YAHOO_HOSTS) {
+        const yahooUrl = `${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+        for (let pi = 0; pi < PROXIES.length; pi++) {
+          try {
+            const res = await fetch(PROXIES[pi](yahooUrl), { signal: AbortSignal.timeout(10000) });
+            const parsed = await parseYahoo(res, pi);
+            if (parsed) {
+              setData(parsed.p, parsed.change, parsed.changePct, parsed.currency, parsed.name);
               return;
             }
-          }
+          } catch { /* 다음 프록시 시도 */ }
         }
-      } catch {}
-
-      // KRX 코스닥 재시도 (.KQ)
-      if (market === 'KRX') {
-        const code2 = symbol.replace(/\..+$/, '');
-        const stooqKQ = `https://stooq.com/q/l/?s=${code2}.KQ&f=sd2t2ohlcvn&h&e=csv`;
-        try {
-          const r3 = await fetch(stooqKQ, { signal: AbortSignal.timeout(8000) });
-          if (r3.ok) {
-            const text2 = await r3.text();
-            const lines2 = text2.trim().split('\n');
-            if (lines2.length >= 2) {
-              const c2 = lines2[1].split(',');
-              const close2 = parseFloat(c2[6]);
-              const open2 = parseFloat(c2[3]);
-              if (!isNaN(close2) && close2 > 0) {
-                const chg2 = close2 - open2;
-                setData(close2, chg2, open2 > 0 ? chg2 / open2 * 100 : 0, 'KRW', c2[8]?.trim() || item.name || symbol);
-                return;
-              }
-            }
-          }
-        } catch {}
       }
     }
 
-    // ── 3. 폴백: Yahoo Finance v8 CORS 프록시 ─────────────────────
-    let ticker = symbol;
-    if (market === 'KRX') ticker = symbol.includes('.') ? symbol : `${symbol}.KS`;
-
-    const PROXIES = [
-      u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-      u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    ];
-    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
-
-    for (let pi = 0; pi < PROXIES.length; pi++) {
-      try {
-        const r4 = await fetch(PROXIES[pi](yahooUrl), { signal: AbortSignal.timeout(9000) });
-        if (!r4.ok) continue;
-        const json4 = pi === 1 ? JSON.parse((await r4.json()).contents) : await r4.json();
-        const meta4 = json4.chart?.result?.[0]?.meta;
-        if (meta4) {
-          const p4 = meta4.regularMarketPrice || meta4.previousClose;
-          const prev4 = meta4.previousClose || meta4.chartPreviousClose;
-          setData(p4, p4 - prev4, prev4 ? (p4 - prev4) / prev4 * 100 : 0, meta4.currency || 'USD', item.name || meta4.shortName || symbol);
-          return;
-        }
-      } catch {}
-    }
-
-    setFail();
+    // 전부 실패
+    _financeData[symbol] = null;
   } catch {
-    setFail();
+    _financeData[symbol] = null;
   } finally {
     _financeLoading[symbol] = false;
   }
