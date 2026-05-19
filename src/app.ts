@@ -1567,7 +1567,7 @@ document.getElementById('watchlist-form-cancel')?.addEventListener('click', hide
 document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => closeSheetOutside(e, 'watchlist-form-overlay'));
 
 document.getElementById('btn-finance-refresh')?.addEventListener('click', () => {
-  refreshAllStocks();
+  refreshAllStocks(true);
 });
 
 // 워치리스트 카드 클릭 위임

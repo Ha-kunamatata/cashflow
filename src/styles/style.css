@@ -1380,15 +1380,168 @@ body.light-theme .month-picker-btn { background:var(--bg3); border-color:var(--b
 .wish-impact-date { font-size: 10px; color: var(--text3); font-family: var(--mono); }
 
 /* ════════════════════════════════════════════════════════
-   재테크 탭
+   재테크 탭 — 완전 리디자인
    ════════════════════════════════════════════════════════ */
-.watchlist-card {
-  border-radius: 16px; border: 1px solid var(--border);
-  background: var(--card-grad), rgba(15,23,42,0.70);
-  padding: 14px 16px; margin-bottom: 10px;
-  transition: border-color 0.15s;
+
+/* 페이지 헤더 */
+.fin-page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-top: 2px;
 }
-.watchlist-card:hover { border-color: rgba(96,165,250,0.2); }
+.fin-page-title-wrap { display: flex; flex-direction: column; gap: 3px; }
+.fin-page-title { font-size: 22px; font-weight: 900; color: var(--text); letter-spacing: -0.5px; }
+.fin-refresh-info { font-size: 10px; color: var(--text3); font-weight: 600; }
+.fin-header-actions { display: flex; gap: 8px; align-items: center; }
+.fin-refresh-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.3s, color 0.15s;
+}
+.fin-refresh-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.fin-refresh-btn:active { transform: scale(0.9); }
+.fin-refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+.fin-add-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 14px; height: 36px; border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none; color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: var(--font); white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.fin-add-btn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(99,102,241,0.25); }
+
+/* 포트폴리오 요약 카드 */
+.fin-portfolio-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 40%, #1e3a8a 100%);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 24px; padding: 20px 20px 18px;
+  margin-bottom: 16px; box-shadow: 0 12px 40px rgba(2,8,23,0.35);
+}
+.fin-portfolio-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 80% 20%, rgba(99,102,241,0.2) 0%, transparent 60%),
+              radial-gradient(circle at 20% 80%, rgba(59,130,246,0.12) 0%, transparent 50%);
+}
+.fin-portfolio-label {
+  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; position: relative;
+}
+.fin-portfolio-inner {
+  display: flex; gap: 0; position: relative;
+}
+.fin-port-stat { flex: 1; min-width: 0; }
+.fin-port-lbl { font-size: 9.5px; color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.3px; margin-bottom: 4px; }
+.fin-port-val { font-size: 20px; font-weight: 900; font-family: var(--mono); color: #f1f5f9; letter-spacing: -0.8px; white-space: nowrap; }
+.fin-port-val .fin-port-unit { font-size: 12px; font-weight: 600; opacity: 0.6; margin-left: 1px; }
+.fin-port-val.up { color: #34d399; }
+.fin-port-val.down { color: #f87171; }
+.fin-port-sub { font-size: 11px; font-weight: 700; margin-top: 2px; }
+.fin-port-sub.up { color: #34d399; }
+.fin-port-sub.down { color: #f87171; }
+.fin-port-div { width: 1px; background: rgba(255,255,255,0.1); margin: 0 14px; flex-shrink: 0; }
+
+/* 섹션 헤더 */
+.fin-section-hdr {
+  font-size: 11px; font-weight: 800; color: var(--text3);
+  letter-spacing: 0.8px; text-transform: uppercase;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.fin-section-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 16px; padding: 0 5px;
+  border-radius: 999px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3);
+  color: #a5b4fc; font-size: 9px; font-weight: 800;
+}
+.fin-cards-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* 종목 카드 */
+.fin-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(17,24,39,0.97); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px; padding: 14px 16px;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+@media (hover: hover) { .fin-card:hover { border-color: rgba(99,102,241,0.25); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); } }
+.fin-card-left { flex: 1; min-width: 0; }
+.fin-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.fin-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.fin-card-name { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.fin-card-ticker { font-size: 11px; color: var(--text3); font-family: var(--mono); font-weight: 600; letter-spacing: 0.3px; }
+.fin-card-hold { font-size: 10px; color: var(--text3); margin-top: 4px; display: flex; align-items: center; gap: 3px; }
+.fin-card-hold b { color: var(--text2); font-weight: 700; }
+.fin-hold-sep { opacity: 0.4; }
+.fin-card-note { font-size: 10px; color: var(--text3); margin-top: 3px; font-style: italic; }
+
+/* 시장 배지 */
+.fin-mkt-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; letter-spacing: 0.3px; }
+.fin-mkt-badge.krx { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.fin-mkt-badge.us  { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+.fin-mkt-badge.crypto { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.fin-mkt-badge.other { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid rgba(148,163,184,0.15); }
+
+/* 가격 영역 */
+.fin-card-price-wrap { text-align: right; }
+.fin-card-price { font-size: 18px; font-weight: 900; font-family: var(--mono); color: var(--text); letter-spacing: -0.5px; }
+.fin-card-chg { font-size: 11px; font-weight: 700; margin-top: 2px; }
+.fin-card-chg.up { color: #34d399; }
+.fin-card-chg.down { color: #f87171; }
+.fin-card-chg.flat { color: var(--text3); }
+.fin-chg-pct { font-size: 10px; font-weight: 800; margin-left: 2px; }
+.fin-card-pnl { display: flex; align-items: center; gap: 4px; margin-top: 4px; padding: 3px 7px; border-radius: 6px; }
+.fin-card-pnl.up { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); }
+.fin-card-pnl.down { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); }
+.fin-pnl-amt { font-size: 11px; font-weight: 800; font-family: var(--mono); }
+.fin-card-pnl.up .fin-pnl-amt { color: #34d399; }
+.fin-card-pnl.down .fin-pnl-amt { color: #f87171; }
+.fin-pnl-pct { font-size: 10px; font-weight: 700; }
+.fin-card-pnl.up .fin-pnl-pct { color: rgba(52,211,153,0.7); }
+.fin-card-pnl.down .fin-pnl-pct { color: rgba(248,113,113,0.7); }
+
+/* 액션 버튼 */
+.fin-card-actions { display: flex; gap: 4px; }
+.fin-action-btn {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+  color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.fin-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.fin-action-btn.delete:hover { background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.2); }
+
+/* 로딩 */
+.fin-loading { display: flex; gap: 4px; align-items: center; height: 28px; }
+.fin-loading-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); animation: fin-dot-pulse 1.2s ease-in-out infinite; }
+.fin-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.fin-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes fin-dot-pulse { 0%,80%,100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+/* 데이터 없음 / 불러오기 */
+.fin-card-no-data { display: flex; flex-direction: column; align-items: flex-end; font-size: 11px; color: var(--text3); gap: 2px; }
+.fin-load-btn { padding: 5px 10px; border-radius: 8px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); color: #a5b4fc; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background 0.15s; }
+.fin-load-btn:hover { background: rgba(99,102,241,0.2); }
+
+/* 빈 상태 */
+.fin-empty { text-align: center; padding: 40px 24px 28px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.fin-empty-icon { width: 72px; height: 72px; border-radius: 50%; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); display: flex; align-items: center; justify-content: center; color: #818cf8; margin-bottom: 4px; }
+.fin-empty-title { font-size: 17px; font-weight: 900; color: var(--text); }
+.fin-empty-desc { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 240px; }
+.fin-empty-btn { display: flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 999px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); margin-top: 4px; box-shadow: 0 4px 16px rgba(99,102,241,0.3); }
+.fin-empty-tips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.fin-empty-tips span { font-size: 10px; color: var(--text3); padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); font-family: var(--mono); }
+
+/* 라이트 테마 */
+body.light-theme .fin-card { background: #fff; border-color: rgba(0,0,0,0.07); }
+body.light-theme .fin-action-btn { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); }
+body.light-theme .fin-refresh-btn { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); }
+body.light-theme .fin-portfolio-card { background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%); border-color: rgba(99,102,241,0.25); }
+body.light-theme .fin-portfolio-label { color: rgba(30,27,75,0.45); }
+body.light-theme .fin-port-lbl { color: rgba(30,27,75,0.45); }
+body.light-theme .fin-port-val { color: #0f172a; }
+body.light-theme .fin-empty-tips span { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.07); }
 
 /* 위시/워치 폼 패널 */
 .wish-form-panel { max-height: 90vh; overflow-y: auto; }
