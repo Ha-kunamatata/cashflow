@@ -250,7 +250,7 @@ function renderLedgerCalendar() {
   const ml = document.getElementById('btn-ledger-month-label');
   if (ml) ml.textContent = `${y}년 ${m + 1}월`;
 
-  const { expense: monthExp, income: monthInc, dayMap } = getLedgerMonth(y, m);
+  const { expense: monthExp, income: monthInc, dayMap, catTotals: monthCatTotals } = getLedgerMonth(y, m);
   const spendDays = Object.keys(dayMap).length;
 
   const te = document.getElementById('ledger-total-spend');
@@ -286,6 +286,30 @@ function renderLedgerCalendar() {
         </div>`;
     } else {
       budgetBar.style.display = 'none';
+    }
+  }
+
+  // 월 TOP 카테고리 스트립
+  const catStrip = document.getElementById('ledger-cal-cat-strip');
+  if (catStrip) {
+    const topMonthCats = Object.entries(monthCatTotals || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    if (topMonthCats.length > 0) {
+      catStrip.style.display = '';
+      catStrip.innerHTML = `<div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${topMonthCats.map(([cat, amt]) => {
+          const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+          const icon = CAT_ICONS[cat] || '📌';
+          const pct = monthExp > 0 ? Math.round((amt / monthExp) * 100) : 0;
+          return `<span class="cal-cat-strip-chip" style="background:${col}18;border-color:${col}38;color:${col}">
+            <span>${icon}</span>
+            <span style="font-weight:700">${escapeHtml(cat)}</span>
+            <span style="opacity:.7">${fmtShort(amt)}</span>
+            <span style="opacity:.5;font-size:9px">${pct}%</span>
+          </span>`;
+        }).join('')}
+      </div>`;
+    } else {
+      catStrip.style.display = 'none';
     }
   }
 
