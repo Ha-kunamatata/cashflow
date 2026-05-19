@@ -893,43 +893,45 @@
 <!-- ── 가계부 항목 폼 시트 ── -->
 <input type="file" id="receipt-photo-input" accept="image/*" capture="environment" style="display:none">
 <div class="sheet-overlay sheet-overlay-top" id="ledger-item-sheet">
-  <div class="sheet-panel">
+  <div class="calc-sheet-panel">
     <div class="sheet-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="sheet-title" id="ledger-item-sheet-title" style="margin:0">항목 추가</div>
-      <button class="btn btn-ghost" id="btn-receipt-ocr" style="padding:6px 10px;font-size:11px;border-radius:10px;gap:4px;display:flex;align-items:center" title="영수증 촬영">
-        <div class="ripple-container"></div>
-        <span>📷</span><span>영수증</span>
+
+    <!-- 헤더: 지출/수입 토글 + 날짜 + OCR -->
+    <div class="calc-header">
+      <div class="calc-type-toggle">
+        <button class="calc-type-btn expense-active" id="ledger-type-expense">지출</button>
+        <button class="calc-type-btn" id="ledger-type-income">수입</button>
+      </div>
+      <div id="ledger-item-sheet-title" class="calc-date-label"></div>
+      <button class="calc-ocr-btn btn" id="btn-receipt-ocr" title="영수증 촬영">
+        <div class="ripple-container"></div>📷
       </button>
     </div>
-    <!-- 즐겨찾기 템플릿 -->
-    <div id="ledger-templates-row" style="margin-bottom:10px;display:none">
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px;font-weight:700">⭐ 즐겨찾기</div>
+
+    <!-- 금액 표시 -->
+    <div class="calc-amount-display expense" id="calc-amount-display">
+      <span class="calc-amount-value" id="calc-display-value">0</span>
+      <span class="calc-amount-won">원</span>
+    </div>
+
+    <!-- 메모 + 즐겨찾기 -->
+    <div style="padding:0 16px 4px">
+      <input class="calc-memo-input" id="ledger-item-memo" type="text" placeholder="메모 추가 (선택)" autocomplete="off">
+      <div id="memo-suggestions" class="memo-suggestions"></div>
+    </div>
+    <div id="ledger-templates-row" style="display:none;padding:0 16px 6px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:700">⭐ 즐겨찾기</div>
       <div id="ledger-templates-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
     </div>
-    <div class="type-toggle" style="margin-bottom:14px">
-      <button class="type-btn expense-active" id="ledger-type-expense">▼ 지출</button>
-      <button class="type-btn inactive" id="ledger-type-income">▲ 수입</button>
-    </div>
+
+    <!-- 카테고리 그룹 탭 + 아이콘 그리드 -->
     <div id="ledger-cat-group-wrap">
-      <div class="form-label" style="margin-bottom:6px">카테고리 그룹</div>
-      <div id="ledger-cat-groups" class="ledger-cat-groups"></div>
+      <div id="ledger-cat-groups" class="calc-cat-group-row"></div>
+      <div id="ledger-cat-chips" class="calc-cat-grid"></div>
     </div>
-    <div class="form-label" style="margin:10px 0 6px">카테고리</div>
-    <div id="ledger-cat-chips" class="ledger-cat-chips"></div>
-    <div class="form-row" style="margin-top:14px">
-      <div>
-        <div class="form-label">금액 (원)</div>
-        <input class="form-input" id="ledger-item-amount" type="number" placeholder="0" inputmode="numeric" style="text-align:right;font-family:var(--mono)">
-      </div>
-      <div>
-        <div class="form-label">메모 (선택)</div>
-        <input class="form-input" id="ledger-item-memo" type="text" placeholder="간단히 메모" autocomplete="off">
-        <div id="memo-suggestions" class="memo-suggestions"></div>
-      </div>
-    </div>
-    <div style="margin-top:12px">
-      <div class="form-label">소비 유형 (선택)</div>
+
+    <!-- 소비 태그 -->
+    <div style="padding:2px 16px 4px">
       <div id="ledger-tag-row" class="ledger-tag-row">
         <button class="ledger-tag-btn" data-tag="충동">💸 충동</button>
         <button class="ledger-tag-btn" data-tag="계획">📋 계획</button>
@@ -938,15 +940,32 @@
         <button class="ledger-tag-btn" data-tag="선물">🎁 선물</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
-      <button class="btn btn-ghost" id="btn-save-template" style="padding:10px 12px;font-size:11px;border-radius:10px;white-space:nowrap" title="즐겨찾기에 저장">
-        <div class="ripple-container"></div>⭐ 저장
-      </button>
-      <div class="sheet-actions" style="flex:1;margin:0">
-        <button class="sheet-secondary-btn" id="btn-ledger-item-cancel">취소</button>
-        <button class="sheet-primary-btn" id="btn-ledger-item-save">저장</button>
-      </div>
+
+    <!-- 숫자 패드 -->
+    <div class="calc-numpad">
+      <button class="calc-key" data-key="7">7</button>
+      <button class="calc-key" data-key="8">8</button>
+      <button class="calc-key" data-key="9">9</button>
+      <button class="calc-key calc-key-func" data-key="del">⌫</button>
+
+      <button class="calc-key" data-key="4">4</button>
+      <button class="calc-key" data-key="5">5</button>
+      <button class="calc-key" data-key="6">6</button>
+      <button class="calc-key calc-key-func" data-key="clear">C</button>
+
+      <button class="calc-key" data-key="1">1</button>
+      <button class="calc-key" data-key="2">2</button>
+      <button class="calc-key" data-key="3">3</button>
+      <button class="calc-key calc-key-save" id="btn-ledger-item-save" data-key="save">저장</button>
+
+      <button class="calc-key calc-key-zero" data-key="0">0</button>
+      <button class="calc-key" data-key="00">00</button>
     </div>
+
+    <!-- 호환용 hidden 요소 -->
+    <input type="hidden" id="ledger-item-amount">
+    <button style="display:none" id="btn-ledger-item-cancel"></button>
+    <button style="display:none" id="btn-save-template"></button>
   </div>
 </div>
 

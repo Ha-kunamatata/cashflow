@@ -1930,3 +1930,340 @@ body.light-theme .topbar-search-btn { background: rgba(0,0,0,0.05); border-color
 }
 .accent-swatch:hover { transform: scale(1.15); }
 .accent-swatch.active { transform: scale(1.15); }
+
+/* ════════════════════════════════════════════════════════
+   뱅크샐러드 스타일 가계부 입력 (Calculator Sheet)
+   ════════════════════════════════════════════════════════ */
+
+/* 계산기 시트 패널 */
+.calc-sheet-panel {
+  width: min(100%, 560px);
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 28px 28px 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -10px 40px rgba(0,0,0,.35);
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.2,.8,.2,1);
+  display: flex;
+  flex-direction: column;
+  max-height: 96dvh;
+  overflow: hidden;
+}
+.sheet-overlay.show .calc-sheet-panel { transform: translateY(0); }
+
+/* 헤더: 타입토글 + 날짜 + OCR */
+.calc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 6px;
+}
+.calc-type-toggle {
+  display: flex;
+  background: var(--bg4);
+  border-radius: 14px;
+  padding: 3px;
+  gap: 2px;
+}
+.calc-type-btn {
+  padding: 7px 16px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.calc-type-btn.expense-active {
+  background: linear-gradient(135deg,#ef4444,#dc2626);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.4);
+}
+.calc-type-btn.income-active {
+  background: linear-gradient(135deg,#10b981,#059669);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.4);
+}
+.calc-date-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+}
+.calc-ocr-btn {
+  padding: 7px 10px;
+  font-size: 14px;
+  border-radius: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  line-height: 1;
+}
+
+/* 금액 표시 */
+.calc-amount-display {
+  text-align: center;
+  padding: 8px 20px 4px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+}
+.calc-amount-value {
+  font-size: 42px;
+  font-weight: 900;
+  font-family: var(--mono);
+  letter-spacing: -1px;
+  transition: color 0.2s;
+}
+.calc-amount-display.expense .calc-amount-value { color: #f87171; }
+.calc-amount-display.income  .calc-amount-value { color: #34d399; }
+.calc-amount-won {
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.45;
+  margin-bottom: 4px;
+  font-family: var(--font);
+}
+.calc-amount-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 38px;
+  background: currentColor;
+  margin-left: 2px;
+  border-radius: 2px;
+  animation: calcBlink 1s step-end infinite;
+  opacity: 0.7;
+  vertical-align: middle;
+}
+@keyframes calcBlink { 0%,100%{opacity:.7} 50%{opacity:0} }
+
+/* 메모 입력 */
+.calc-memo-input {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 6px;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.calc-memo-input:focus { border-color: var(--accent2); }
+.calc-memo-input::placeholder { color: var(--text3); }
+
+/* 카테고리 그룹 탭 */
+.calc-cat-group-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.calc-cat-group-row::-webkit-scrollbar { display: none; }
+.calc-cat-group-tab {
+  flex-shrink: 0;
+  padding: 5px 13px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text3);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.calc-cat-group-tab.active {
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.5);
+  color: #a5b4fc;
+}
+
+/* 카테고리 아이콘 그리드 */
+.calc-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 0 16px 8px;
+  max-height: 152px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.calc-cat-grid::-webkit-scrollbar { display: none; }
+.calc-cat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px 6px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background: var(--bg3);
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+.calc-cat-item:active { transform: scale(0.94); }
+.calc-cat-item.active {
+  border-color: var(--item-color, var(--accent2));
+  background: color-mix(in srgb, var(--item-color, var(--accent2)) 14%, transparent);
+}
+.calc-cat-icon { font-size: 22px; line-height: 1; }
+.calc-cat-name {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.calc-cat-item.active .calc-cat-name { color: var(--item-color, var(--accent2)); font-weight: 800; }
+
+/* 숫자 패드 */
+.calc-numpad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 56px);
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.calc-key {
+  background: var(--bg2);
+  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-family: var(--mono);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.calc-key:active { background: var(--bg4); transform: scale(0.94); }
+.calc-key-func {
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 18px;
+}
+.calc-key-zero { grid-column: span 2; }
+.calc-key-save {
+  grid-row: span 2;
+  grid-column: 4;
+  grid-row: 3 / 5;
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  font-family: var(--font);
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.calc-key-save:active { transform: scale(0.96); background: #4f46e5; }
+
+/* 뱅크샐러드 스타일 거래 카드 (day sheet) */
+.lday-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 6px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  cursor: pointer;
+  border-radius: 0;
+  transition: background .12s;
+}
+.lday-card:last-child { border-bottom: none; }
+.lday-card:active { background: rgba(255,255,255,.04); }
+.lday-card-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+.lday-card-body { flex: 1; min-width: 0; }
+.lday-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lday-card-meta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lday-card-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.07);
+}
+.lday-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.lday-card-amount {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--mono);
+}
+.lday-card-amount.red { color: #f87171; }
+.lday-card-amount.green { color: #34d399; }
+.lday-card-actions { display: flex; gap: 4px; margin-top: 2px; }
+.lday-card-action-btn {
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text3);
+  cursor: pointer;
+  font-family: var(--font);
+}
+.lday-card-action-btn.del { color: var(--red2); border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.07); }
+
+/* 라이트 테마 호환 */
+body.light-theme .calc-sheet-panel { background: #fff; border-color: rgba(0,0,0,.08); }
+body.light-theme .calc-type-toggle { background: rgba(0,0,0,.06); }
+body.light-theme .calc-key { background: #f8fafc; border-color: rgba(0,0,0,.08); color: #0f172a; }
+body.light-theme .calc-key-func { background: #f1f5f9; }
+body.light-theme .calc-cat-item { background: rgba(0,0,0,.04); }
+body.light-theme .calc-memo-input { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.1); color: #0f172a; }
+body.light-theme .lday-card:active { background: rgba(0,0,0,.04); }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}

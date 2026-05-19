@@ -339,6 +339,34 @@ let _ledgerItemType  = 'expense';
 let _ledgerCatGroup  = Object.keys(LEDGER_CATEGORIES)[0];
 let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
 let _ledgerItemTag   = null; // 소비 유형 태그
+let _calcAmountStr   = '';   // 계산기 입력 문자열
+
+// 카테고리 이모지 아이콘 맵
+const CAT_ICONS: Record<string, string> = {
+  '식비': '🍽️', '음료·카페': '☕', '배달': '🛵', '간식': '🍿',
+  '교통': '🚌', '주유': '⛽', '택시': '🚕', '주차': '🅿️',
+  '카드': '💳', '할부': '🔄',
+  '공과금': '💡', '관리비': '🏢', '수도': '💧', '가스': '🔥',
+  '보험': '🛡️',
+  '통신': '📱',
+  '구독': '📺', '스트리밍': '🎬',
+  '주거': '🏠', '월세': '🏡', '전세': '🏘️',
+  '의료': '🏥', '약': '💊', '치과': '🦷',
+  '문화': '🎭', '영화': '🎬', '공연': '🎵',
+  '교육': '📚', '학원': '✏️',
+  '생활': '🛒', '마트': '🛍️', '쇼핑': '👗',
+  '미용': '💇', '뷰티': '💄',
+  '운동': '💪', '헬스': '🏋️',
+  '여행': '✈️', '숙박': '🏨',
+  '경조사': '💌', '선물': '🎁',
+  '저축': '🐷', '투자': '📈',
+  '기타지출': '📦',
+  '월급': '💰', '급여': '💰',
+  '부수입': '💵', '아르바이트': '💼',
+  '이자': '🏦', '배당': '📊',
+  '환급': '💫', '환전': '💱',
+  '기타수입': '💴',
+};
 
 // 날짜 셀 클릭 → 날짜 시트 열기
 export function openLedgerDaySheet(dateStr) {
@@ -386,26 +414,31 @@ function _renderDaySheet() {
     return;
   }
 
+  const TAG_EMOJI: Record<string, string> = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
   list.innerHTML = items.map(item => {
     const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
+    const icon = CAT_ICONS[item.category] || (item.type === 'income' ? '💰' : '📦');
     const sign = item.type === 'expense' ? '-' : '+';
-    const cls  = item.type === 'expense' ? 'red' : 'green';
-    const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
+    const amtCls = item.type === 'expense' ? 'red' : 'green';
     return `
-      <div class="lday-item" data-id="${item.id}">
-        <span class="lday-item-dot" style="background:${col}"></span>
-        <div class="lday-item-info">
-          <span class="lday-item-cat">${escapeHtml(item.category)}</span>
-          ${item.memo ? `<span class="lday-item-memo">${escapeHtml(item.memo)}</span>` : ''}
-          ${item.tag ? `<span class="lday-item-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+      <div class="lday-card" data-id="${item.id}">
+        <div class="lday-card-icon-wrap" style="background:${col}15;border-color:${col}35;color:${col}">
+          ${icon}
         </div>
-        <span class="lday-item-amt ${cls}">${sign}${fmtShort(item.amount)}</span>
-        <button class="icon-btn edit lday-edit-btn" data-id="${item.id}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
-        </button>
-        <button class="icon-btn del lday-del-btn" data-id="${item.id}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-        </button>
+        <div class="lday-card-body">
+          <div class="lday-card-name">${escapeHtml(item.memo || item.category)}</div>
+          <div class="lday-card-meta">
+            <span>${escapeHtml(item.category)}</span>
+            ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+          </div>
+        </div>
+        <div class="lday-card-right">
+          <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
+          <div class="lday-card-actions">
+            <button class="lday-card-action-btn lday-edit-btn" data-id="${item.id}">수정</button>
+            <button class="lday-card-action-btn del lday-del-btn" data-id="${item.id}">삭제</button>
+          </div>
+        </div>
       </div>`;
   }).join('');
 }
@@ -419,35 +452,34 @@ export function openLedgerItemForm(dateStr, itemId) {
     ? (state.ledgerData?.[_ledgerItemDate] || []).find(i => i.id === itemId)
     : null;
 
-  // 기존 값 복원 또는 기본값
   _ledgerItemType  = existing?.type     || 'expense';
   _ledgerCategory  = existing?.category || LEDGER_CATEGORIES[_ledgerCatGroup]?.[0] || '기타';
-  // 카테고리 그룹 찾기
   for (const [grp, cats] of Object.entries(LEDGER_CATEGORIES)) {
     if (cats.includes(_ledgerCategory)) { _ledgerCatGroup = grp; break; }
   }
 
+  // 계산기 금액 초기화
+  _calcAmountStr = existing?.amount ? String(existing.amount) : '';
+  _updateCalcDisplay();
+
   const titleEl = document.getElementById('ledger-item-sheet-title');
   if (titleEl) {
     const d = new Date(_ledgerItemDate);
-    titleEl.textContent = `${d.getMonth() + 1}/${d.getDate()} ${existing ? '항목 수정' : '항목 추가'}`;
+    titleEl.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${existing ? '수정' : ''}`;
   }
 
-  const amtEl  = document.getElementById('ledger-item-amount');
-  const memoEl = document.getElementById('ledger-item-memo');
-  if (amtEl)  amtEl.value  = existing?.amount || '';
-  if (memoEl) memoEl.value = existing?.memo   || '';
+  const memoEl = document.getElementById('ledger-item-memo') as HTMLInputElement;
+  if (memoEl) memoEl.value = existing?.memo || '';
 
   _ledgerItemTag = existing?.tag || null;
   _renderTagButtons();
-
   _renderItemFormType();
   renderLedgerTemplates();
   openSheet('ledger-item-sheet');
-  setTimeout(() => amtEl?.focus(), 120);
 }
 
 export function closeLedgerItemForm() {
+  _calcAmountStr = '';
   closeSheet('ledger-item-sheet');
 }
 
@@ -462,6 +494,10 @@ export function setLedgerItemType(type) {
   _renderItemFormType();
 }
 
+export function getCatIcon(cat: string): string {
+  return CAT_ICONS[cat] || '📌';
+}
+
 export function selectLedgerCatGroup(groupName) {
   _ledgerCatGroup = groupName;
   _ledgerCategory = LEDGER_CATEGORIES[groupName]?.[0] || '기타';
@@ -474,17 +510,53 @@ export function selectLedgerCat(catName) {
   _renderCatChips();
 }
 
+function _updateCalcDisplay() {
+  const el = document.getElementById('calc-display-value');
+  const wrap = document.getElementById('calc-amount-display');
+  if (!el) return;
+  const num = parseInt(_calcAmountStr || '0', 10);
+  el.textContent = num.toLocaleString('ko-KR');
+  if (wrap) {
+    wrap.className = `calc-amount-display ${_ledgerItemType === 'expense' ? 'expense' : 'income'}`;
+  }
+}
+
+function _handleCalcKey(key: string) {
+  if (key === 'save') { saveLedgerItem(); return; }
+  if (key === 'del') { _calcAmountStr = _calcAmountStr.slice(0, -1); }
+  else if (key === 'clear') { _calcAmountStr = ''; }
+  else if (key === '00') { if (_calcAmountStr) _calcAmountStr += '00'; }
+  else { // digit
+    if (_calcAmountStr.length >= 10) return; // 최대 10자리
+    if (_calcAmountStr === '0') _calcAmountStr = key;
+    else _calcAmountStr += key;
+  }
+  _updateCalcDisplay();
+}
+
+// 계산기 키패드 이벤트 위임 설정 (한 번만)
+let _calcKeypadReady = false;
+function _setupCalcKeypad() {
+  if (_calcKeypadReady) return;
+  _calcKeypadReady = true;
+  document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-key]') as HTMLElement;
+    if (!btn) return;
+    const key = btn.dataset.key;
+    if (key) _handleCalcKey(key);
+  });
+}
+
 function _renderItemFormType() {
   const expBtn = document.getElementById('ledger-type-expense');
   const incBtn = document.getElementById('ledger-type-income');
-  if (expBtn) expBtn.className = `type-btn ${_ledgerItemType === 'expense' ? 'expense-active' : 'inactive'}`;
-  if (incBtn) incBtn.className = `type-btn ${_ledgerItemType === 'income'  ? 'income-active'  : 'inactive'}`;
+  if (expBtn) expBtn.className = `calc-type-btn ${_ledgerItemType === 'expense' ? 'expense-active' : ''}`;
+  if (incBtn) incBtn.className = `calc-type-btn ${_ledgerItemType === 'income' ? 'income-active' : ''}`;
 
-  const groupWrap = document.getElementById('ledger-cat-group-wrap');
-  if (groupWrap) groupWrap.style.display = _ledgerItemType === 'expense' ? '' : 'none';
-
+  _updateCalcDisplay();
   _renderCatGroupTabs();
   _renderCatChips();
+  _setupCalcKeypad();
 }
 
 function _renderCatGroupTabs() {
@@ -492,7 +564,7 @@ function _renderCatGroupTabs() {
   if (!el) return;
   if (_ledgerItemType === 'income') { el.innerHTML = ''; return; }
   el.innerHTML = Object.keys(LEDGER_CATEGORIES).map(grp => `
-    <button class="ledger-cat-group-btn ${grp === _ledgerCatGroup ? 'active' : ''}" data-group="${escapeHtml(grp)}">${grp}</button>
+    <button class="calc-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">${grp}</button>
   `).join('');
 }
 
@@ -503,13 +575,16 @@ function _renderCatChips() {
     ? LEDGER_INCOME_CATEGORIES
     : (LEDGER_CATEGORIES[_ledgerCatGroup] || []);
 
+  el.className = 'calc-cat-grid';
   el.innerHTML = cats.map(cat => {
     const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+    const icon = CAT_ICONS[cat] || '📌';
     const sel = cat === _ledgerCategory;
     return `
-      <button class="ledger-cat-chip ${sel ? 'active' : ''}" data-cat="${escapeHtml(cat)}"
-        style="${sel ? `background:${col}22;border-color:${col};color:${col}` : ''}">
-        ${cat}
+      <button class="calc-cat-item${sel ? ' active' : ''}" data-cat="${escapeHtml(cat)}"
+        style="--item-color:${col}">
+        <span class="calc-cat-icon">${icon}</span>
+        <span class="calc-cat-name">${escapeHtml(cat)}</span>
       </button>`;
   }).join('');
 }
@@ -528,10 +603,15 @@ function _renderTagButtons() {
 }
 
 export function saveLedgerItem() {
-  const amt  = Number(document.getElementById('ledger-item-amount')?.value) || 0;
-  const memo = document.getElementById('ledger-item-memo')?.value.trim() || '';
+  const amt  = parseInt(_calcAmountStr || '0', 10) || Number((document.getElementById('ledger-item-amount') as HTMLInputElement)?.value) || 0;
+  const memo = (document.getElementById('ledger-item-memo') as HTMLInputElement)?.value.trim() || '';
 
-  if (!amt) { alert('금액을 입력해주세요'); return; }
+  if (!amt) {
+    // 금액 없으면 표시 흔들기
+    const disp = document.getElementById('calc-amount-display');
+    if (disp) { disp.style.animation = 'none'; disp.offsetHeight; disp.style.animation = 'shake 0.3s ease'; }
+    return;
+  }
   if (!_ledgerItemDate) return;
 
   if (!state.ledgerData) state.ledgerData = {};
@@ -1484,6 +1564,8 @@ export async function handleReceiptOCR(file) {
     const result = await analyzeReceipt(base64, file.type || 'image/jpeg');
 
     if (result.amount > 0) {
+      _calcAmountStr = String(result.amount);
+      _updateCalcDisplay();
       const amtEl = document.getElementById('ledger-item-amount') as HTMLInputElement;
       if (amtEl) amtEl.value = String(result.amount);
     }
