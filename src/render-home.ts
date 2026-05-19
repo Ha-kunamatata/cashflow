@@ -307,6 +307,8 @@ export function _renderSparkline() {
   const el = document.getElementById('balance-sparkline');
   if (!el) return;
   const now = today();
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
   const days = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(now);
@@ -314,22 +316,108 @@ export function _renderSparkline() {
     const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
     const items = state.ledgerData?.[dk] || [];
     const exp = items.filter(it => it.type === 'expense').reduce((s, it) => s + it.amount, 0);
-    days.push({ exp, isToday: i === 0 });
+    const inc = items.filter(it => it.type === 'income').reduce((s, it) => s + it.amount, 0);
+    const isToday = i === 0;
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    days.push({ d, dk, exp, inc, isToday, isWeekend, dow: dayNames[d.getDay()], date: d.getDate() });
   }
-  const hasData = days.some(d => d.exp > 0);
+
+  const hasData = days.some(d => d.exp > 0 || d.inc > 0);
   if (!hasData) { el.innerHTML = ''; return; }
-  const maxExp = Math.max(...days.map(d => d.exp), 1);
+
+  const maxVal = Math.max(...days.map(d => Math.max(d.exp, d.inc)), 1);
+  const totalExp7 = days.slice(-7).reduce((s, d) => s + d.exp, 0);
+  const totalExp14 = days.reduce((s, d) => s + d.exp, 0);
+  const avgDaily = totalExp14 / 14;
+  const todayExp = days[13].exp;
+  const todayInc = days[13].inc;
+
+  // SVG area chart: 460 × 52
+  const W = 460, H = 52, PB = 2, PT = 4;
+  const chartH = H - PT - PB;
+  const step = W / (days.length - 1);
+
+  // Points for expense area
+  const expPts = days.map((d, i) => ({
+    x: i * step,
+    y: PT + chartH - Math.max(0, d.exp / maxVal) * chartH,
+  }));
+
+  // Smooth SVG path (catmull-rom-ish via quadratic bezier)
+  const toPath = (pts: {x:number;y:number}[]) => {
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i+1].x) / 2;
+      d += ` C ${mx.toFixed(1)},${pts[i].y.toFixed(1)} ${mx.toFixed(1)},${pts[i+1].y.toFixed(1)} ${pts[i+1].x.toFixed(1)},${pts[i+1].y.toFixed(1)}`;
+    }
+    return d;
+  };
+
+  const linePath = toPath(expPts);
+  const areaPath = `${linePath} L ${expPts[expPts.length-1].x.toFixed(1)},${(H-PB).toFixed(1)} L ${expPts[0].x.toFixed(1)},${(H-PB).toFixed(1)} Z`;
+
+  // Average line y
+  const avgY = PT + chartH - Math.min(1, avgDaily / maxVal) * chartH;
+
+  // Today dot
+  const todayPt = expPts[13];
+
+  // Income dots — show as small green circles above bars
+  const incDots = days.map((d, i) => d.inc > 0
+    ? `<circle cx="${(i * step).toFixed(1)}" cy="${(PT + chartH - (d.inc/maxVal)*chartH).toFixed(1)}" r="3" fill="#34d399" opacity="0.8"/>`
+    : ''
+  ).join('');
+
+  const svgHtml = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f87171" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#f87171" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <!-- area fill -->
+      <path d="${areaPath}" fill="url(#expGrad)"/>
+      <!-- avg line -->
+      ${avgDaily > 0 ? `<line x1="0" y1="${avgY.toFixed(1)}" x2="${W}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="3 3"/>` : ''}
+      <!-- expense line -->
+      <path d="${linePath}" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- income dots -->
+      ${incDots}
+      <!-- today highlight vertical -->
+      <line x1="${todayPt.x.toFixed(1)}" y1="${PT}" x2="${todayPt.x.toFixed(1)}" y2="${H}" stroke="rgba(129,140,248,0.35)" stroke-width="1.5"/>
+      <!-- today dot -->
+      ${todayExp > 0 ? `<circle cx="${todayPt.x.toFixed(1)}" cy="${todayPt.y.toFixed(1)}" r="4" fill="#818cf8" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>` : ''}
+    </svg>`;
+
+  // Day labels: only show every 2nd day label to avoid crowding
+  const labelsHtml = days.map((d, i) => {
+    const showLabel = i === 0 || i === 7 || i === 13 || (i % 2 === 0);
+    if (!showLabel) return `<div style="flex:1"></div>`;
+    const col = d.isToday ? 'rgba(129,140,248,0.9)' : d.isWeekend ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.25)';
+    return `<div style="flex:1;text-align:center;font-size:8.5px;font-weight:${d.isToday ? '800' : '600'};color:${col};letter-spacing:0.1px">${d.isToday ? '오늘' : d.dow}</div>`;
+  }).join('');
+
+  const todayStr = todayExp > 0 ? `-${fmtShort(todayExp)}` : todayInc > 0 ? `+${fmtShort(todayInc)}` : '없음';
+  const todayColor = todayExp > 0 ? '#f87171' : todayInc > 0 ? '#34d399' : 'rgba(255,255,255,0.3)';
+  const avgStr = avgDaily > 0 ? `평균 ${fmtShort(avgDaily)}/일` : '';
+
   el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <span style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:0.5px">14일 지출 패턴</span>
-      <span style="font-size:9px;color:rgba(255,255,255,0.45)">오늘 <span style="color:#f87171;font-weight:700">${fmtShort(days[13].exp)}</span></span>
-    </div>
-    <div style="display:flex;align-items:flex-end;gap:2px;height:26px">
-      ${days.map(d => {
-        const pct = Math.max(10, Math.round((d.exp / maxExp) * 100));
-        const col = d.isToday ? 'rgba(129,140,248,0.9)' : d.exp > 0 ? 'rgba(248,113,113,0.65)' : 'rgba(255,255,255,0.08)';
-        return `<div style="flex:1;border-radius:2px 2px 0 0;background:${col};height:${pct}%;transition:height 0.3s ease"></div>`;
-      }).join('')}
+    <div style="margin-bottom:5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.5px;text-transform:uppercase">14일 지출 패턴</span>
+          ${avgStr ? `<span style="font-size:9px;color:rgba(255,255,255,0.2)">${avgStr}</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:2px;background:#f87171;border-radius:2px;display:inline-block"></span><span style="font-size:8px;color:rgba(255,255,255,0.25)">지출</span></div>
+          <div style="display:flex;align-items:center;gap:3px"><span style="width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block"></span><span style="font-size:8px;color:rgba(255,255,255,0.25)">수입</span></div>
+          <span style="font-size:9px;font-weight:800;color:${todayColor}">오늘 ${todayStr}</span>
+        </div>
+      </div>
+      <div style="position:relative">${svgHtml}</div>
+      <div style="display:flex;margin-top:3px">${labelsHtml}</div>
     </div>`;
 }
 

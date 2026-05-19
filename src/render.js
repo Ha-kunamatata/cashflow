@@ -3022,128 +3022,207 @@ export function setFinanceData(symbol, data) {
   _financeData[symbol] = data;
 }
 
+// ── 숫자 포맷 헬퍼 ──────────────────────────────────────
+function _fmtPrice(price, currency) {
+  if (currency === 'KRW') return price >= 1000 ? price.toLocaleString('ko-KR') : price.toFixed(0);
+  if (currency === 'USD') return price < 10 ? price.toFixed(4) : price < 1000 ? price.toFixed(2) : price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return price.toFixed(2);
+}
+function _currSym(currency) { return { KRW: '₩', USD: '$', EUR: '€', GBP: '£' }[currency] || ''; }
+function _numFmt(n) { return Math.abs(n) >= 1e8 ? (n/1e8).toFixed(1)+'억' : Math.abs(n) >= 1e4 ? (n/1e4).toFixed(0)+'만' : n.toLocaleString('ko-KR'); }
+
 export function renderFinance() {
   const watchlist = state.watchlist || [];
   const container = document.getElementById('watchlist-container');
   if (!container) return;
 
+  // ── 포트폴리오 요약 카드 갱신 ──────────────────────────
+  _updateFinancePortfolioCard(watchlist);
+
   if (!watchlist.length) {
-    container.innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">📈</div>
-      <div class="empty-state-title">관심종목 없음</div>
-      <div class="empty-state-desc">주식·ETF·암호화폐를 추가하면<br>실시간 시세와 수익률을 추적합니다</div>
-      <div class="empty-state-hint">우측 상단 + 추가 버튼을 탭하세요</div>
-    </div>`;
-    updateFinanceSummary();
+    container.innerHTML = `
+      <div class="fin-empty">
+        <div class="fin-empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </div>
+        <div class="fin-empty-title">관심종목이 없어요</div>
+        <div class="fin-empty-desc">주식·ETF·암호화폐를 추가하면<br>실시간 시세와 수익률을 한눈에 확인할 수 있어요</div>
+        <button class="fin-empty-btn" id="btn-add-watchlist-empty">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          첫 종목 추가하기
+        </button>
+        <div class="fin-empty-tips">
+          <span>🇰🇷 005930 · 삼성전자</span>
+          <span>🇺🇸 AAPL · 애플</span>
+          <span>₿ BTC-USD</span>
+        </div>
+      </div>`;
+    document.getElementById('btn-add-watchlist-empty')?.addEventListener('click', () => {
+      document.getElementById('btn-add-watchlist')?.click();
+    });
     return;
   }
 
-  container.innerHTML = watchlist.map(item => {
+  // ── 그룹화: 보유 종목 vs 관심 종목 ──────────────────────
+  const holdings = watchlist.filter(w => w.buyPrice && w.quantity);
+  const watchOnly = watchlist.filter(w => !w.buyPrice || !w.quantity);
+
+  const renderCard = (item) => {
     const data = _financeData[item.symbol];
     const isLoading = _financeLoading[item.symbol];
-    const name = (data && data.name) ? data.name : item.name;
+    const name = (data?.name) || item.name || item.symbol;
+    const mkt = item.market || 'OTHER';
+    const mktBadge = { KRX: '<span class="fin-mkt-badge krx">KRX</span>', US: '<span class="fin-mkt-badge us">US</span>', CRYPTO: '<span class="fin-mkt-badge crypto">CRYPTO</span>', OTHER: '<span class="fin-mkt-badge other">기타</span>' }[mkt] || '';
 
-    let priceSection = '';
+    let priceHtml = '';
     if (isLoading) {
-      priceSection = `<div style="font-size:12px;color:var(--text3)">불러오는 중...</div>`;
+      priceHtml = `<div class="fin-loading"><div class="fin-loading-dot"></div><div class="fin-loading-dot"></div><div class="fin-loading-dot"></div></div>`;
     } else if (data && data.price != null) {
-      const chgColor = data.change > 0 ? 'var(--green2)' : data.change < 0 ? 'var(--red2)' : 'var(--text3)';
-      const chgSign = data.change > 0 ? '+' : '';
-      const currency = data.currency === 'KRW' ? '₩' : data.currency === 'USD' ? '$' : '';
-      const priceStr = data.currency === 'KRW'
-        ? (data.price >= 1000 ? data.price.toLocaleString() : data.price.toFixed(2))
-        : data.price.toFixed(2);
+      const curr = data.currency || 'USD';
+      const cs = _currSym(curr);
+      const ps = _fmtPrice(data.price, curr);
+      const chg = data.change || 0;
+      const chgPct = data.changePct || 0;
+      const isUp = chg > 0, isDown = chg < 0;
+      const chgCls = isUp ? 'up' : isDown ? 'down' : 'flat';
+      const chgSign = isUp ? '+' : '';
 
-      // 수익률 계산 (매수가 입력 시)
-      let returnHtml = '';
+      // 수익률
+      let pnlHtml = '';
       if (item.buyPrice && item.quantity) {
-        const investedKRW = Number(item.buyPrice) * Number(item.quantity);
-        const currentKRW = data.price * Number(item.quantity);
-        const pnl = currentKRW - investedKRW;
-        const pnlPct = investedKRW > 0 ? (pnl / investedKRW * 100) : 0;
-        const pnlColor = pnl >= 0 ? 'var(--green2)' : 'var(--red2)';
-        returnHtml = `<div style="font-size:10px;color:${pnlColor};font-weight:700;margin-top:2px">
-          ${pnl >= 0 ? '+' : ''}${currency}${Math.abs(pnl).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)
+        const invested = Number(item.buyPrice) * Number(item.quantity);
+        const current = data.price * Number(item.quantity);
+        const pnl = current - invested;
+        const pnlPct = invested > 0 ? (pnl / invested * 100) : 0;
+        const pnlCls = pnl >= 0 ? 'up' : 'down';
+        const pnlSign = pnl >= 0 ? '+' : '';
+        pnlHtml = `<div class="fin-card-pnl ${pnlCls}">
+          <span class="fin-pnl-amt">${pnlSign}${cs}${_fmtPrice(Math.abs(pnl), curr)}</span>
+          <span class="fin-pnl-pct">${pnlSign}${pnlPct.toFixed(2)}%</span>
         </div>`;
       }
 
-      priceSection = `
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:900;font-family:var(--mono);color:var(--text)">${currency}${priceStr}</div>
-          <div style="font-size:12px;font-weight:700;color:${chgColor}">${chgSign}${data.change?.toFixed(2) || 0} (${chgSign}${data.changePct?.toFixed(2) || 0}%)</div>
-          ${returnHtml}
+      priceHtml = `
+        <div class="fin-card-price-wrap">
+          <div class="fin-card-price">${cs}${ps}</div>
+          <div class="fin-card-chg ${chgCls}">${chgSign}${chg.toFixed(curr === 'KRW' ? 0 : 2)} <span class="fin-chg-pct">${chgSign}${chgPct.toFixed(2)}%</span></div>
+          ${pnlHtml}
         </div>`;
+    } else if (data === null) {
+      priceHtml = `<div class="fin-card-no-data"><span>데이터 없음</span><span style="font-size:9px;margin-top:2px">API 한도 초과</span></div>`;
     } else {
-      priceSection = `<div style="font-size:11px;color:var(--text3)">데이터 없음<br><span style="font-size:9px">⚠️ API 제한</span></div>`;
+      priceHtml = `<button class="fin-load-btn fin-load-trigger" data-symbol="${escapeHtml(item.symbol)}">시세 불러오기</button>`;
     }
 
-    const mktLabel = { KRX: '🇰🇷', US: '🇺🇸', CRYPTO: '₿', OTHER: '🌐' }[item.market] || '🌐';
+    const holdInfo = (item.buyPrice && item.quantity) ? `
+      <div class="fin-card-hold">
+        <span>매수가 <b>${Number(item.buyPrice).toLocaleString('ko-KR')}</b></span>
+        <span class="fin-hold-sep">·</span>
+        <span><b>${item.quantity}</b>주</span>
+      </div>` : '';
 
     return `
-      <div class="watchlist-card" data-symbol="${escapeHtml(item.symbol)}">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-              <span style="font-size:14px">${mktLabel}</span>
-              <span style="font-size:15px;font-weight:900;color:var(--text)">${escapeHtml(name || item.symbol)}</span>
-              <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${escapeHtml(item.symbol)}</span>
-            </div>
-            ${item.buyPrice ? `<div style="font-size:10px;color:var(--text3)">매수가 ${Number(item.buyPrice).toLocaleString()} × ${item.quantity || 1}주</div>` : ''}
-            ${item.note ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(item.note)}</div>` : ''}
+      <div class="fin-card" data-symbol="${escapeHtml(item.symbol)}">
+        <div class="fin-card-left">
+          <div class="fin-card-header">
+            <span class="fin-card-name">${escapeHtml(name)}</span>
+            ${mktBadge}
           </div>
-          <div style="display:flex;align-items:flex-start;gap:8px">
-            ${priceSection}
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <button class="icon-btn edit watchlist-edit-btn" data-symbol="${escapeHtml(item.symbol)}" title="수정">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
-              </button>
-              <button class="icon-btn delete watchlist-del-btn" data-symbol="${escapeHtml(item.symbol)}" title="삭제">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-              </button>
-            </div>
+          <div class="fin-card-ticker">${escapeHtml(item.symbol)}</div>
+          ${holdInfo}
+          ${item.note ? `<div class="fin-card-note">${escapeHtml(item.note)}</div>` : ''}
+        </div>
+        <div class="fin-card-right">
+          ${priceHtml}
+          <div class="fin-card-actions">
+            <button class="fin-action-btn watchlist-edit-btn" data-symbol="${escapeHtml(item.symbol)}" title="수정">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="fin-action-btn delete watchlist-del-btn" data-symbol="${escapeHtml(item.symbol)}" title="삭제">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            </button>
           </div>
         </div>
       </div>`;
-  }).join('');
+  };
 
-  updateFinanceSummary();
+  let html = '';
+  if (holdings.length) {
+    html += `<div class="fin-section-hdr">보유 종목 <span class="fin-section-count">${holdings.length}</span></div>`;
+    html += `<div class="fin-cards-list">${holdings.map(renderCard).join('')}</div>`;
+  }
+  if (watchOnly.length) {
+    html += `<div class="fin-section-hdr" style="margin-top:${holdings.length ? '16px' : '0'}">관심 종목 <span class="fin-section-count">${watchOnly.length}</span></div>`;
+    html += `<div class="fin-cards-list">${watchOnly.map(renderCard).join('')}</div>`;
+  }
+  container.innerHTML = html;
+
+  // 시세 불러오기 버튼 이벤트
+  container.querySelectorAll('.fin-load-trigger').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sym = btn.dataset.symbol;
+      const item = (state.watchlist || []).find(w => w.symbol === sym);
+      if (item) fetchStockPrice(item).then(() => renderFinance());
+    });
+  });
 }
 
-function updateFinanceSummary() {
-  const el = document.getElementById('finance-summary-inner');
-  if (!el) return;
-  const watchlist = state.watchlist || [];
-  if (!watchlist.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">종목을 추가하면 여기에 요약이 표시됩니다</div>';
-    return;
-  }
+function _updateFinancePortfolioCard(watchlist) {
+  const card = document.getElementById('fin-portfolio-card');
+  if (!card) return;
 
-  let totalInvested = 0, totalCurrent = 0, updatedCount = 0;
+  if (!watchlist.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  let totalInvested = 0, totalCurrent = 0, holdCount = 0;
+  let dayPnl = 0;
   for (const item of watchlist) {
     const data = _financeData[item.symbol];
-    if (item.buyPrice && item.quantity && data?.price) {
-      totalInvested += Number(item.buyPrice) * Number(item.quantity);
-      totalCurrent += data.price * Number(item.quantity);
-      updatedCount++;
+    if (!data?.price) continue;
+    if (item.buyPrice && item.quantity) {
+      const qty = Number(item.quantity);
+      totalInvested += Number(item.buyPrice) * qty;
+      totalCurrent += data.price * qty;
+      holdCount++;
+    }
+    if (data.change && item.quantity) {
+      dayPnl += data.change * Number(item.quantity || 0);
     }
   }
 
   const pnl = totalCurrent - totalInvested;
   const pnlPct = totalInvested > 0 ? (pnl / totalInvested * 100) : 0;
-  const pnlColor = pnl >= 0 ? 'var(--green2)' : 'var(--red2)';
+  const pnlUp = pnl >= 0;
+  const dayUp = dayPnl >= 0;
 
-  el.innerHTML = updatedCount > 0 ? `
-    <div style="flex:1;min-width:80px">
-      <div style="font-size:10px;font-weight:700;color:var(--text3)">총 평가액</div>
-      <div style="font-size:16px;font-weight:900;font-family:var(--mono);color:var(--text)">${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>
+  const el = document.getElementById('fin-portfolio-inner');
+  if (!el) return;
+
+  if (holdCount === 0) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:4px 0">매수가·수량 입력 시 수익률이 표시돼요</div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="fin-port-stat">
+      <div class="fin-port-lbl">총 평가액</div>
+      <div class="fin-port-val">${_numFmt(totalCurrent)}<span class="fin-port-unit">원</span></div>
     </div>
-    <div style="flex:1;min-width:80px">
-      <div style="font-size:10px;font-weight:700;color:var(--text3)">수익/손실</div>
-      <div style="font-size:16px;font-weight:900;font-family:var(--mono);color:${pnlColor}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>
-      <div style="font-size:11px;color:${pnlColor}">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</div>
+    <div class="fin-port-div"></div>
+    <div class="fin-port-stat">
+      <div class="fin-port-lbl">평가손익</div>
+      <div class="fin-port-val ${pnlUp ? 'up' : 'down'}">${pnlUp ? '+' : ''}${_numFmt(pnl)}<span class="fin-port-unit">원</span></div>
+      <div class="fin-port-sub ${pnlUp ? 'up' : 'down'}">${pnlUp ? '+' : ''}${pnlPct.toFixed(2)}%</div>
     </div>
-  ` : `<div style="font-size:12px;color:var(--text3)">매수가 입력 시 수익률이 표시됩니다</div>`;
+    <div class="fin-port-div"></div>
+    <div class="fin-port-stat">
+      <div class="fin-port-lbl">오늘 변동</div>
+      <div class="fin-port-val ${dayUp ? 'up' : 'down'}" style="font-size:18px">${dayUp ? '+' : ''}${_numFmt(dayPnl)}<span class="fin-port-unit">원</span></div>
+    </div>`;
 }
+
+function updateFinanceSummary() { /* deprecated — use _updateFinancePortfolioCard */ }
 
 /** 종목 데이터 로드 (Yahoo Finance 비공개 API) */
 export async function fetchStockPrice(item) {
@@ -3232,21 +3311,24 @@ export async function fetchStockPrice(item) {
 
 let _lastRefreshTime = 0;
 
-export async function refreshAllStocks() {
+export async function refreshAllStocks(force = false) {
   const watchlist = state.watchlist || [];
   if (!watchlist.length) return;
 
   const now = Date.now();
-  if (now - _lastRefreshTime < 30000) return;
+  if (!force && now - _lastRefreshTime < 30000) return;
   _lastRefreshTime = now;
 
+  const refreshBtn = document.getElementById('btn-finance-refresh');
   const infoEl = document.getElementById('finance-refresh-info');
-  if (infoEl) infoEl.textContent = '새로고침 중...';
+  if (refreshBtn) refreshBtn.classList.add('spinning');
+  if (infoEl) infoEl.textContent = '시세 불러오는 중...';
 
   await Promise.allSettled(watchlist.map(item => fetchStockPrice(item)));
   renderFinance();
 
-  if (infoEl) infoEl.textContent = `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR')}`;
+  if (refreshBtn) refreshBtn.classList.remove('spinning');
+  if (infoEl) infoEl.textContent = `${new Date().toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'})} 기준`;
 }
 
 // ════════════════════════════════════════════════════════
