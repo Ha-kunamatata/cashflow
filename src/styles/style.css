@@ -2475,3 +2475,78 @@ body.light-theme .search-result-card { border-bottom-color: rgba(0,0,0,.05); }
   font-weight: 500;
   cursor: default;
 }
+
+/* ── 홈 이번 주 날짜 스트립 (뱅크샐러드 시그니처) ─────── */
+.week-strip {
+  display: flex;
+  gap: 0;
+  background: var(--bg2);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.week-strip-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 2px 7px;
+  cursor: pointer;
+  transition: background .12s;
+  border-right: 1px solid var(--border);
+  gap: 3px;
+}
+.week-strip-day:last-child { border-right: none; }
+.week-strip-day:active { background: var(--bg3); }
+.week-strip-day.today { background: rgba(99,102,241,0.12); }
+.week-strip-day.future { opacity: 0.45; pointer-events: none; }
+.week-strip-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 0.3px;
+}
+.week-strip-date {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--mono);
+}
+.week-strip-date.today {
+  background: var(--accent);
+  color: white;
+  font-weight: 900;
+}
+.week-strip-dots {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  align-items: center;
+  justify-content: center;
+}
+.week-strip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.week-strip-dot.exp { background: #f87171; }
+.week-strip-dot.inc { background: #34d399; }
+.week-strip-amt {
+  font-size: 8px;
+  font-family: var(--mono);
+  color: var(--red2);
+  font-weight: 700;
+  min-height: 10px;
+  white-space: nowrap;
+}
+
+/* 라이트 테마 */
+body.light-theme .week-strip { background: #f8fafc; border-color: rgba(0,0,0,.07); }
+body.light-theme .week-strip-day { border-color: rgba(0,0,0,.06); }
+body.light-theme .week-strip-day.today { background: rgba(99,102,241,.08); }

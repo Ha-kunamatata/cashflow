@@ -504,6 +504,47 @@ function _renderRecurringHint() {
 }
 
 // ════════════════════════════════════════════════════════
+// 이번 주 가로 날짜 스트립 (뱅크샐러드 시그니처)
+// ════════════════════════════════════════════════════════
+export function renderWeekStrip() {
+  const el = document.getElementById('home-week-strip');
+  if (!el) return;
+  const now = today();
+  const dow = now.getDay();
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + diffToMon + i);
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const items = state.ledgerData?.[dk] || [];
+    const exp = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+    const inc = items.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const isToday = dk === dateKey(now);
+    const isFuture = d > now;
+    days.push({ d, dk, exp, inc, isToday, isFuture, dayName: dayNames[d.getDay()], dowIdx: d.getDay() });
+  }
+
+  el.innerHTML = `<div class="week-strip">
+    ${days.map(day => {
+      const isWeekend = day.dowIdx === 0 || day.dowIdx === 6;
+      const hasTx = day.exp > 0 || day.inc > 0;
+      return `<div class="week-strip-day ${day.isToday ? 'today' : ''} ${day.isFuture ? 'future' : ''}" data-dk="${day.dk}">
+        <div class="week-strip-name" style="color:${isWeekend ? 'var(--accent2)' : ''}">${day.dayName}</div>
+        <div class="week-strip-date ${day.isToday ? 'today' : ''}">${day.d.getDate()}</div>
+        ${hasTx ? `<div class="week-strip-dots">
+          ${day.exp > 0 ? '<span class="week-strip-dot exp"></span>' : ''}
+          ${day.inc > 0 ? '<span class="week-strip-dot inc"></span>' : ''}
+        </div>` : '<div class="week-strip-dots"></div>'}
+        ${day.exp > 0 && !day.isFuture ? `<div class="week-strip-amt">${fmtShort(day.exp)}</div>` : '<div class="week-strip-amt"></div>'}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
 // 홈
 // ════════════════════════════════════════════════════════
 export function renderHome() {
@@ -706,6 +747,7 @@ export function renderHome() {
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
 
+  renderWeekStrip();
   _renderSparkline();
   renderMonthProgress();
   renderCashflowCard();

@@ -630,6 +630,16 @@ document.getElementById('card-months-list')?.addEventListener('input', (e) => {
   if (input) updateCardData(input.dataset.ym, input.dataset.card, input.value);
 });
 
+// 홈 주간 날짜 스트립 — 날짜 탭 시 가계부로 이동
+document.getElementById('home-week-strip')?.addEventListener('click', (e) => {
+  const day = e.target.closest('.week-strip-day[data-dk]');
+  if (!day) return;
+  const dk = day.dataset.dk;
+  const ledgerBtn = document.querySelector('.nav-btn[data-page="ledger"]');
+  navigate('ledger', ledgerBtn);
+  setTimeout(() => _toggleLedgerInlinePanel(dk), 280);
+});
+
 // 가계부 달력 이벤트 위임 — 인라인 패널 토글
 document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
   const day = e.target.closest('.ledger-day:not(.empty)');
