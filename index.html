@@ -195,6 +195,12 @@
         <span class="streak-chip" id="streak-chip-home" style="display:none"></span>
       </div>
 
+      <!-- ── 월별 결산 / 이상 감지 / 청구 알림 ── -->
+      <div id="home-monthly-recap" style="display:none;margin-bottom:12px"></div>
+      <div id="home-anomaly-card" style="display:none;margin-bottom:12px"></div>
+      <div id="home-bill-remind" style="display:none;margin-bottom:12px"></div>
+      <!-- ── 이번달 스탯 ── -->
+      <div id="home-month-insights" style="margin-bottom:14px"></div>
       <!-- ── 최근 거래 ── -->
       <div id="home-recent-tx" style="margin-bottom:14px">
         <div class="home-section-hdr">최근 지출</div>
@@ -1534,6 +1540,14 @@ if ('serviceWorker' in navigator) {
       </button>
     </div>
     <button id="btn-search-close" class="search-cancel-btn">취소</button>
+  </div>
+  <div id="search-filter-bar" style="padding:6px 16px 8px;display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--border)">
+    <button class="search-filter-chip active" data-sf="all">전체</button>
+    <button class="search-filter-chip" data-sf="expense">지출만</button>
+    <button class="search-filter-chip" data-sf="income">수입만</button>
+    <button class="search-filter-chip" data-sf="impulse">💸 충동</button>
+    <button class="search-filter-chip" data-sf="plan">📋 계획</button>
+    <button class="search-filter-chip" data-sf="essential">✅ 필수</button>
   </div>
   <div id="search-results" class="search-results"></div>
 </div>

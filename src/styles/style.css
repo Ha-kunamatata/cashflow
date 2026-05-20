@@ -3277,3 +3277,73 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
 
 /* ── 예측 차트 래퍼 ─────────────────────────────────────── */
 .chart-wrap svg { overflow: visible; }
+
+/* ── 검색 필터 칩 ─────────────────────────────────────── */
+.search-filter-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.search-filter-chip.active {
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.4);
+  color: var(--accent2);
+}
+#search-filter-bar {
+  scrollbar-width: none;
+}
+#search-filter-bar::-webkit-scrollbar { display: none; }
+
+/* ── 목표 탭 속도 인디케이터 ─────────────────────────────── */
+.goal-pace-card {
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+/* ── 위시→목표 전환 버튼 ─────────────────────────────────── */
+.wish-to-goal-btn {
+  font-size: 14px;
+  line-height: 1;
+  padding: 3px;
+}
+.wish-to-goal-btn:hover { opacity: 0.75; }
+
+/* ── 예산 이월 카드 ──────────────────────────────────────── */
+.budget-carryover-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(99,102,241,0.1);
+  color: var(--accent2);
+}
+
+/* ── 요일별 지출 바 ──────────────────────────────────────── */
+.dow-chart-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+}
+
+/* ── 홈 인사이트 카드 ──────────────────────────────────────── */
+#home-month-insights .card,
+#home-anomaly-card .card,
+#home-bill-remind .card,
+#home-monthly-recap .card {
+  animation: fadeSlideUp 0.3s ease both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

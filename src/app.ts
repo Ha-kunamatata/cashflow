@@ -152,6 +152,8 @@ import {
   handleReceiptOCR,
   applyMemoSuggestion,
   getCatIcon,
+  applyBudgetCarryover,
+  convertWishToGoal,
 } from './ui';
 
 import { LEDGER_CAT_COLORS } from './config';
@@ -1046,8 +1048,10 @@ document.getElementById('budget-editor-sheet')?.addEventListener('click', (e) =>
 document.getElementById('budget-page-content')?.addEventListener('click', (e) => {
   const editBtn = e.target.closest('.budget-cat-edit-btn');
   const suggestBtn = e.target.closest('#btn-budget-suggest');
+  const carryoverBtn = e.target.closest('#btn-budget-carryover');
   if (editBtn?.dataset.cat) openBudgetEditor(editBtn.dataset.cat);
   if (suggestBtn) applyBudgetSuggestion();
+  if (carryoverBtn && !carryoverBtn.disabled) applyBudgetCarryover();
 });
 
 // AI 기능
@@ -1444,11 +1448,13 @@ document.getElementById('wish-list')?.addEventListener('click', (e) => {
   const buyBtn = e.target.closest('.wish-buy-btn');
   const unbuyBtn = e.target.closest('.wish-unbuy-btn');
   const linkBtn = e.target.closest('.wish-link-btn');
+  const toGoalBtn = e.target.closest('.wish-to-goal-btn');
 
   if (editBtn) openWishForm(editBtn.dataset.id);
   if (delBtn) deleteWishItem(delBtn.dataset.id);
   if (buyBtn) toggleWishBought(buyBtn.dataset.id);
   if (unbuyBtn) toggleWishBought(unbuyBtn.dataset.id);
+  if (toGoalBtn) convertWishToGoal(toGoalBtn.dataset.id);
   if (linkBtn) {
     const url = linkBtn.dataset.url;
     if (url) window.open(url, '_blank', 'noopener');
@@ -1781,14 +1787,24 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
 // 전체 검색
 // ══════════════════════════════════════════════════════════════
 (function _setupSearch() {
-  const overlay  = document.getElementById('search-overlay');
-  const input    = document.getElementById('search-input');
-  const results  = document.getElementById('search-results');
-  const clearBtn = document.getElementById('btn-search-clear');
-  const closeBtn = document.getElementById('btn-search-close');
-  const openBtn  = document.getElementById('btn-open-search');
+  const overlay    = document.getElementById('search-overlay');
+  const input      = document.getElementById('search-input');
+  const results    = document.getElementById('search-results');
+  const clearBtn   = document.getElementById('btn-search-clear');
+  const closeBtn   = document.getElementById('btn-search-close');
+  const openBtn    = document.getElementById('btn-open-search');
+  const filterBar  = document.getElementById('search-filter-bar');
   if (!overlay) return;
 
+  let _activeFilter = 'all';
+
+  filterBar?.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest('.search-filter-chip') as HTMLElement;
+    if (!chip) return;
+    _activeFilter = chip.dataset.sf || 'all';
+    filterBar.querySelectorAll('.search-filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+    _renderResults(input.value);
+  });
 
   function openSearch() {
     overlay.style.display = 'flex';
@@ -1799,6 +1815,8 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
     overlay.style.display = 'none';
     input.value = '';
     clearBtn.style.display = 'none';
+    _activeFilter = 'all';
+    filterBar?.querySelectorAll('.search-filter-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
   }
 
   function highlight(text, query) {
@@ -1809,6 +1827,8 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
       + `<mark class="search-result-mark">${escapeHtml(text.slice(idx, idx + query.length))}</mark>`
       + escapeHtml(text.slice(idx + query.length));
   }
+
+  const TAG_FILTER_MAP = { impulse: '충동', plan: '계획', essential: '필수' };
 
   function _renderResults(query) {
     const q = query.trim().toLowerCase();
@@ -1821,6 +1841,11 @@ document.getElementById('report-cat-trend-chips')?.addEventListener('click', (e)
         const amtMatch  = String(item.amount).includes(q);
         const dateMatch = dk.includes(q);
         if (!q || catMatch || memoMatch || amtMatch || dateMatch) {
+          // Apply filter
+          if (_activeFilter === 'expense' && item.type !== 'expense') continue;
+          if (_activeFilter === 'income' && item.type !== 'income') continue;
+          const tagFilter = TAG_FILTER_MAP[_activeFilter];
+          if (tagFilter && item.tag !== tagFilter) continue;
           allItems.push({ dk, item });
         }
       }

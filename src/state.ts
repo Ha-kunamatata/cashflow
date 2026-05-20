@@ -33,6 +33,9 @@ export interface StateShape {
   geminiKey: string;
   alphaVantageKey: string;
   ledgerTemplates: LedgerTemplate[];
+  netWorthHistory: { ym: number; total: number }[];
+  lastSeenMonth: number;
+  budgetCarryover: Record<string, number>;
 }
 
 export const DEFAULT_CARDS: Card[] = [];
@@ -57,6 +60,9 @@ export const state: StateShape = {
   geminiKey: '',
   alphaVantageKey: '',
   ledgerTemplates: [],
+  netWorthHistory: [],
+  lastSeenMonth: 0,
+  budgetCarryover: {},
 };
 
 // ── 상태 완전 초기화 (계정 전환 시 메모리 상태 리셋) ──
@@ -80,6 +86,9 @@ export function resetState(): void {
   state.geminiKey         = '';
   state.alphaVantageKey   = '';
   state.ledgerTemplates   = [];
+  state.netWorthHistory   = [];
+  state.lastSeenMonth     = 0;
+  state.budgetCarryover   = {};
 }
 
 // ── 저장 ──────────────────────────────────────────────
@@ -123,6 +132,9 @@ export function load(): void {
   if (!state.wishlist)        state.wishlist        = [];
   if (!state.watchlist)       state.watchlist       = [];
   if (!state.ledgerTemplates) state.ledgerTemplates = [];
+  if (!state.netWorthHistory) state.netWorthHistory = [];
+  if (!state.budgetCarryover) state.budgetCarryover = {};
+  if (!state.lastSeenMonth)   state.lastSeenMonth   = 0;
 }
 
 // ── checkData → ledgerData 마이그레이션 ───────────────
@@ -178,16 +190,18 @@ export { syncLedgerToBalance as syncCheckDataToBalance };
 
 // ── state 필드 초기화 (누락 필드 보완) ────────────────
 export function ensureStateFields(): void {
-  if (!state.goals)     state.goals     = [];
-  if (!state.checkData) state.checkData = {};
-  if (!state.ledgerData) state.ledgerData = {};
-  if (!state.assets)    state.assets    = [];
-  if (!state.budgets)   state.budgets   = {};
-  if (!state.badges)    state.badges    = [];
-  if (!state.streak)    state.streak    = { count: 0, lastDate: '' };
-  if (!state.wishlist)  state.wishlist  = [];
-  if (!state.watchlist) state.watchlist = [];
-  if (!state.cards)     state.cards     = null;
+  if (!state.goals)           state.goals           = [];
+  if (!state.checkData)       state.checkData       = {};
+  if (!state.ledgerData)      state.ledgerData      = {};
+  if (!state.assets)          state.assets          = [];
+  if (!state.budgets)         state.budgets         = {};
+  if (!state.badges)          state.badges          = [];
+  if (!state.streak)          state.streak          = { count: 0, lastDate: '' };
+  if (!state.wishlist)        state.wishlist        = [];
+  if (!state.watchlist)       state.watchlist       = [];
+  if (!state.cards)           state.cards           = null;
+  if (!state.netWorthHistory) state.netWorthHistory = [];
+  if (!state.budgetCarryover) state.budgetCarryover = {};
 }
 
 export function initDefaultData(): void {

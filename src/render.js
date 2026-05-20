@@ -598,6 +598,10 @@ export function renderHome() {
   renderHomeBudgetBars();
   renderHomeForecastWidget();
   renderWeeklyCard();
+  _renderHomeInsights();
+  _renderMonthlyRecap();
+  _renderAnomalyCard();
+  _renderBillRemind();
 
   // ── 재정 건강 점수 미니 카드 (SVG 링 + 카운트업) ─────
   const miniScoreEl = document.getElementById('health-score-mini');
@@ -1664,9 +1668,17 @@ function _renderMonthlyStats() {
   const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
   const tagTotals = {}, tagCounts = {};
   const pfx = `${y}-${p2(m + 1)}`;
+  // 요일별 지출 패턴 (0=일, 1=월, ... 6=토)
+  const dowTotals = [0, 0, 0, 0, 0, 0, 0];
+  const dowCounts = [0, 0, 0, 0, 0, 0, 0];
   for (const [dk, items] of Object.entries(state.ledgerData || {})) {
     if (!dk.startsWith(pfx)) continue;
+    const dow = new Date(dk).getDay();
     for (const item of items) {
+      if (item.type === 'expense') {
+        dowTotals[dow] += item.amount;
+        dowCounts[dow]++;
+      }
       if (item.type === 'expense' && item.tag) {
         tagTotals[item.tag] = (tagTotals[item.tag] || 0) + item.amount;
         tagCounts[item.tag] = (tagCounts[item.tag] || 0) + 1;
@@ -1674,6 +1686,24 @@ function _renderMonthlyStats() {
     }
   }
   const tagEntries = Object.entries(tagTotals).sort((a, b) => b[1] - a[1]);
+
+  // 요일별 바 차트 (월~일 순)
+  const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+  const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
+  const maxDow = Math.max(...dowTotals, 1);
+  const dowBarsHtml = DOW_ORDER.map(di => {
+    const amt = dowTotals[di];
+    const isWeekend = di === 0 || di === 6;
+    const isMax = amt > 0 && amt === Math.max(...DOW_ORDER.map(d => dowTotals[d]));
+    const h = Math.round((amt / maxDow) * 50);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">
+      <div style="font-size:9px;color:${isMax ? 'var(--red2)' : 'var(--text3)'};font-weight:${isMax ? 700 : 400}">${amt > 0 ? fmtShort(amt) : ''}</div>
+      <div style="width:100%;background:var(--bg3);border-radius:5px;height:50px;display:flex;align-items:flex-end;overflow:hidden">
+        <div style="width:100%;height:${h}px;background:${isMax ? 'rgba(248,113,113,0.75)' : isWeekend ? 'rgba(139,92,246,0.45)' : 'rgba(96,165,250,0.5)'};border-radius:5px 5px 0 0;transition:height 0.4s ease"></div>
+      </div>
+      <div style="font-size:9px;color:${isWeekend ? '#a78bfa' : 'var(--text3)'};font-weight:${isWeekend ? 600 : 400}">${DOW_LABELS[di]}</div>
+    </div>`;
+  }).join('');
 
   const el = document.getElementById('ledger-stats-content');
   if (!el) return;
@@ -1797,6 +1827,14 @@ function _renderMonthlyStats() {
       <div class="card-title">📅 주별 지출 패턴</div>
       <div style="display:flex;gap:8px;align-items:flex-end;padding:4px 0">${weekBars}</div>
     </div>
+
+    ${dowTotals.some(v => v > 0) ? `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">🗓️ 요일별 지출 패턴
+        <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:4px">주말 보라색</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:flex-end;padding:4px 0">${dowBarsHtml}</div>
+    </div>` : ''}
 
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">📊 전월 대비</div>
@@ -2938,12 +2976,32 @@ export function renderGoals() {
       setTimeout(() => window.launchConfetti?.(), 400);
     }
 
-    // Monthly savings speed relative to required
-    const monthlyIncome = state.entries
-      .filter(e => e.type === 'income' && e.repeat === '매월')
-      .reduce((s, e) => s + e.amount, 0);
-    const canSaveMonthly = monthlyIncome > 0 && monthlyRequired > 0
-      ? Math.min(100, Math.round((monthlyIncome * 0.3 / monthlyRequired) * 100)) : 0; // assume 30% savings rate
+    // 실제 저축 속도 (최근 3개월 가계부 기준)
+    const now3 = today();
+    let actualMonthlySavings = 0;
+    let validMonths3 = 0;
+    for (let mi = 1; mi <= 3; mi++) {
+      let mm = now3.getMonth() - mi;
+      let yy = now3.getFullYear();
+      if (mm < 0) { mm += 12; yy--; }
+      const ml = getLedgerMonth(yy, mm);
+      if (ml.income > 0 || ml.expense > 0) {
+        actualMonthlySavings += (ml.income - ml.expense);
+        validMonths3++;
+      }
+    }
+    if (validMonths3 > 0) actualMonthlySavings = Math.round(actualMonthlySavings / validMonths3);
+    const monthsToFinish = actualMonthlySavings > 0 ? Math.ceil(remaining / actualMonthlySavings) : null;
+    const paceOk = monthsToFinish !== null && monthsLeft > 0 && actualMonthlySavings >= monthlyRequired;
+    const paceHtml = pct < 100 && validMonths3 > 0 ? (() => {
+      if (!g.targetDate && monthsToFinish !== null && monthsToFinish > 0)
+        return `<div style="font-size:11px;padding:7px 10px;border-radius:10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.15);margin-bottom:8px">
+          💡 현재 속도(${fmtShort(actualMonthlySavings)}/월)라면 약 <strong>${monthsToFinish}개월</strong> 후 달성</div>`;
+      if (g.targetDate && monthsLeft > 0)
+        return `<div style="font-size:11px;padding:7px 10px;border-radius:10px;background:${paceOk ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'};border:1px solid ${paceOk ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'};margin-bottom:8px">
+          ${paceOk ? '✅' : '⚠️'} 현재 속도 ${fmtShort(actualMonthlySavings)}/월 ${paceOk ? '— 기한 내 달성 가능' : `— ${fmtShort(monthlyRequired - actualMonthlySavings)}/월 부족`}</div>`;
+      return '';
+    })() : '';
 
     return `
       <div class="goal-card stagger-item ${urgency ? 'goal-card-' + urgency : ''}" data-goal-id="${g.id}" style="cursor:default;--stagger-idx:${goalIndex}">
@@ -2995,11 +3053,12 @@ export function renderGoals() {
           </div>
         </div>
         ${urgency === 'urgent' ? `<div style="font-size:11px;color:var(--red2);padding:8px 10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);margin-bottom:8px">⚠️ 목표 기간이 얼마 남지 않았습니다</div>` : ''}
+        ${paceHtml}
         ` : pct >= 100 ? `
         <div style="font-size:13px;color:var(--green2);padding:10px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);margin-bottom:10px;text-align:center">
           🎉 목표를 달성했어요! 훌륭합니다!
         </div>
-        ` : ''}
+        ` : paceHtml ? paceHtml : ''}
 
         <!-- 공유 코드 -->
         <div class="goal-share-row" style="justify-content:space-between;align-items:center">
@@ -3063,6 +3122,203 @@ export function renderHouseLevel() {
 }
 
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// 홈 인사이트 — 무지출 일수 + TOP3 카테고리 + 지난달 대비
+// ════════════════════════════════════════════════════════
+function _renderHomeInsights() {
+  const el = document.getElementById('home-month-insights');
+  if (!el) return;
+  const now = today();
+  const y = now.getFullYear(), m = now.getMonth();
+  const { expense, catTotals } = getLedgerMonth(y, m);
+
+  // 무지출 일수
+  const prefix = `${y}-${p2(m + 1)}`;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const elapsed = now.getDate();
+  let zeroDays = 0;
+  for (let d = 1; d <= elapsed; d++) {
+    const dk = `${prefix}-${p2(d)}`;
+    const items = state.ledgerData?.[dk] || [];
+    if (items.filter(i => i.type === 'expense').length === 0) zeroDays++;
+  }
+
+  // 지난달 비교
+  let prevM = m - 1, prevY = y;
+  if (prevM < 0) { prevM = 11; prevY--; }
+  const { expense: prevExp } = getLedgerMonth(prevY, prevM);
+  const diff = expense - prevExp;
+  const diffPct = prevExp > 0 ? Math.round((diff / prevExp) * 100) : 0;
+
+  // TOP 3 카테고리
+  const top3 = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  if (expense === 0 && zeroDays === 0) { el.innerHTML = ''; return; }
+
+  const vsLastMonth = prevExp > 0 ? `
+    <div style="display:flex;align-items:center;gap:4px">
+      <span style="font-size:10px;color:var(--text3)">전월비</span>
+      <span style="font-size:12px;font-weight:700;color:${diff > 0 ? 'var(--red2)' : 'var(--green2)'}">${diff > 0 ? '▲' : '▼'}${Math.abs(diffPct)}%</span>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);border-radius:12px;padding:10px">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px">이번달 무지출</div>
+        <div style="font-size:22px;font-weight:900;color:var(--green2);font-family:var(--mono)">${zeroDays}<span style="font-size:11px;color:var(--text3);font-weight:400">일</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">${elapsed}일 중 ${zeroDays}일</div>
+      </div>
+      <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.15);border-radius:12px;padding:10px">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px">이번달 지출</div>
+        <div style="font-size:22px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(expense)}</div>
+        ${vsLastMonth}
+      </div>
+    </div>
+    ${top3.length > 0 ? `
+    <div class="card" style="padding:10px 12px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px">TOP 3 지출 카테고리</div>
+      ${top3.map(([cat, amt], i) => {
+        const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+        const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0;
+        const ranks = ['🥇','🥈','🥉'];
+        return `<div style="display:flex;align-items:center;gap:8px;${i > 0 ? 'margin-top:6px' : ''}">
+          <span style="font-size:13px">${ranks[i]}</span>
+          <span style="font-size:11px;color:var(--text2);flex:1;font-weight:600">${cat}</span>
+          <div style="flex:1;max-width:80px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
+          </div>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text2);min-width:50px;text-align:right">${fmtShort(amt)}</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
+}
+
+// ════════════════════════════════════════════════════════
+// 월별 결산 카드 (새 달 첫 접속 시)
+// ════════════════════════════════════════════════════════
+function _renderMonthlyRecap() {
+  const el = document.getElementById('home-monthly-recap');
+  if (!el) return;
+  const now = today();
+  const currentYm = now.getFullYear() * 100 + (now.getMonth() + 1);
+  const lastSeen = state.lastSeenMonth || 0;
+  // 이번 달이 처음 열린 경우 (지난달 결산 표시)
+  if (lastSeen === currentYm || lastSeen === 0) {
+    if (lastSeen === 0) { state.lastSeenMonth = currentYm; }
+    el.style.display = 'none';
+    return;
+  }
+  // 지난달 데이터 가져오기
+  const prevYm = lastSeen;
+  const prevY = Math.floor(prevYm / 100);
+  const prevM = (prevYm % 100) - 1;
+  const { expense, income, net, catTotals } = getLedgerMonth(prevY, prevM);
+  const savRate = income > 0 ? Math.max(0, Math.round(((income - expense) / income) * 100)) : 0;
+  const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+
+  state.lastSeenMonth = currentYm;
+
+  if (expense === 0 && income === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,0.14),rgba(139,92,246,0.10));border:1px solid rgba(129,140,248,0.25);border-radius:16px;padding:14px;position:relative">
+      <button id="btn-close-recap" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px">✕</button>
+      <div style="font-size:10px;font-weight:700;color:#a78bfa;letter-spacing:0.5px;margin-bottom:10px">📋 ${prevM + 1}월 결산</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">수입</div><div style="font-size:15px;font-weight:900;color:var(--green2);font-family:var(--mono)">${fmtShort(income)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">지출</div><div style="font-size:15px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(expense)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">저축률</div><div style="font-size:15px;font-weight:900;color:${savRate >= 20 ? 'var(--green2)' : 'var(--orange)'};font-family:var(--mono)">${savRate}%</div></div>
+      </div>
+      ${topCat ? `<div style="font-size:11px;color:var(--text2)">가장 많이 쓴 항목: <strong style="color:var(--text)">${topCat[0]}</strong> (${fmtShort(topCat[1])})</div>` : ''}
+    </div>`;
+  document.getElementById('btn-close-recap')?.addEventListener('click', () => {
+    el.style.display = 'none';
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// 지출 이상 감지 카드 (Gemini 없는 순수 로직)
+// ════════════════════════════════════════════════════════
+function _renderAnomalyCard() {
+  const el = document.getElementById('home-anomaly-card');
+  if (!el) return;
+  const now = today();
+  const y = now.getFullYear(), m = now.getMonth();
+  const { catTotals: catThis } = getLedgerMonth(y, m);
+  // 3개월 평균 계산
+  const catAvg = {};
+  for (let i = 1; i <= 3; i++) {
+    let pm = m - i, py = y;
+    if (pm < 0) { pm += 12; py--; }
+    const { catTotals } = getLedgerMonth(py, pm);
+    for (const [cat, amt] of Object.entries(catTotals)) {
+      catAvg[cat] = (catAvg[cat] || 0) + amt / 3;
+    }
+  }
+  const anomalies = [];
+  for (const [cat, amt] of Object.entries(catThis)) {
+    const avg = catAvg[cat] || 0;
+    if (avg > 0) {
+      const pct = Math.round(((amt - avg) / avg) * 100);
+      if (pct >= 50) anomalies.push({ cat, amt, avg, pct });
+    }
+  }
+  anomalies.sort((a, b) => b.pct - a.pct);
+  if (!anomalies.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);border-radius:14px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:0.5px;margin-bottom:8px">⚠️ 지출 이상 감지 — 최근 3개월 평균 대비</div>
+      ${anomalies.slice(0, 3).map(a => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:12px;color:var(--text2)">${a.cat}</span>
+          <div style="text-align:right">
+            <span style="font-size:12px;font-weight:700;color:var(--red2);font-family:var(--mono)">${fmtShort(a.amt)}</span>
+            <span style="font-size:10px;color:var(--orange);margin-left:6px">▲${a.pct}%</span>
+            <div style="font-size:9px;color:var(--text3)">평균 ${fmtShort(Math.round(a.avg))}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 청구서 알림 (D-3 이내 고정 지출)
+// ════════════════════════════════════════════════════════
+function _renderBillRemind() {
+  const el = document.getElementById('home-bill-remind');
+  if (!el) return;
+  const now = today();
+  const bills = [];
+  for (const entry of (state.entries || [])) {
+    if (entry.type !== 'expense' || entry.repeat !== '매월' || !entry.day) continue;
+    const endM = entry.endMonth ? parseInt(entry.endMonth, 10) : null;
+    const nowYm = now.getFullYear() * 100 + (now.getMonth() + 1);
+    if (endM && endM < nowYm) continue;
+    let billDate = new Date(now.getFullYear(), now.getMonth(), entry.day);
+    if (billDate < now) billDate = new Date(now.getFullYear(), now.getMonth() + 1, entry.day);
+    const daysLeft = Math.round((billDate - now) / 86400000);
+    if (daysLeft >= 0 && daysLeft <= 3) bills.push({ entry, daysLeft });
+  }
+  if (!bills.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:14px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--red2);letter-spacing:0.5px;margin-bottom:8px">🔔 곧 청구 예정</div>
+      ${bills.map(({ entry, daysLeft }) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div>
+            <span style="font-size:12px;color:var(--text)">${escapeHtml(entry.name)}</span>
+            <span style="font-size:10px;color:var(--text3);margin-left:6px">${entry.category || ''}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:800;color:var(--red2);font-family:var(--mono)">${fmtShort(entry.amount)}</div>
+            <div style="font-size:10px;color:${daysLeft === 0 ? 'var(--red2)' : 'var(--orange)'};font-weight:700">${daysLeft === 0 ? '오늘!' : `D-${daysLeft}`}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
 // 스트릭 칩
 // ════════════════════════════════════════════════════════
 export function renderStreak() {
@@ -3151,6 +3407,59 @@ export function renderAssets() {
       </div>`;
   }).join('');
 
+  // 순자산 히스토리 스냅샷 저장
+  if (total > 0) {
+    const now2 = today();
+    const ym2 = now2.getFullYear() * 100 + (now2.getMonth() + 1);
+    if (!state.netWorthHistory) state.netWorthHistory = [];
+    const existing = state.netWorthHistory.findIndex(h => h.ym === ym2);
+    if (existing >= 0) state.netWorthHistory[existing].total = total;
+    else state.netWorthHistory.push({ ym: ym2, total });
+    state.netWorthHistory.sort((a, b) => a.ym - b.ym);
+    if (state.netWorthHistory.length > 24) state.netWorthHistory = state.netWorthHistory.slice(-24);
+  }
+
+  // 순자산 히스토리 미니 차트
+  const history = (state.netWorthHistory || []).slice(-12);
+  let historyChart = '';
+  if (history.length >= 2) {
+    const W = 280, H = 60;
+    const minV = Math.min(...history.map(h => h.total));
+    const maxV = Math.max(...history.map(h => h.total));
+    const range = Math.max(maxV - minV, 1);
+    const pts = history.map((h, i) => {
+      const x = (i / (history.length - 1)) * W;
+      const y = H - ((h.total - minV) / range) * (H - 8) - 4;
+      return [x.toFixed(1), y.toFixed(1)];
+    });
+    const lineD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
+    const areaD = `${lineD} L${pts[pts.length-1][0]},${H} L${pts[0][0]},${H} Z`;
+    const trend = history[history.length-1].total - history[0].total;
+    const trendColor = trend >= 0 ? '#34d399' : '#f87171';
+    historyChart = `
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;font-weight:700;color:var(--text3)">${history.length}개월 순자산 추이</span>
+          <span style="font-size:11px;font-weight:700;color:${trendColor}">${trend >= 0 ? '▲' : '▼'} ${fmtShort(Math.abs(trend))}</span>
+        </div>
+        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible">
+          <defs>
+            <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${trendColor}" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="${trendColor}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="${areaD}" fill="url(#nwGrad)"/>
+          <path d="${lineD}" fill="none" stroke="${trendColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="3" fill="${trendColor}"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px">
+          <span>${Math.floor(history[0].ym / 100)}/${history[0].ym % 100}월</span>
+          <span>${Math.floor(history[history.length-1].ym / 100)}/${history[history.length-1].ym % 100}월</span>
+        </div>
+      </div>`;
+  }
+
   container.innerHTML = `
     <div class="card" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -3168,6 +3477,7 @@ export function renderAssets() {
         <svg width="96" height="96" viewBox="0 0 96 96" style="flex-shrink:0">${donutSvg}</svg>
         <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:140px">${purposeLegend}</div>
       </div>` : ''}
+      ${historyChart}
     </div>
 
     <div class="card" style="margin-bottom:12px">
@@ -3352,6 +3662,34 @@ export function renderBudget() {
       </div>
       ${allCats.size === 0 ? '<div class="empty-state" style="padding:20px 0">지출 내역 또는 예산이 없습니다</div>' : catRows}
     </div>
+
+    ${(() => {
+      let prevM2 = budgetMonth - 1, prevY2 = budgetYear;
+      if (prevM2 < 0) { prevM2 = 11; prevY2--; }
+      const prevBudget2 = getMonthBudget(state.budgets, prevY2, prevM2);
+      const prevActual2 = getMonthActual(state.ledgerData, prevY2, prevM2);
+      const carryItems = Object.entries(prevBudget2)
+        .map(([cat, b]) => ({ cat, leftover: b - (prevActual2[cat] || 0) }))
+        .filter(x => x.leftover > 0);
+      const totalCarry = carryItems.reduce((s, x) => s + x.leftover, 0);
+      if (!totalCarry) return '';
+      const ym = `${budgetYear}-${p2(budgetMonth + 1)}`;
+      const alreadyApplied = !!(state.budgetCarryover?.[ym]);
+      return `<div class="card" style="margin-bottom:12px;background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.5px">전월 미사용 예산 이월</div>
+            <div style="font-size:18px;font-weight:900;color:var(--accent2);font-family:var(--mono);margin-top:2px">${fmtShort(totalCarry)}</div>
+          </div>
+          <button class="btn ${alreadyApplied ? 'btn-ghost' : ''}" id="btn-budget-carryover" style="font-size:11px;padding:6px 12px" ${alreadyApplied ? 'disabled' : ''}>
+            <div class="ripple-container"></div>${alreadyApplied ? '✅ 이월 적용됨' : '↩ 이월 적용'}
+          </button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${carryItems.slice(0, 6).map(x => `<span style="font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(99,102,241,0.1);color:var(--accent2)">${escapeHtml(x.cat)} +${fmtShort(x.leftover)}</span>`).join('')}
+        </div>
+      </div>`;
+    })()}
   `;
 }
 
@@ -3492,6 +3830,7 @@ export function renderWishlist() {
               </button>` : `<button class="icon-btn wish-unbuy-btn" data-id="${escapeHtml(w.id)}" title="미구매로 되돌리기" style="color:var(--text3)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109 9"/><polyline points="3 3 3 12 12 12"/></svg>
               </button>`}
+              ${!w.bought ? `<button class="icon-btn wish-to-goal-btn" data-id="${escapeHtml(w.id)}" title="목표로 전환" style="color:var(--accent2)">🎯</button>` : ''}
               <button class="icon-btn edit wish-edit-btn" data-id="${escapeHtml(w.id)}" title="수정">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
               </button>
