@@ -163,7 +163,15 @@
         <div id="balance-insight" class="balance-insight-text"></div>
 
         <!-- 이번달 수입/지출/저축률 3분할 -->
-        <div id="hero-month-stats" class="hero-month-stats"></div>
+        <div id="hero-month-stats" class="hero-month-stats">
+          <div class="hero-stats-row" id="hero-stats-skeleton">
+            <div class="hero-stat-item"><div class="skel-line" style="width:56px;height:10px;margin-bottom:5px"></div><div class="skel-line" style="width:72px;height:16px;margin-bottom:0"></div></div>
+            <div class="hero-stat-sep"></div>
+            <div class="hero-stat-item"><div class="skel-line" style="width:56px;height:10px;margin-bottom:5px"></div><div class="skel-line" style="width:72px;height:16px;margin-bottom:0"></div></div>
+            <div class="hero-stat-sep"></div>
+            <div class="hero-stat-item"><div class="skel-line" style="width:40px;height:10px;margin-bottom:5px"></div><div class="skel-line" style="width:44px;height:16px;margin-bottom:0"></div></div>
+          </div>
+        </div>
 
         <!-- 스파크라인: 최근 14일 지출 패턴 -->
         <div id="balance-sparkline" style="margin:10px 0 0"></div>
@@ -188,7 +196,14 @@
       </div>
 
       <!-- ── 최근 거래 ── -->
-      <div id="home-recent-tx" style="margin-bottom:14px"></div>
+      <div id="home-recent-tx" style="margin-bottom:14px">
+        <div class="home-section-hdr">최근 지출</div>
+        <div class="card" style="padding:12px 16px;display:flex;flex-direction:column;gap:10px" id="recent-tx-skeleton">
+          <div style="display:flex;gap:10px;align-items:center"><div class="skel-block" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skel-line" style="width:60%;margin-bottom:4px"></div><div class="skel-line" style="width:40%;height:10px;margin-bottom:0"></div></div><div class="skel-line" style="width:56px;height:14px;margin-bottom:0"></div></div>
+          <div style="display:flex;gap:10px;align-items:center"><div class="skel-block" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skel-line" style="width:50%;margin-bottom:4px"></div><div class="skel-line" style="width:35%;height:10px;margin-bottom:0"></div></div><div class="skel-line" style="width:56px;height:14px;margin-bottom:0"></div></div>
+          <div style="display:flex;gap:10px;align-items:center"><div class="skel-block" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skel-line" style="width:70%;margin-bottom:4px"></div><div class="skel-line" style="width:45%;height:10px;margin-bottom:0"></div></div><div class="skel-line" style="width:56px;height:14px;margin-bottom:0"></div></div>
+        </div>
+      </div>
 
       <!-- ── 섹션: 오늘의 소비 ── -->
       <div id="today-timeline" style="margin-bottom:14px"></div>

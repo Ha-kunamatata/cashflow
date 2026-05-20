@@ -698,7 +698,7 @@ export function renderHome() {
         const icon = RECENT_ICONS[item.category] || (item.type === 'income' ? '💰' : '💳');
         const label = item.memo || item.category || '기타';
         const dateStr = item._dk.slice(5).replace('-', '/');
-        return `<div class="recent-tx-row" style="${i > 0 ? 'border-top:1px solid var(--border)' : ''}">
+        return `<div class="recent-tx-row stagger-item" style="${i > 0 ? 'border-top:1px solid var(--border);' : ''}--stagger-idx:${i}">
           <span class="recent-tx-icon">${icon}</span>
           <div class="recent-tx-info">
             <div class="recent-tx-name">${escapeHtml(label)}</div>
@@ -734,7 +734,7 @@ export function renderHome() {
             : 'color:var(--text3)';
 
       return `
-        <div class="event-row" data-forecast-idx="${i}">
+        <div class="event-row stagger-item" data-forecast-idx="${i}" style="--stagger-idx:${Math.min(i,8)}">
           <div class="event-left">
             <span class="event-date">${f.date.getMonth() + 1}/${p2(f.date.getDate())}</span>
             <span class="event-day" style="${dayColor}">${DAYS_KR[dow]}</span>
@@ -1324,6 +1324,13 @@ export function renderLedger() {
   } else {
     renderLedgerCalendar();
   }
+  // 탭 전환 시 fade-in
+  const activeView = document.querySelector('#page-ledger [id^="ledger-view-"]:not([style*="display:none"]):not([style*="display: none"])');
+  if (activeView) {
+    activeView.classList.remove('tab-fade-in');
+    void activeView.offsetWidth; // reflow trigger
+    activeView.classList.add('tab-fade-in');
+  }
 }
 
 // ── 가계부 내 예측 뷰 ──────────────────────────────────
@@ -1619,11 +1626,11 @@ function _renderMonthlyStats() {
     donutSvg += `<text x="${CX}" y="${CY+4}" fill="var(--text)" font-size="10" text-anchor="middle" font-family="monospace" font-weight="700">${Math.round((expense/total)*100)}%</text>`;
   }
 
-  cats.slice(0, 7).forEach(([cat, amt]) => {
+  cats.slice(0, 7).forEach(([cat, amt], ci) => {
     const col = LEDGER_CAT_COLORS[cat] || '#64748b';
     const pct = Math.round((amt / total) * 100);
     donutLegend += `
-      <div class="lstat-cat-row">
+      <div class="lstat-cat-row stagger-item" style="--stagger-idx:${ci}">
         <span class="lstat-cat-dot" style="background:${col}"></span>
         <span class="lstat-cat-name">${cat}</span>
         <div class="lstat-cat-bar"><div style="width:${pct}%;background:${col};height:100%;border-radius:4px;opacity:.85"></div></div>
@@ -2736,7 +2743,7 @@ export function renderGoals() {
       </div>
     </div>`;
 
-  const goalCards = goals.map((g) => {
+  const goalCards = goals.map((g, goalIndex) => {
     const saved = g.savedAmount || 0;
     const target = g.targetAmount || 1;
     const pct = Math.min(100, Math.round((saved / target) * 100));
@@ -2769,7 +2776,7 @@ export function renderGoals() {
       ? Math.min(100, Math.round((monthlyIncome * 0.3 / monthlyRequired) * 100)) : 0; // assume 30% savings rate
 
     return `
-      <div class="goal-card ${urgency ? 'goal-card-' + urgency : ''}" data-goal-id="${g.id}" style="cursor:default">
+      <div class="goal-card stagger-item ${urgency ? 'goal-card-' + urgency : ''}" data-goal-id="${g.id}" style="cursor:default;--stagger-idx:${goalIndex}">
         <div class="goal-card-top">
           <div class="goal-emoji">${escapeHtml(g.emoji || '🎯')}</div>
           <div class="goal-info">
@@ -3243,8 +3250,8 @@ export function renderWishlist() {
       (w.priority === 'must' ? 'var(--red2)' : w.priority === 'want' ? 'var(--accent2)' : 'var(--text3)');
 
     return `
-      <div class="wish-card ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}" data-idx="${idx}" draggable="true"
-           style="border-left:3px solid ${priBorderColor}">
+      <div class="wish-card stagger-item ${w.bought ? 'bought' : ''}" data-id="${escapeHtml(w.id)}" data-idx="${idx}" draggable="true"
+           style="border-left:3px solid ${priBorderColor};--stagger-idx:${idx}">
         <div class="wish-card-top">
           <!-- 드래그 핸들 -->
           <div class="wish-drag-handle" data-id="${escapeHtml(w.id)}" title="드래그하여 순서 변경">
