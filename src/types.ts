@@ -27,6 +27,7 @@ export interface LedgerItem {
   amount: number;
   memo?: string;
   tag?: string | null;
+  cardId?: string | null; // 결제 카드 ID (지출 시)
 }
 
 /** 가계부 데이터: { 'YYYY-MM-DD': LedgerItem[] } */
@@ -40,6 +41,7 @@ export interface LedgerTemplate {
   amount: number;
   memo?: string;
   tag?: string | null;
+  cardId?: string | null;
 }
 
 /** 카드 정의 */

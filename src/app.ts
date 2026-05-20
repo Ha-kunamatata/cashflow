@@ -154,6 +154,7 @@ import {
   getCatIcon,
   applyBudgetCarryover,
   convertWishToGoal,
+  selectLedgerCard,
 } from './ui';
 
 import { LEDGER_CAT_COLORS } from './config';
@@ -949,6 +950,10 @@ document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
 document.getElementById('ledger-tag-row')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.ledger-tag-btn');
   if (btn) selectLedgerTag(btn.dataset.tag);
+});
+document.getElementById('ledger-card-chips')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.ledger-card-chip') as HTMLElement;
+  if (btn) selectLedgerCard(btn.dataset.cardId || '');
 });
 document.getElementById('btn-ledger-item-save')?.addEventListener('click', () => {
   saveLedgerItem();

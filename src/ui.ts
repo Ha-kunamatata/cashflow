@@ -381,6 +381,7 @@ let _ledgerItemType  = 'expense';
 let _ledgerCatGroup  = Object.keys(LEDGER_CATEGORIES)[0];
 let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
 let _ledgerItemTag   = null; // 소비 유형 태그
+let _ledgerCardId: string | null = null; // 선택된 카드 ID
 let _calcAmountStr   = '';   // 계산기 입력 문자열
 
 
@@ -431,11 +432,15 @@ function _renderDaySheet() {
   }
 
   const TAG_EMOJI: Record<string, string> = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
+  const cardMap: Record<string, { name: string; color: string }> = {};
+  (state.cards || []).forEach(c => { cardMap[c.id] = { name: c.name, color: c.color || '#6366f1' }; });
+
   list.innerHTML = items.map(item => {
     const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
     const icon = CAT_ICONS[item.category] || (item.type === 'income' ? '💰' : '📦');
     const sign = item.type === 'expense' ? '-' : '+';
     const amtCls = item.type === 'expense' ? 'red' : 'green';
+    const cardInfo = item.cardId && cardMap[item.cardId];
     return `
       <div class="lday-card" data-id="${item.id}">
         <div class="lday-card-icon-wrap" style="background:${col}15;border-color:${col}35;color:${col}">
@@ -446,6 +451,7 @@ function _renderDaySheet() {
           <div class="lday-card-meta">
             <span>${escapeHtml(item.category)}</span>
             ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
+            ${cardInfo ? `<span class="lday-card-badge" style="background:${cardInfo.color}22;color:${cardInfo.color};border-color:${cardInfo.color}44">💳 ${escapeHtml(cardInfo.name)}</span>` : ''}
           </div>
         </div>
         <div class="lday-card-right">
@@ -496,6 +502,7 @@ export function openLedgerItemForm(dateStr, itemId) {
   if (memoEl) memoEl.value = existing?.memo || '';
 
   _ledgerItemTag = existing?.tag || null;
+  _ledgerCardId = existing?.cardId || null;
   _renderTagButtons();
   _renderItemFormType();
   renderLedgerTemplates();
@@ -504,6 +511,7 @@ export function openLedgerItemForm(dateStr, itemId) {
 
 export function closeLedgerItemForm() {
   _calcAmountStr = '';
+  _ledgerCardId = null;
   closeSheet('ledger-item-sheet');
 }
 
@@ -603,7 +611,36 @@ function _renderItemFormType() {
   _updateCalcDisplay();
   _renderCatGroupTabs();
   _renderCatChips();
+  _renderCardPicker();
   _setupCalcKeypad();
+}
+
+function _renderCardPicker() {
+  const row = document.getElementById('ledger-card-picker-row');
+  const chips = document.getElementById('ledger-card-chips');
+  if (!row || !chips) return;
+
+  const cards = state.cards || [];
+  // 수입이면 숨김
+  if (_ledgerItemType !== 'expense' || cards.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+
+  const cashItem = `<button class="ledger-card-chip ${!_ledgerCardId ? 'active' : ''}" data-card-id="">💵 현금</button>`;
+  const cardItems = cards.map(c => {
+    const sel = _ledgerCardId === c.id;
+    const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color || '#6366f1'};margin-right:4px;vertical-align:middle;flex-shrink:0"></span>`;
+    return `<button class="ledger-card-chip ${sel ? 'active' : ''}" data-card-id="${escapeHtml(c.id)}">${dot}${escapeHtml(c.name)}</button>`;
+  }).join('');
+
+  chips.innerHTML = cashItem + cardItems;
+}
+
+export function selectLedgerCard(cardId: string) {
+  _ledgerCardId = cardId || null;
+  _renderCardPicker();
 }
 
 const _RECENT_CATS_KEY = 'recentCats';
@@ -694,6 +731,7 @@ export function saveLedgerItem() {
     amount:   amt,
     memo,
     ..._ledgerItemTag ? { tag: _ledgerItemTag } : {},
+    ...(_ledgerItemType === 'expense' && _ledgerCardId) ? { cardId: _ledgerCardId } : {},
   };
 
   if (_ledgerItemId) {
@@ -1680,7 +1718,9 @@ export function useTemplate(tplId) {
   const memoEl = document.getElementById('ledger-item-memo');
   if (amtEl) amtEl.value = tpl.amount || '';
   if (memoEl) memoEl.value = tpl.memo || '';
+  _calcAmountStr = tpl.amount ? String(tpl.amount) : '';
   _ledgerItemTag = tpl.tag || null;
+  _ledgerCardId = tpl.cardId || null;
   _renderTagButtons();
   _renderItemFormType();
 }
@@ -1698,6 +1738,7 @@ export function saveCurrentAsTemplate() {
   state.ledgerTemplates.push({
     id: uid(), type: _ledgerItemType, category: _ledgerCategory,
     amount, memo: memoEl?.value?.trim() || '', tag: _ledgerItemTag || null,
+    cardId: _ledgerCardId || null,
   });
   save();
   renderLedgerTemplates();
