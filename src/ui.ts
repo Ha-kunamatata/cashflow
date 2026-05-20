@@ -9,7 +9,7 @@ import { state, save, syncLedgerToBalance, DEFAULT_CARDS } from './state';
 import * as renderModule from './render';
 import { getGeminiKey, setGeminiKey, hasGeminiKey, getHomeInsight, getLedgerAnalysis, chatWithAI, renderMarkdown } from './ai';
 import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS } from './assets';
-import { setMonthBudget, getMonthBudget } from './budget';
+import { setMonthBudget, getMonthBudget, getMonthActual } from './budget';
 import { computeStreak, checkBadges, BADGE_DEFS } from './streak';
 
 // ── 목표 관련 ────────────────────────────────────────────
@@ -782,6 +782,54 @@ export function addQuickLedgerItem(item: { type: string; category: string; amoun
   syncLedgerToBalance();
   save();
   showBadge(`✅ ${item.category} ${fmtShort(item.amount)} 오늘 추가됨`);
+}
+
+export function applyBudgetCarryover(year?: number, month?: number) {
+  const now = today();
+  const y = year ?? now.getFullYear();
+  const m = month ?? now.getMonth();
+  let prevM = m - 1, prevY = y;
+  if (prevM < 0) { prevM = 11; prevY--; }
+
+  const prevBudget = getMonthBudget(state.budgets, prevY, prevM);
+  const prevActual = getMonthActual(state.ledgerData, prevY, prevM);
+  const currentBudget = getMonthBudget(state.budgets, y, m);
+  if (!state.budgetCarryover) state.budgetCarryover = {};
+
+  const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+  if (state.budgetCarryover[ym]) { showBadge('이미 이월이 적용된 달입니다'); return; }
+
+  let applied = false;
+  for (const [cat, budgeted] of Object.entries(prevBudget)) {
+    const leftover = budgeted - (prevActual[cat] || 0);
+    if (leftover > 0) {
+      setMonthBudget(state.budgets, y, m, cat, (currentBudget[cat] || 0) + leftover);
+      applied = true;
+    }
+  }
+  if (!applied) { showBadge('이월할 전월 잔여 예산이 없어요'); return; }
+
+  state.budgetCarryover[ym] = true;
+  save();
+  showBadge('✅ 전월 미사용 예산이 이월됐어요');
+  renderModule.renderBudget();
+}
+
+export function convertWishToGoal(wishId: string) {
+  const wish = (state.wishlist || []).find(w => w.id === wishId);
+  if (!wish) return;
+  const goalName = wish.name;
+  const goalAmount = wish.price ? Number(wish.price) : 0;
+  openGoalForm(null);
+  setTimeout(() => {
+    const nameEl = document.getElementById('goal-name') as HTMLInputElement;
+    const amtEl = document.getElementById('goal-amount') as HTMLInputElement;
+    const emojiEl = document.getElementById('goal-emoji') as HTMLInputElement;
+    if (nameEl) nameEl.value = goalName;
+    if (amtEl) amtEl.value = String(goalAmount);
+    if (emojiEl) emojiEl.value = '🎯';
+  }, 80);
+  showBadge('🎯 위시리스트에서 목표로 전환');
 }
 
 export function importDataClick() {
