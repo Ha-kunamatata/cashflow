@@ -31,6 +31,7 @@ export interface StateShape {
   wishlist: WishItem[];
   watchlist: WatchlistItem[];
   geminiKey: string;
+  alphaVantageKey: string;
   ledgerTemplates: LedgerTemplate[];
 }
 
@@ -54,6 +55,7 @@ export const state: StateShape = {
   wishlist: [],
   watchlist: [],
   geminiKey: '',
+  alphaVantageKey: '',
   ledgerTemplates: [],
 };
 
@@ -76,6 +78,7 @@ export function resetState(): void {
   state.wishlist          = [];
   state.watchlist         = [];
   state.geminiKey         = '';
+  state.alphaVantageKey   = '';
   state.ledgerTemplates   = [];
 }
 

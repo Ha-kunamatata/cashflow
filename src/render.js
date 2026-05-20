@@ -1359,26 +1359,24 @@ export function renderLedgerForecast() {
     const t = today();
     const months = [0, 1].map(offset => {
       const d = new Date(t.getFullYear(), t.getMonth() + offset, 1);
-      const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const ymNum = Number(ym);
+      const ymNum = d.getFullYear() * 100 + (d.getMonth() + 1);
       const monthFc = fc.filter(f => f.ym === ymNum);
       const totalInc = monthFc.reduce((s, f) => s + f.income, 0);
       const totalExp = monthFc.reduce((s, f) => s + f.expense, 0);
       const net = totalInc - totalExp;
       const dangerDays = monthFc.filter(f => f.balance < (state.dangerLine || 0)).length;
-      const lowestBalance = monthFc.length ? Math.min(...monthFc.map(f => f.balance)) : state.balance;
-      return { label: `${d.getMonth() + 1}월`, totalInc, totalExp, net, dangerDays, lowestBalance };
+      const savRate = totalInc > 0 ? Math.max(0, Math.round((1 - totalExp / totalInc) * 100)) : 0;
+      return { label: `${d.getMonth() + 1}월`, totalInc, totalExp, net, dangerDays, savRate };
     });
 
-    // 전체 위험일
     const allDangerDays = fc.filter(f => f.balance < (state.dangerLine || 0));
     const firstDanger = allDangerDays[0];
     const dangerCount = allDangerDays.length;
+    const minDangerBal = dangerCount > 0 ? Math.min(...allDangerDays.map(f => f.balance)) : 0;
 
-    // 큰 지출 TOP 3 (30일 내)
-    const next30 = fc.slice(0, 30);
+    // 30일 내 큰 지출 TOP 3
     const bigEvents = [];
-    next30.forEach(f => {
+    fc.slice(0, 30).forEach(f => {
       f.events.filter(e => e.type === 'expense' && e.amt >= 50_000).forEach(e => {
         bigEvents.push({ date: `${f.date.getMonth()+1}/${f.date.getDate()}`, name: e.name, amt: e.amt });
       });
@@ -1389,100 +1387,159 @@ export function renderLedgerForecast() {
     summaryEl.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         ${months.map(m => `
-          <div style="background:var(--bg3);border-radius:14px;padding:12px;border:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">${m.label} 예상</div>
-            <div style="font-size:11px;color:var(--green2)">▲ ${fmtShort(m.totalInc)}</div>
-            <div style="font-size:11px;color:var(--red2)">▼ ${fmtShort(m.totalExp)}</div>
-            <div style="font-size:13px;font-weight:900;color:${m.net >= 0 ? 'var(--green2)' : 'var(--red2)'};margin-top:4px">${m.net >= 0 ? '+' : ''}${fmtShort(m.net)}</div>
-            ${m.dangerDays > 0 ? `<div style="font-size:10px;color:var(--orange);margin-top:4px">⚠️ 위험일 ${m.dangerDays}일</div>` : `<div style="font-size:10px;color:var(--green2);margin-top:4px">✅ 안전</div>`}
+          <div style="background:linear-gradient(135deg,rgba(59,130,246,0.10),rgba(139,92,246,0.07));border:1px solid rgba(96,165,250,0.18);border-radius:16px;padding:14px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px">${m.label} 예상</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:10px;color:var(--text3)">수입</span>
+              <span style="font-size:12px;font-weight:700;color:var(--green2);font-family:var(--mono)">+${fmtShort(m.totalInc)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:10px;color:var(--text3)">지출</span>
+              <span style="font-size:12px;font-weight:700;color:var(--red2);font-family:var(--mono)">-${fmtShort(m.totalExp)}</span>
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,0.07);margin:5px 0"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:10px;color:var(--text3)">순액</span>
+              <span style="font-size:17px;font-weight:900;font-family:var(--mono);color:${m.net >= 0 ? 'var(--green2)' : 'var(--red2)'}">${m.net >= 0 ? '+' : ''}${fmtShort(m.net)}</span>
+            </div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(99,102,241,0.12);color:#a78bfa;font-weight:700">${m.savRate}% 저축</span>
+              ${m.dangerDays > 0
+                ? `<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(249,115,22,0.13);color:var(--orange);font-weight:700">⚠️ ${m.dangerDays}일 위험</span>`
+                : `<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(16,185,129,0.10);color:var(--green2);font-weight:700">✅ 안전</span>`}
+            </div>
           </div>`).join('')}
       </div>
+
       ${firstDanger ? `
-        <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px">
-          <span style="font-weight:700;color:var(--orange)">⚠️ 위험 알림</span>
-          <span style="color:var(--text2);margin-left:8px">앞으로 ${dangerCount}일 위험 구간, 최초 ${firstDanger.date.getMonth()+1}/${firstDanger.date.getDate()}일 (잔고 ${fmtShort(firstDanger.balance)})</span>
+        <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.22);border-radius:14px;padding:13px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--red2);margin-bottom:4px">🚨 잔고 위험 구간 예측</div>
+            <div style="font-size:11px;color:var(--text2)">최초 위험일 <strong style="color:var(--orange)">${firstDanger.date.getMonth()+1}/${firstDanger.date.getDate()}일</strong></div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">최저 예상 잔고: <span style="font-family:var(--mono);color:var(--red2)">${fmtShort(minDangerBal)}</span></div>
+          </div>
+          <div style="text-align:center;flex-shrink:0;padding:8px 14px;background:rgba(239,68,68,0.10);border-radius:12px">
+            <div style="font-size:30px;font-weight:900;font-family:var(--mono);color:var(--red2);line-height:1">${dangerCount}</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">위험일</div>
+          </div>
         </div>` : `
-        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px">
-          <span style="font-weight:700;color:var(--green2)">✅ 365일 안전</span>
-          <span style="color:var(--text2);margin-left:8px">앞 1년 위험일 없음</span>
+        <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.16);border-radius:14px;padding:13px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;border-radius:50%;background:rgba(16,185,129,0.14);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✅</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--green2)">365일 전 구간 안전</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">앞으로 1년간 잔고 위험 구간 없음</div>
+          </div>
         </div>`}
+
       ${top3.length ? `
-        <div style="margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">📌 30일 내 큰 지출</div>
-          ${top3.map(e => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
-            <span style="color:var(--text2)">${e.date} ${escapeHtml(e.name)}</span>
-            <span style="color:var(--red2);font-weight:700;font-family:var(--mono)">-${fmtShort(e.amt)}</span>
-          </div>`).join('')}
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;margin-bottom:10px">📌 30일 내 예정 지출 TOP</div>
+          ${top3.map((e, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < top3.length-1 ? 'border-bottom:1px solid rgba(255,255,255,0.04)' : ''}">
+              <div style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.10);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--red2);flex-shrink:0">${i+1}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(e.name)}</div>
+                <div style="font-size:10px;color:var(--text3)">${e.date}</div>
+              </div>
+              <div style="font-size:14px;font-weight:900;color:var(--red2);font-family:var(--mono);flex-shrink:0">-${fmtShort(e.amt)}</div>
+            </div>`).join('')}
         </div>` : ''}
     `;
   }
 
-  // 차트
+  // ── 차트 (Catmull-Rom 베지어 곡선) ─────────────────────
   const chartEl = document.getElementById('ledger-forecast-chart');
   if (chartEl) {
     const slice = fc.slice(0, _lfPeriod);
     const vals = slice.map(f => f.balance);
-    const min = Math.min(...vals, 0);
-    const max = Math.max(...vals, state.dangerLine);
-    const range = max - min || 1;
-    const W = 560, H = 100, PAD = 8;
-    const bw = W / slice.length;
-    const py = v => PAD + (H - PAD * 2) - ((v - min) / range) * (H - PAD * 2);
-    const pts = slice.map((f, i) => `${(i * bw + bw / 2).toFixed(1)},${py(f.balance).toFixed(1)}`).join(' ');
+    const minVal = Math.min(...vals, 0);
+    const maxVal = Math.max(...vals, state.dangerLine || 0);
+    const range = maxVal - minVal || 1;
+    const W = 560, H = 160, PL = 54, PR = 10, PT = 14, PB = 6;
+    const cW = W - PL - PR, cH = H - PT - PB;
+    const px = i => PL + (i / Math.max(slice.length - 1, 1)) * cW;
+    const py = v => PT + cH - ((v - minVal) / range) * cH;
+
+    // Y축 눈금
+    const yMid = (minVal + maxVal) / 2;
+    const yGrid = [maxVal, yMid, minVal].map(v => `
+      <line x1="${PL}" y1="${py(v).toFixed(1)}" x2="${W-PR}" y2="${py(v).toFixed(1)}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+      <text x="${PL-5}" y="${(py(v)+4).toFixed(1)}" fill="rgba(148,163,184,0.5)" font-size="8" text-anchor="end" font-family="monospace">${fmtShort(v)}</text>`).join('');
+
+    // Catmull-Rom → 베지어
+    const pts = slice.map((f, i) => [px(i), py(f.balance)]);
+    let pathD = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[Math.max(0, i-2)], p1 = pts[i-1], p2 = pts[i], p3 = pts[Math.min(pts.length-1, i+1)];
+      const cp1x = p1[0] + (p2[0]-p0[0])/6, cp1y = p1[1] + (p2[1]-p0[1])/6;
+      const cp2x = p2[0] - (p3[0]-p1[0])/6, cp2y = p2[1] - (p3[1]-p1[1])/6;
+      pathD += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    const areaD = pathD + ` L${pts[pts.length-1][0].toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z`;
+
+    // 이벤트 점
     let dots = '';
     slice.forEach((f, i) => {
       if (!f.income && !f.expense) return;
-      const fill = f.balance < state.dangerLine ? '#ef4444' : f.income > 0 ? '#10b981' : '#f87171';
-      dots += `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${py(f.balance).toFixed(1)}" r="2.5" fill="${fill}" opacity="0.85"/>`;
+      const fill = f.balance < (state.dangerLine||0) ? '#ef4444' : f.income > 0 ? '#10b981' : '#f87171';
+      dots += `<circle cx="${px(i).toFixed(1)}" cy="${py(f.balance).toFixed(1)}" r="2.8" fill="${fill}" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>`;
     });
-    const dangerY = py(state.dangerLine);
+
+    // 위험선
+    const dangerY = py(state.dangerLine || 0);
+    const dangerZone = (state.dangerLine || 0) > minVal ? `
+      <rect x="${PL}" y="${dangerY.toFixed(1)}" width="${cW}" height="${Math.max(0, py(minVal)-dangerY).toFixed(1)}" fill="rgba(239,68,68,0.05)"/>
+      <line x1="${PL}" y1="${dangerY.toFixed(1)}" x2="${W-PR}" y2="${dangerY.toFixed(1)}" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.65"/>` : '';
+
+    chartEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
     chartEl.innerHTML = `
-      <defs><linearGradient id="lfg" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.32"/>
-        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>
-      </linearGradient></defs>
-      ${state.dangerLine > min ? `<rect x="0" y="${dangerY.toFixed(1)}" width="${W}" height="${(py(0) - dangerY).toFixed(1)}" fill="rgba(249,115,22,0.06)"/>` : ''}
-      ${state.dangerLine > 0 ? `<line x1="0" y1="${dangerY.toFixed(1)}" x2="${W}" y2="${dangerY.toFixed(1)}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 3"/>` : ''}
-      <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#lfg)"/>
-      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
-      ${dots}`;
+      <defs>
+        <linearGradient id="fcFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.26"/>
+          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.01"/>
+        </linearGradient>
+        <linearGradient id="fcLine" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/>
+        </linearGradient>
+        <clipPath id="fcClip"><rect x="${PL}" y="${PT}" width="${cW}" height="${cH+1}"/></clipPath>
+      </defs>
+      ${yGrid}
+      ${dangerZone}
+      <g clip-path="url(#fcClip)">
+        <path d="${areaD}" fill="url(#fcFill)"/>
+        <path d="${pathD}" fill="none" stroke="url(#fcLine)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+      </g>`;
   }
 
-  // 테이블: 이번달 + 다음달만 (navMonth로 이동 가능)
+  // ── 테이블 ──────────────────────────────────────────────
   const t = today();
-  const baseYear = t.getFullYear();
-  const baseMonth = t.getMonth() + _lfNavMonth;
-  const targetDate = new Date(baseYear, baseMonth, 1);
-  const ym = targetDate.getFullYear() * 100 + (targetDate.getMonth() + 1);
-
+  const targetDate = new Date(t.getFullYear(), t.getMonth() + _lfNavMonth, 1);
   const navBtn = document.getElementById('btn-lf-month-nav');
   if (navBtn) navBtn.textContent = `${targetDate.getFullYear()}년 ${targetDate.getMonth() + 1}월`;
 
-  // 현재달 + 다음달 날짜 범위
   const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-  const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 2, 0);
-
-  const filtered = fc.filter(f => f.date >= startDate && f.date <= endDate);
+  const endDate   = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+  const filtered  = fc.filter(f => f.date >= startDate && f.date <= endDate && (f.income > 0 || f.expense > 0));
   const tbody = document.getElementById('ledger-forecast-tbody');
   if (!tbody) return;
 
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px">해당 기간에 이벤트 없음</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px">해당 월에 예정 이벤트 없음</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(f => {
-    const isDanger = f.balance < state.dangerLine;
+    const isDanger = f.balance < (state.dangerLine || 0);
     const dow = f.date.getDay();
-    const dayColor = dow === 0 ? '#ef4444' : dow === 6 ? '#60a5fa' : '';
     const names = f.events.slice(0, 2).map(e => escapeHtml(e.name)).join(', ');
-    return `<tr class="${isDanger ? 'danger-row' : ''}" style="${isDanger ? 'background:rgba(239,68,68,0.06)' : ''}">
-      <td style="font-family:var(--mono);font-size:11px">${f.date.getMonth()+1}/${p2(f.date.getDate())}</td>
-      <td style="font-size:11px;${dayColor ? `color:${dayColor}` : ''}">${DAYS_KR[dow]}</td>
-      <td style="color:var(--green2);font-family:var(--mono);font-size:11px">${f.income > 0 ? '+'+fmtShort(f.income) : ''}</td>
-      <td style="color:var(--red2);font-family:var(--mono);font-size:11px">${f.expense > 0 ? '-'+fmtShort(f.expense) : ''}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:${isDanger ? 'var(--orange)' : 'var(--text)'}">${fmtShort(f.balance)}</td>
-      <td style="font-size:10px;color:var(--text3);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${names}${isDanger ? ' ⚠️' : ''}</td>
+    return `<tr style="${isDanger ? 'background:rgba(239,68,68,0.06)' : ''}">
+      <td class="col-date">${f.date.getMonth()+1}/${p2(f.date.getDate())}</td>
+      <td class="col-day${dow===0?' sun':dow===6?' sat':''}">${DAYS_KR[dow]}</td>
+      <td class="col-in">${f.income > 0 ? '+'+fmtShort(f.income) : ''}</td>
+      <td class="col-out">${f.expense > 0 ? '-'+fmtShort(f.expense) : ''}</td>
+      <td class="col-bal${isDanger?' danger':''}">${fmtShort(f.balance)}</td>
+      <td style="font-size:10px;color:var(--text3);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${names}${isDanger?' ⚠️':''}</td>
     </tr>`;
   }).join('');
 }
@@ -1587,7 +1644,21 @@ function _renderMonthlyStats() {
   const m = currentLedgerMonth;
   const { expense, income, net, catTotals, dayMap } = getLedgerMonth(y, m);
 
-  // 태그별 집계
+  const now = today();
+  const isCurrentMonth = (y === now.getFullYear() && m === now.getMonth());
+  const totalDays = new Date(y, m + 1, 0).getDate();
+  const elapsedDays = isCurrentMonth ? now.getDate() : totalDays;
+  const remainingDays = totalDays - elapsedDays;
+  const dailyAvg = elapsedDays > 0 ? Math.round(expense / elapsedDays) : 0;
+  const projected = dailyAvg * totalDays;
+  const savRate = income > 0 ? Math.max(0, Math.round(((income - expense) / income) * 100)) : 0;
+
+  let prevM = m - 1, prevY = y;
+  if (prevM < 0) { prevM = 11; prevY--; }
+  const { expense: prevExp, income: prevInc } = getLedgerMonth(prevY, prevM);
+  const expPct = prevExp > 0 ? Math.round(((expense - prevExp) / prevExp) * 100) : null;
+  const incPct = prevInc > 0 ? Math.round(((income - prevInc) / prevInc) * 100) : null;
+
   const TAG_EMOJI = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
   const tagTotals = {}, tagCounts = {};
   const pfx = `${y}-${p2(m + 1)}`;
@@ -1605,12 +1676,12 @@ function _renderMonthlyStats() {
   const el = document.getElementById('ledger-stats-content');
   if (!el) return;
 
-  // 카테고리 도넛 + 랭킹
+  // 카테고리 도넛 (140px, 저축률 표시)
   const cats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   const total = expense || 1;
+  const R = 56, CX = 70, CY = 70;
   let donutSvg = '', donutLegend = '';
   if (cats.length > 0) {
-    const R = 44, CX = 52, CY = 52;
     let angle = -Math.PI / 2;
     cats.forEach(([cat, amt]) => {
       const pct = amt / total;
@@ -1622,8 +1693,9 @@ function _renderMonthlyStats() {
       donutSvg += `<path d="M${CX},${CY} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" opacity="0.88"/>`;
       angle += a;
     });
-    donutSvg += `<circle cx="${CX}" cy="${CY}" r="26" fill="var(--bg2)"/>`;
-    donutSvg += `<text x="${CX}" y="${CY+4}" fill="var(--text)" font-size="10" text-anchor="middle" font-family="monospace" font-weight="700">${Math.round((expense/total)*100)}%</text>`;
+    donutSvg += `<circle cx="${CX}" cy="${CY}" r="34" fill="var(--bg2)"/>`;
+    donutSvg += `<text x="${CX}" y="${CY - 4}" fill="var(--text)" font-size="13" text-anchor="middle" font-family="monospace" font-weight="900">${savRate}%</text>`;
+    donutSvg += `<text x="${CX}" y="${CY + 12}" fill="var(--text3)" font-size="9" text-anchor="middle">저축률</text>`;
   }
 
   cats.slice(0, 7).forEach(([cat, amt], ci) => {
@@ -1638,64 +1710,101 @@ function _renderMonthlyStats() {
       </div>`;
   });
 
-  // 일별 바 차트
-  const sortedDays = Object.entries(dayMap).sort((a, b) => a[0] - b[0]);
-  const maxDayAmt  = Math.max(...sortedDays.map(([, v]) => v), 1);
-  let dayBars = sortedDays.map(([day, amt]) => `
-    <div class="bar-row">
-      <span class="bar-label">${day}일</span>
-      <div class="bar-track"><div class="bar-fill expense" style="width:${((amt/maxDayAmt)*100).toFixed(1)}%"></div></div>
-      <span class="bar-value" style="color:var(--red2)">${fmtShort(amt)}</span>
+  // 주별 지출 패턴
+  const weeks = [0, 0, 0, 0];
+  for (const [day, amt] of Object.entries(dayMap)) {
+    const wk = Math.min(3, Math.floor((parseInt(day, 10) - 1) / 7));
+    weeks[wk] += amt;
+  }
+  const maxWeek = Math.max(...weeks, 1);
+  const weekLabels = ['1주', '2주', '3주', '4주'];
+  const weekBars = weeks.map((amt, i) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <div style="font-size:9px;color:${amt === Math.max(...weeks) && amt > 0 ? 'var(--red2)' : 'var(--text3)'};font-weight:700">${amt > 0 ? fmtShort(amt) : '-'}</div>
+      <div style="width:100%;background:var(--bg3);border-radius:6px;height:60px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${((amt / maxWeek) * 100).toFixed(0)}%;background:${amt === Math.max(...weeks) && amt > 0 ? 'rgba(248,113,113,0.7)' : 'rgba(96,165,250,0.5)'};border-radius:6px;transition:height 0.4s ease"></div>
+      </div>
+      <div style="font-size:9px;color:var(--text3)">${weekLabels[i]}</div>
     </div>`).join('');
 
-  // 전월 비교
-  let prevM = m - 1, prevY = y;
-  if (prevM < 0) { prevM = 11; prevY--; }
-  const { expense: prevExp, income: prevInc } = getLedgerMonth(prevY, prevM);
-  const expDiff  = expense - prevExp;
-  const incDiff  = income  - prevInc;
+  // 전월 비교 헬퍼
+  const momRow = (label, cur, prev, pct, isExpense) => {
+    const arrow = pct === null ? '' : (pct > 0 ? '▲' : '▼');
+    const arrowColor = isExpense
+      ? (pct > 0 ? 'var(--red2)' : 'var(--green2)')
+      : (pct > 0 ? 'var(--green2)' : 'var(--red2)');
+    const pctStr = pct !== null
+      ? `<span style="font-size:11px;color:${arrowColor};font-weight:700">${arrow} ${Math.abs(pct)}%</span>` : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+      <span style="font-size:12px;color:var(--text2)">${label}</span>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${isExpense ? 'var(--red2)' : 'var(--green2)'}">${fmtShort(cur)}</div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
+          <span style="font-size:10px;color:var(--text3)">전월 ${fmtShort(prev)}</span>
+          ${pctStr}
+        </div>
+      </div>
+    </div>`;
+  };
 
   el.innerHTML = `
+    ${isCurrentMonth && elapsedDays > 0 ? `
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border:1px solid rgba(129,140,248,0.2);border-radius:16px;padding:14px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:#a78bfa;letter-spacing:0.5px;margin-bottom:8px">⚡ 이번 달 소비 속도</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">경과</div>
+          <div style="font-size:16px;font-weight:900;color:var(--text);font-family:var(--mono)">${elapsedDays}<span style="font-size:10px;color:var(--text3)">일</span></div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">일 평균</div>
+          <div style="font-size:16px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(dailyAvg)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">월말 예상</div>
+          <div style="font-size:16px;font-weight:900;color:${prevExp > 0 && projected > prevExp ? 'var(--orange)' : 'var(--text)'};font-family:var(--mono)">${fmtShort(projected)}</div>
+        </div>
+      </div>
+      ${remainingDays > 0 ? `<div style="margin-top:8px;font-size:10px;color:var(--text3)">남은 ${remainingDays}일 · 일 ${fmtShort(dailyAvg)} 페이스</div>` : ''}
+    </div>` : ''}
+
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">${y}년 ${m + 1}월 요약</div>
-      <div class="lstat-summary-row">
-        <div class="lstat-summary-item"><div class="lstat-summary-label">지출</div><div class="lstat-summary-val red">${fmtShort(expense)}</div></div>
-        <div class="lstat-summary-item"><div class="lstat-summary-label">수입</div><div class="lstat-summary-val green">${fmtShort(income)}</div></div>
-        <div class="lstat-summary-item"><div class="lstat-summary-label">순액</div><div class="lstat-summary-val" style="color:${net>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(net)}</div></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title">카테고리별 지출</div>
-      ${expense === 0 ? '<div class="empty-state" style="padding:20px 0">지출 없음</div>' : `
+      ${expense === 0 && income === 0 ? '<div class="empty-state" style="padding:20px 0">기록 없음</div>' : `
         <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">
-          <svg width="104" height="104" viewBox="0 0 104 104" style="flex-shrink:0">${donutSvg}</svg>
-          <div style="flex:1;min-width:160px">${donutLegend}</div>
-        </div>`}
+          <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0">${donutSvg}</svg>
+          <div style="flex:1;min-width:140px">
+            <div style="margin-bottom:10px">
+              <div style="font-size:9px;color:var(--text3);margin-bottom:2px">이번 달 지출</div>
+              <div style="font-size:22px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(expense)}</div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:9px;color:var(--text3);margin-bottom:2px">이번 달 수입</div>
+              <div style="font-size:18px;font-weight:800;color:var(--green2);font-family:var(--mono)">${fmtShort(income)}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:10px;padding:3px 9px;border-radius:8px;font-weight:700;background:${savRate >= 20 ? 'rgba(52,211,153,0.15)' : savRate >= 10 ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)'};color:${savRate >= 20 ? 'var(--green2)' : savRate >= 10 ? 'var(--orange)' : 'var(--red2)'}">저축률 ${savRate}%</span>
+              <span style="font-size:10px;padding:3px 9px;border-radius:8px;font-weight:700;background:rgba(99,102,241,0.12);color:#a78bfa">순 ${fmtSigned(net)}</span>
+            </div>
+          </div>
+        </div>
+        ${donutLegend}`}
     </div>
 
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">일별 지출</div>
-      ${sortedDays.length === 0 ? '<div class="empty-state" style="padding:20px 0">기록 없음</div>' : `<div class="monthly-chart-bar">${dayBars}</div>`}
+      <div class="card-title">📅 주별 지출 패턴</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;padding:4px 0">${weekBars}</div>
     </div>
 
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">전월 대비</div>
-      <div class="report-mom-item">
-        <span>지출</span>
-        <span style="color:${expDiff>0?'var(--red2)':'var(--green2)'}">${expDiff>=0?'+':''}${fmtSigned(expDiff)}</span>
-        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevExp)})</span>
-      </div>
-      <div class="report-mom-item" style="margin-top:8px">
-        <span>수입</span>
-        <span style="color:${incDiff>=0?'var(--green2)':'var(--red2)'}">${incDiff>=0?'+':''}${fmtSigned(incDiff)}</span>
-        <span style="font-size:11px;color:var(--text3)">(전월 ${fmtShort(prevInc)})</span>
-      </div>
+      <div class="card-title">📊 전월 대비</div>
+      ${momRow('지출', expense, prevExp, expPct, true)}
+      ${momRow('수입', income, prevInc, incPct, false)}
     </div>
 
     ${tagEntries.length > 0 ? `
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">🏷️ 소비 유형별 지출</div>
+      <div class="card-title">🏷️ 소비 유형별</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${tagEntries.map(([tag, amt]) => {
           const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0;
@@ -1714,54 +1823,113 @@ function _renderMonthlyStats() {
 function _renderAnnualStats() {
   const y = currentLedgerYear;
   const { expense: yearExp, income: yearInc, net: yearNet, monthMap } = getLedgerYear(y);
+  const { expense: prevYearExp, income: prevYearInc } = getLedgerYear(y - 1);
+
+  const yearSavRate = yearInc > 0 ? Math.max(0, Math.round(((yearInc - yearExp) / yearInc) * 100)) : 0;
+  const expYoY = prevYearExp > 0 ? Math.round(((yearExp - prevYearExp) / prevYearExp) * 100) : null;
+  const incYoY = prevYearInc > 0 ? Math.round(((yearInc - prevYearInc) / prevYearInc) * 100) : null;
 
   const el = document.getElementById('ledger-stats-content');
   if (!el) return;
 
-  // 월별 바 차트 (수입+지출)
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = monthMap[i + 1] || { expense: 0, income: 0 };
-    return { label: `${i + 1}월`, expense: d.expense, income: d.income };
+    const savRate = d.income > 0 ? Math.max(0, Math.round(((d.income - d.expense) / d.income) * 100)) : 0;
+    return { label: `${i + 1}월`, expense: d.expense, income: d.income, savRate };
   });
   const maxVal = Math.max(...months.flatMap(d => [d.expense, d.income]), 1);
-  const monthBars = months.map(d => `
-    <div>
-      <div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-weight:600">${d.label}</div>
-      <div class="bar-row">
-        <span class="bar-label" style="color:var(--green2)">수</span>
-        <div class="bar-track"><div class="bar-fill income" style="width:${((d.income/maxVal)*100).toFixed(1)}%"></div></div>
-        <span class="bar-value" style="color:var(--green2)">${fmtShort(d.income)}</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label" style="color:var(--red2)">지</span>
-        <div class="bar-track"><div class="bar-fill expense" style="width:${((d.expense/maxVal)*100).toFixed(1)}%"></div></div>
-        <span class="bar-value" style="color:var(--red2)">${fmtShort(d.expense)}</span>
-      </div>
-    </div>`).join('');
 
-  // 최대/최소 지출월
+  // SVG dual-bar chart with savings rate polyline
+  const W = 560, H = 140, PL = 8, PR = 8, PT = 10, PB = 24;
+  const chartW = W - PL - PR, chartH = H - PT - PB;
+  const barW = Math.floor(chartW / 12);
+  const halfW = Math.floor(barW * 0.35);
+
+  let svgBars = '', xLabels = '', savRateLine = '';
+  const savRatePts = [];
+  months.forEach((mo, i) => {
+    const x = PL + i * barW + barW / 2;
+    const incH = Math.round((mo.income / maxVal) * chartH);
+    const expH = Math.round((mo.expense / maxVal) * chartH);
+    const incY = PT + chartH - incH;
+    const expY = PT + chartH - expH;
+    if (mo.income > 0 || mo.expense > 0) {
+      svgBars += `<rect x="${(x - halfW * 2 - 1).toFixed(0)}" y="${incY}" width="${halfW}" height="${incH}" rx="2" fill="rgba(52,211,153,0.7)"/>`;
+      svgBars += `<rect x="${(x - 1).toFixed(0)}" y="${expY}" width="${halfW}" height="${expH}" rx="2" fill="rgba(248,113,113,0.7)"/>`;
+      if (mo.income > 0) savRatePts.push([x, PT + chartH - Math.round((mo.savRate / 100) * chartH)]);
+    }
+    xLabels += `<text x="${x}" y="${H - 4}" fill="var(--text3)" font-size="8" text-anchor="middle">${mo.label}</text>`;
+  });
+  if (savRatePts.length >= 2) {
+    const pts = savRatePts.map(([x, y2]) => `${x.toFixed(0)},${y2.toFixed(0)}`).join(' ');
+    savRateLine = `<polyline points="${pts}" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.7"/>`;
+    savRatePts.forEach(([x, y2]) => {
+      savRateLine += `<circle cx="${x.toFixed(0)}" cy="${y2.toFixed(0)}" r="2.5" fill="#a78bfa" opacity="0.8"/>`;
+    });
+  }
+
   const expMonths = months.filter(d => d.expense > 0).sort((a, b) => b.expense - a.expense);
   const bestLabel  = expMonths.length > 0 ? expMonths[expMonths.length - 1].label : '-';
   const worstLabel = expMonths.length > 0 ? expMonths[0].label : '-';
 
+  const yoyRow = (label, val, pct, isExpense) => {
+    const base = `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+      <span style="font-size:12px;color:var(--text2)">${label}</span>
+      <div style="text-align:right">
+        <span style="font-size:13px;font-weight:700;font-family:var(--mono)">${fmtShort(val)}</span>`;
+    if (pct === null) return base + `</div></div>`;
+    const arrow = pct > 0 ? '▲' : '▼';
+    const color = isExpense ? (pct > 0 ? 'var(--red2)' : 'var(--green2)') : (pct > 0 ? 'var(--green2)' : 'var(--red2)');
+    return base + `<span style="margin-left:8px;font-size:11px;font-weight:700;color:${color}">${arrow} ${Math.abs(pct)}%</span></div></div>`;
+  };
+
   el.innerHTML = `
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">${y}년 연간 요약</div>
-      <div class="lstat-summary-row">
-        <div class="lstat-summary-item"><div class="lstat-summary-label">연간 지출</div><div class="lstat-summary-val red">${fmtShort(yearExp)}</div></div>
-        <div class="lstat-summary-item"><div class="lstat-summary-label">연간 수입</div><div class="lstat-summary-val green">${fmtShort(yearInc)}</div></div>
-        <div class="lstat-summary-item"><div class="lstat-summary-label">순액</div><div class="lstat-summary-val" style="color:${yearNet>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(yearNet)}</div></div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">${y}년 연간 요약</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:rgba(52,211,153,0.08);border-radius:10px;padding:10px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">연간 수입</div>
+          <div style="font-size:18px;font-weight:900;color:var(--green2);font-family:var(--mono)">${fmtShort(yearInc)}</div>
+        </div>
+        <div style="background:rgba(248,113,113,0.08);border-radius:10px;padding:10px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">연간 지출</div>
+          <div style="font-size:18px;font-weight:900;color:var(--red2);font-family:var(--mono)">${fmtShort(yearExp)}</div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <span class="info-chip success">📉 지출 최소: ${bestLabel}</span>
-        <span class="info-chip warning">📈 지출 최대: ${worstLabel}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;padding:3px 10px;border-radius:8px;font-weight:700;background:${yearSavRate >= 20 ? 'rgba(52,211,153,0.15)' : 'rgba(251,191,36,0.15)'};color:${yearSavRate >= 20 ? 'var(--green2)' : 'var(--orange)'}">연 저축률 ${yearSavRate}%</span>
+        <span class="info-chip success">📉 최소: ${bestLabel}</span>
+        <span class="info-chip warning">📈 최대: ${worstLabel}</span>
       </div>
     </div>
 
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">월별 수입 / 지출</div>
-      <div class="monthly-chart-bar">${monthBars}</div>
+      <div class="card-title">월별 수입 / 지출 <span style="float:right;font-size:9px;color:#a78bfa">-- 저축률 추이</span></div>
+      <div style="overflow-x:auto">
+        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="min-width:${W}px;display:block">
+          <line x1="${PL}" y1="${PT + chartH}" x2="${W - PR}" y2="${PT + chartH}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+          ${svgBars}
+          ${savRateLine}
+          ${xLabels}
+        </svg>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:9px;color:var(--text3)">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:rgba(52,211,153,0.7);border-radius:2px;display:inline-block"></span>수입</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:rgba(248,113,113,0.7);border-radius:2px;display:inline-block"></span>지출</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#a78bfa;display:inline-block"></span>저축률</span>
+      </div>
     </div>
+
+    ${expYoY !== null || incYoY !== null ? `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">📅 전년 대비 (${y - 1}→${y}년)</div>
+      ${yoyRow('연간 수입', yearInc, incYoY, false)}
+      ${yoyRow('연간 지출', yearExp, expYoY, true)}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0">
+        <span style="font-size:12px;color:var(--text2)">연간 순액</span>
+        <span style="font-size:14px;font-weight:900;font-family:var(--mono);color:${yearNet >= 0 ? 'var(--green2)' : 'var(--red2)'}">${fmtSigned(yearNet)}</span>
+      </div>
+    </div>` : ''}
 
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">📅 ${y}년 지출 히트맵</div>
@@ -3058,7 +3226,6 @@ export function renderBudget() {
   const container = document.getElementById('budget-page-content');
   if (!container) return;
 
-  // Get year/month from ui.js budget state
   let budgetYear, budgetMonth;
   try {
     const uiModule = window._budgetUiRef;
@@ -3069,52 +3236,81 @@ export function renderBudget() {
     budgetMonth = new Date().getMonth();
   }
 
-  // Update header label
   const labelEl = document.getElementById('budget-month-label');
   if (labelEl) labelEl.textContent = `${budgetYear}년 ${budgetMonth + 1}월`;
 
   const budget = getMonthBudget(state.budgets, budgetYear, budgetMonth);
   const actual = getMonthActual(state.ledgerData, budgetYear, budgetMonth);
 
-  // All categories with budget or spending
+  // 전월 실적 (트렌드 비교용)
+  let prevM = budgetMonth - 1, prevY = budgetYear;
+  if (prevM < 0) { prevM = 11; prevY--; }
+  const prevActual = getMonthActual(state.ledgerData, prevY, prevM);
+
   const allCats = new Set([...Object.keys(budget), ...Object.keys(actual)]);
   const totalBudget = Object.values(budget).reduce((s, v) => s + v, 0);
   const totalActual = Object.values(actual).reduce((s, v) => s + v, 0);
   const totalPct = totalBudget > 0 ? Math.min(100, Math.round((totalActual / totalBudget) * 100)) : 0;
 
-  // Circular gauge SVG
-  const gaugeR = 42, gaugeCX = 52, gaugeCY = 52;
+  // 날짜 기반 계산
+  const now = today();
+  const isCurrentMonth = (budgetYear === now.getFullYear() && budgetMonth === now.getMonth());
+  const totalDays = new Date(budgetYear, budgetMonth + 1, 0).getDate();
+  const elapsedDays = isCurrentMonth ? now.getDate() : totalDays;
+  const remainingDays = totalDays - elapsedDays;
+  const dailyAllowance = totalBudget > 0 && remainingDays > 0
+    ? Math.max(0, Math.round((totalBudget - totalActual) / remainingDays)) : 0;
+  const projected = elapsedDays > 0 ? Math.round(totalActual / elapsedDays * totalDays) : 0;
+
+  // 원형 게이지 (116px)
+  const gaugeR = 48, gaugeCX = 58, gaugeCY = 58;
   const circumference = 2 * Math.PI * gaugeR;
   const dashOffset = circumference * (1 - totalPct / 100);
   const gaugeColor = totalPct >= 100 ? '#ef4444' : totalPct >= 80 ? '#f97316' : '#10b981';
   const gaugeSvg = `
-    <svg width="104" height="104" viewBox="0 0 104 104">
+    <svg width="116" height="116" viewBox="0 0 116 116" style="flex-shrink:0">
       <circle cx="${gaugeCX}" cy="${gaugeCY}" r="${gaugeR}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10"/>
       <circle cx="${gaugeCX}" cy="${gaugeCY}" r="${gaugeR}" fill="none" stroke="${gaugeColor}" stroke-width="10"
         stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${dashOffset.toFixed(1)}"
         stroke-linecap="round" transform="rotate(-90 ${gaugeCX} ${gaugeCY})" style="transition:stroke-dashoffset 1s ease"/>
-      <text x="${gaugeCX}" y="${gaugeCY - 6}" fill="var(--text)" font-size="16" text-anchor="middle" font-family="monospace" font-weight="900">${totalPct}%</text>
-      <text x="${gaugeCX}" y="${gaugeCY + 10}" fill="var(--text3)" font-size="8" text-anchor="middle">사용</text>
+      <text x="${gaugeCX}" y="${gaugeCY - 7}" fill="var(--text)" font-size="18" text-anchor="middle" font-family="monospace" font-weight="900">${totalPct}%</text>
+      <text x="${gaugeCX}" y="${gaugeCY + 9}" fill="var(--text3)" font-size="8" text-anchor="middle">사용</text>
     </svg>`;
 
+  // 카테고리 행 (전월 트렌드 + 초과 하이라이트)
   const catRows = [...allCats].map(cat => {
     const b = budget[cat] || 0;
     const a = actual[cat] || 0;
+    const p = prevActual[cat] || 0;
     const pct = b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
     const over = a > b && b > 0;
     const fillColor = over ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
     const col = LEDGER_CAT_COLORS[cat] || '#64748b';
+
+    let trendHtml = '';
+    if (p > 0 && a > 0) {
+      const trendPct = Math.round(((a - p) / p) * 100);
+      const trendUp = trendPct > 0;
+      trendHtml = `<span style="font-size:9px;color:${trendUp ? 'var(--red2)' : 'var(--green2)'};font-weight:700;margin-left:4px">${trendUp ? '▲' : '▼'}${Math.abs(trendPct)}%</span>`;
+    }
+
     return `
-      <div class="budget-cat-row" id="budget-row-${escapeHtml(cat)}" data-cat="${escapeHtml(cat)}">
+      <div class="budget-cat-row" id="budget-row-${escapeHtml(cat)}" data-cat="${escapeHtml(cat)}"
+        style="${over ? 'background:rgba(239,68,68,0.06);border-radius:10px;margin:2px -4px;padding:6px 4px;' : ''}">
         <span class="lstat-cat-dot" style="background:${col}"></span>
         <span style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${escapeHtml(cat)}</span>
-        <div class="budget-progress">
-          <div class="budget-progress-fill" style="width:${pct}%;background:${fillColor}"></div>
+        <div style="flex:1.5;min-width:80px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:10px;font-family:var(--mono);color:${over ? 'var(--red2)' : 'var(--text2)'}">
+              ${fmtShort(a)}${b > 0 ? `<span style="color:var(--text3)">/${fmtShort(b)}</span>` : ''}
+            </span>
+            ${trendHtml}
+          </div>
+          <div class="budget-progress">
+            <div class="budget-progress-fill" style="width:${pct}%;background:${fillColor}"></div>
+          </div>
         </div>
-        <span style="font-size:11px;font-family:var(--mono);min-width:70px;text-align:right;${over ? 'color:var(--red2)' : ''}">
-          ${fmtShort(a)}${b > 0 ? `<span style="color:var(--text3)">/${fmtShort(b)}</span>` : ''}
-        </span>
-        <button class="icon-btn edit budget-cat-edit-btn" data-cat="${escapeHtml(cat)}" style="margin-left:4px">
+        <button class="icon-btn edit budget-cat-edit-btn" data-cat="${escapeHtml(cat)}" style="margin-left:6px">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
         </button>
       </div>`;
@@ -3126,11 +3322,26 @@ export function renderBudget() {
         ${gaugeSvg}
         <div style="flex:1">
           <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:4px">${budgetYear}년 ${budgetMonth + 1}월 예산</div>
-          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--text)">${fmtShort(totalActual)}</div>
+          <div style="font-family:var(--mono);font-size:24px;font-weight:900;color:var(--text)">${fmtShort(totalActual)}</div>
           <div style="font-size:12px;color:var(--text3);margin-top:2px">예산 ${fmtShort(totalBudget)} 중</div>
           ${totalActual > totalBudget && totalBudget > 0 ? `<div class="budget-over" style="margin-top:4px;font-size:11px">⚠️ 예산 초과 ${fmtShort(totalActual - totalBudget)}</div>` : ''}
         </div>
       </div>
+      ${totalBudget > 0 && isCurrentMonth ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+        ${remainingDays > 0 ? `
+        <div style="background:rgba(99,102,241,0.1);border-radius:10px;padding:10px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">오늘부터 일 한도</div>
+          <div style="font-size:17px;font-weight:900;color:#a78bfa;font-family:var(--mono)">${fmtShort(dailyAllowance)}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:1px">남은 ${remainingDays}일</div>
+        </div>` : ''}
+        ${elapsedDays > 0 ? `
+        <div style="background:${projected > totalBudget ? 'rgba(239,68,68,0.08)' : 'rgba(52,211,153,0.08)'};border-radius:10px;padding:10px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">월말 예상 지출</div>
+          <div style="font-size:17px;font-weight:900;color:${projected > totalBudget ? 'var(--red2)' : 'var(--green2)'};font-family:var(--mono)">${fmtShort(projected)}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:1px">${projected > totalBudget ? `초과 ${fmtShort(projected - totalBudget)} 예상` : '예산 내 유지 중'}</div>
+        </div>` : ''}
+      </div>` : ''}
     </div>
 
     <div class="card" style="margin-bottom:12px">
@@ -3322,6 +3533,12 @@ export function renderFinance() {
 
   // ── 포트폴리오 요약 카드 갱신 ──────────────────────────
   _updateFinancePortfolioCard(watchlist);
+
+  // ── API 키 없음 배너 ──────────────────────────────────
+  const apiBanner = document.getElementById('fin-api-banner');
+  if (apiBanner) {
+    apiBanner.style.display = state.alphaVantageKey ? 'none' : '';
+  }
 
   if (!watchlist.length) {
     container.innerHTML = `
@@ -3562,7 +3779,34 @@ export async function fetchStockPrice(item) {
       } catch {}
     }
 
-    // ── 2. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
+    // ── 2. 주식/ETF: Alpha Vantage (API 키 있을 때 우선) ────────
+    const avKey = state.alphaVantageKey;
+    if (avKey) {
+      const avSymbol = market === 'KRX'
+        ? symbol.replace(/\..+$/, '') + '.KSC'
+        : symbol;
+      try {
+        const r = await fetch(
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(avSymbol)}&apikey=${encodeURIComponent(avKey)}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        if (r.ok) {
+          const json = await r.json();
+          const q = json['Global Quote'];
+          const p = parseFloat(q?.['05. price']);
+          const prev = parseFloat(q?.['08. previous close']);
+          if (p > 0) {
+            const chg = p - prev;
+            const chgPct = prev > 0 ? (chg / prev * 100) : 0;
+            const currency = market === 'KRX' ? 'KRW' : 'USD';
+            setData(p, chg, chgPct, currency, item.name || q?.['01. symbol'] || symbol);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // ── 3. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
     // 프록시 3종 + yahoo 도메인 2종을 동시에 시도하여 가장 먼저 오는 결과 사용
     const PROXIES = [
       { fn: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`, raw: true },

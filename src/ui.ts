@@ -831,7 +831,7 @@ export function initGeminiKeyUI() {
   if (!hasGeminiKey()) {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="window._nav?.('settings')" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
 }
@@ -865,9 +865,32 @@ export function saveGeminiKey() {
   } else {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="window._nav?.('settings')" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
+}
+
+// ── Alpha Vantage 키 ──────────────────────────────────
+export function initAlphaVantageKey() {
+  const input = document.getElementById('alpha-vantage-key-input') as HTMLInputElement;
+  const status = document.getElementById('alpha-key-status');
+  if (!input) return;
+  const stored = state.alphaVantageKey;
+  input.value = stored ? '••••••••••••••••••••' : '';
+  if (status) status.textContent = stored ? '✅ API 키가 저장되어 있습니다' : '키를 입력하면 주식 시세를 불러올 수 있습니다';
+}
+
+export function saveAlphaVantageKey() {
+  const input = document.getElementById('alpha-vantage-key-input') as HTMLInputElement;
+  const status = document.getElementById('alpha-key-status');
+  const val = input?.value?.trim() || '';
+  if (val === '••••••••••••••••••••') { showBadge('ℹ️ 변경사항 없음'); return; }
+  state.alphaVantageKey = val;
+  save();
+  const hasKey = !!val;
+  if (input) input.value = hasKey ? '••••••••••••••••••••' : '';
+  if (status) status.textContent = hasKey ? '✅ API 키가 저장되었습니다' : 'API 키가 삭제되었습니다';
+  showBadge(hasKey ? '✅ Alpha Vantage 키 저장됨' : '🗑️ API 키 삭제됨');
 }
 
 // ── 홈 AI 인사이트 ────────────────────────────────────
