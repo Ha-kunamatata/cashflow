@@ -176,6 +176,46 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak';
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
+// ── 홈 위젯 스택 (스와이프 카드) ───────────────────────
+(function _initWidgetStacks() {
+  function setupStack(stack: HTMLElement) {
+    const slides = Array.from(stack.querySelectorAll<HTMLElement>('.ws-slide'));
+    const dots = Array.from(stack.querySelectorAll<HTMLElement>('.ws-dot'));
+    if (!slides.length) return;
+    let current = 0;
+
+    function goTo(idx: number) {
+      idx = Math.max(0, Math.min(slides.length - 1, idx));
+      slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      current = idx;
+    }
+
+    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+
+    // Touch swipe
+    let startX = 0, startY = 0, dragging = false;
+    const slidesEl = stack.querySelector<HTMLElement>('.ws-slides');
+    if (!slidesEl) return;
+    slidesEl.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dragging = true;
+    }, { passive: true });
+    slidesEl.addEventListener('touchend', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = Math.abs(e.changedTouches[0].clientY - startY);
+      if (Math.abs(dx) > 42 && Math.abs(dx) > dy) {
+        goTo(dx < 0 ? current + 1 : current - 1);
+      }
+    }, { passive: true });
+  }
+
+  document.querySelectorAll<HTMLElement>('.home-widget-stack').forEach(setupStack);
+})();
+
 // ── 홈 풀-투-리프레시 ──────────────────────────────────
 {
   let _ptr_startY = 0, _ptr_pulling = false, _ptr_indicator: HTMLElement | null = null;
@@ -721,19 +761,38 @@ function _toggleLedgerInlinePanel(dk) {
   const panel = document.getElementById('ledger-day-inline-panel');
   if (!panel) { openLedgerDaySheet(dk); return; }
 
-  const isSame = panel.dataset.activeDk === dk && panel.style.display !== 'none';
+  const isSame = panel.dataset.activeDk === dk && panel.classList.contains('open');
   if (isSame) {
-    panel.style.display = 'none';
-    panel.dataset.activeDk = '';
+    _closeInlinePanel(panel);
     return;
   }
 
   panel.dataset.activeDk = dk;
   _renderInlinePanel(dk);
-  if (panel.style.display === 'none') {
-    panel.style.display = 'block';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
+  _openInlinePanel(panel);
+}
+
+function _openInlinePanel(panel: HTMLElement) {
+  panel.style.display = 'block';
+  panel.classList.remove('closing');
+  // rAF ensures display:block is painted before class triggers CSS transition
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => panel.classList.add('open'));
+  });
+}
+
+function _closeInlinePanel(panel: HTMLElement) {
+  panel.classList.add('closing');
+  panel.classList.remove('open');
+  const onEnd = () => {
+    panel.style.display = 'none';
+    panel.classList.remove('closing');
+    panel.dataset.activeDk = '';
+    panel.removeEventListener('transitionend', onEnd);
+  };
+  panel.addEventListener('transitionend', onEnd);
+  // fallback in case transitionend doesn't fire
+  setTimeout(() => { if (panel.classList.contains('closing')) onEnd(); }, 400);
 }
 
 function _renderInlinePanel(dk) {
