@@ -1,6 +1,6 @@
 {
-  "name": "내 자금 흐름",
-  "short_name": "자금흐름",
+  "name": "캐플 : cashflow",
+  "short_name": "캐플",
   "description": "개인 현금흐름 관리 앱",
   "start_url": "./",
   "display": "standalone",

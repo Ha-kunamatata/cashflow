@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════
-   style.css — 내 자금 흐름 v3.0
+   style.css — 캐플 : cashflow
    ════════════════════════════════════════════════════════ */
 
 :root {
@@ -134,14 +134,13 @@ body {
 @keyframes iconPop { from { transform: scale(0.5); opacity:0 } to { transform: scale(1); opacity:1 } }
 
 .login-title {
-  font-size: 26px; font-weight: 900; color: #f0f6ff; letter-spacing: -0.5px;
+  font-size: 32px; font-weight: 900; color: #f0f6ff; letter-spacing: -0.5px;
   margin: 0 0 6px; text-align: center;
   animation: slideUp 0.5s ease 0.15s both;
 }
-.login-sub {
-  font-size: 11px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase;
-  color: rgba(148,163,184,0.7); text-align: center;
-  animation: slideUp 0.5s ease 0.22s both;
+.login-title-en {
+  font-size: 16px; font-weight: 500; color: rgba(148,163,184,0.75);
+  letter-spacing: 0.5px; vertical-align: middle;
 }
 
 /* Feature list */
