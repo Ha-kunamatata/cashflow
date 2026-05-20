@@ -1265,11 +1265,12 @@ export function renderCardMonths() {
   for (let i = -1; i <= 12; i++) {
     const d = new Date(t.getFullYear(), t.getMonth() + i, 1);
     const ym = String(yyyymm(d));
+    const ymDash = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
     const m = d.getMonth() + 1;
     const cd = state.cardData[ym] || {};
     const isCurrent = d.getFullYear() === t.getFullYear() && m === t.getMonth() + 1;
 
-    // 이달 고정항목 중 이 카드에 해당하는 것 합산
+    // 고정항목 합산
     const fixedByCard = {};
     for (const card of cards) {
       const fixedSum = (state.entries || [])
@@ -1279,25 +1280,44 @@ export function renderCardMonths() {
       fixedByCard[card.id] = fixedSum;
     }
 
+    // 가계부에서 카드별 사용액 집계
+    const ledgerByCard = {};
+    for (const card of cards) {
+      let ledgerSum = 0;
+      for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+        if (!dk.startsWith(ymDash)) continue;
+        for (const item of items) {
+          if (item.type === 'expense' && item.cardId === card.id) {
+            ledgerSum += item.amount;
+          }
+        }
+      }
+      ledgerByCard[card.id] = ledgerSum;
+    }
+
     const totalVariable = cards.reduce((s, c) => s + Number(cd[c.id] || 0), 0);
     const totalFixed = Object.values(fixedByCard).reduce((a, b) => a + b, 0);
-    const grandTotal = totalVariable + totalFixed;
+    const totalLedger = Object.values(ledgerByCard).reduce((a, b) => a + b, 0);
+    const grandTotal = totalVariable + totalFixed + totalLedger;
 
     const cardInputs = cards.map(card => {
       const varAmt = cd[card.id] || 0;
       const fixedAmt = fixedByCard[card.id] || 0;
+      const ledgerAmt = ledgerByCard[card.id] || 0;
+      const totalCard = fixedAmt + varAmt + ledgerAmt;
       return `
-        <div style="margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
             <div style="width:8px;height:8px;border-radius:50%;background:${escapeHtml(card.color)};flex-shrink:0"></div>
             <div style="font-size:12px;font-weight:700;color:var(--text2)">${escapeHtml(card.name)} <span style="font-weight:400;color:var(--text3)">(${card.payDay}일)</span></div>
+            ${totalCard > 0 ? `<span style="margin-left:auto;font-size:12px;font-weight:900;font-family:var(--mono);color:var(--text)">-${fmtShort(totalCard)}</span>` : ''}
           </div>
-          ${fixedAmt > 0 ? `<div style="font-size:10px;color:var(--text3);margin-bottom:4px">고정항목 자동합산: <span style="color:var(--accent2);font-weight:700">${fmtShort(fixedAmt)}</span></div>` : ''}
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">변동 지출 (식비·쇼핑 등)</div>
+          ${fixedAmt > 0 ? `<div style="font-size:10px;color:var(--text3);margin-bottom:3px;padding-left:14px">고정 자동합산: <span style="color:var(--accent2);font-weight:700">${fmtShort(fixedAmt)}</span></div>` : ''}
+          ${ledgerAmt > 0 ? `<div style="font-size:10px;color:var(--green2);margin-bottom:3px;padding-left:14px;font-weight:700">📒 가계부 기록: ${fmtShort(ledgerAmt)}</div>` : ''}
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px;padding-left:14px">추가 입력 (식비·쇼핑 등)</div>
           <input class="card-num-input" type="number" value="${varAmt || ''}" placeholder="0" inputmode="numeric"
             data-ym="${ym}" data-card="${escapeHtml(card.id)}"
             style="border-color:${escapeHtml(card.color)};border-width:1.5px">
-          ${fixedAmt > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">예상 총 청구: <span style="font-weight:700;color:var(--text)">${fmtShort(fixedAmt + varAmt)}</span></div>` : ''}
         </div>
       `;
     }).join('');
