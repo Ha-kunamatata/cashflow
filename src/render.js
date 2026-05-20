@@ -3560,62 +3560,66 @@ export async function fetchStockPrice(item) {
           }
         }
       } catch {}
-      // CoinGecko 실패 → Yahoo Finance 폴백으로 이어짐
     }
 
-    // ── 2. 주식/ETF: Yahoo Finance v8 × 다중 프록시 ────────────
-    // CORS 프록시 3종 × Yahoo 도메인 2종 = 최대 6번 시도
+    // ── 2. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
+    // 프록시 3종 + yahoo 도메인 2종을 동시에 시도하여 가장 먼저 오는 결과 사용
     const PROXIES = [
-      (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-      (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-      (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+      { fn: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`, raw: true },
+      { fn: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, raw: true },
+      { fn: (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, raw: false },
+      { fn: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, raw: true },
     ];
-    const isAllOrigins = (i) => i === 1;
 
-    const parseYahoo = async (res, proxyIdx) => {
-      if (!res.ok) return null;
+    const parseYahooResponse = async (res, isRaw) => {
+      if (!res.ok) throw new Error('not ok');
       let json;
-      if (isAllOrigins(proxyIdx)) {
+      if (isRaw) {
+        json = await res.json();
+      } else {
         const w = await res.json();
         json = JSON.parse(w.contents);
-      } else {
-        json = await res.json();
       }
       const meta = json?.chart?.result?.[0]?.meta;
-      if (!meta) return null;
+      if (!meta) throw new Error('no meta');
       const p = meta.regularMarketPrice || meta.previousClose;
       const prev = meta.previousClose || meta.chartPreviousClose || p;
-      if (!p || p <= 0) return null;
+      if (!p || p <= 0) throw new Error('no price');
       return { p, change: p - prev, changePct: prev ? (p - prev) / prev * 100 : 0,
                currency: meta.currency || 'USD', name: item.name || meta.shortName || symbol };
     };
 
-    // 시도할 티커 목록 (KRX: .KS → .KQ → 원본)
+    const tryTickerConcurrent = async (ticker) => {
+      const YAHOO_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
+      const attempts = [];
+      for (const host of YAHOO_HOSTS) {
+        const yahooUrl = `${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
+        for (const proxy of PROXIES) {
+          attempts.push(
+            fetch(proxy.fn(yahooUrl), { signal: AbortSignal.timeout(8000) })
+              .then(res => parseYahooResponse(res, proxy.raw))
+          );
+        }
+      }
+      return Promise.any(attempts);
+    };
+
     const tickers = [symbol];
     if (market === 'KRX') {
       const code = symbol.replace(/\..+$/, '');
       tickers.unshift(`${code}.KS`, `${code}.KQ`);
     }
 
-    const YAHOO_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
-
     for (const ticker of tickers) {
-      for (const host of YAHOO_HOSTS) {
-        const yahooUrl = `${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
-        for (let pi = 0; pi < PROXIES.length; pi++) {
-          try {
-            const res = await fetch(PROXIES[pi](yahooUrl), { signal: AbortSignal.timeout(10000) });
-            const parsed = await parseYahoo(res, pi);
-            if (parsed) {
-              setData(parsed.p, parsed.change, parsed.changePct, parsed.currency, parsed.name);
-              return;
-            }
-          } catch { /* 다음 프록시 시도 */ }
+      try {
+        const parsed = await tryTickerConcurrent(ticker);
+        if (parsed) {
+          setData(parsed.p, parsed.change, parsed.changePct, parsed.currency, parsed.name);
+          return;
         }
-      }
+      } catch { /* 다음 ticker 시도 */ }
     }
 
-    // 전부 실패
     _financeData[symbol] = null;
   } catch {
     _financeData[symbol] = null;
