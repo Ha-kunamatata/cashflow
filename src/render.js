@@ -1857,6 +1857,51 @@ function _renderMonthlyStats() {
         }).join('')}
       </div>
     </div>` : ''}
+
+    ${(() => {
+      const cards = state.cards || [];
+      if (!cards.length) return '';
+      const cardTotals = {}; // cardId → { total, count }
+      let cashTotal = 0, cashCount = 0;
+      for (const [dk, items] of Object.entries(state.ledgerData || {})) {
+        if (!dk.startsWith(pfx)) continue;
+        for (const item of items) {
+          if (item.type !== 'expense') continue;
+          if (item.cardId) {
+            if (!cardTotals[item.cardId]) cardTotals[item.cardId] = { total: 0, count: 0 };
+            cardTotals[item.cardId].total += item.amount;
+            cardTotals[item.cardId].count++;
+          } else {
+            cashTotal += item.amount;
+            cashCount++;
+          }
+        }
+      }
+      const hasAny = Object.keys(cardTotals).length > 0 || cashTotal > 0;
+      if (!hasAny) return '';
+      const rows = cards
+        .filter(c => cardTotals[c.id])
+        .map(c => {
+          const { total, count } = cardTotals[c.id];
+          const pct = expense > 0 ? Math.round((total / expense) * 100) : 0;
+          return `<div class="lstat-cat-row">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color || '#6366f1'};flex-shrink:0"></span>
+            <span class="lstat-cat-name" style="margin-left:4px">💳 ${escapeHtml(c.name)}</span>
+            <div class="lstat-cat-bar"><div style="width:${pct}%;background:${c.color || '#6366f1'};height:100%;border-radius:4px;opacity:.8"></div></div>
+            <span class="lstat-cat-amt">${count}건 · ${fmtShort(total)}</span>
+          </div>`;
+        }).join('');
+      const cashRow = cashTotal > 0 ? `<div class="lstat-cat-row">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#64748b;flex-shrink:0"></span>
+        <span class="lstat-cat-name" style="margin-left:4px">💵 현금/기타</span>
+        <div class="lstat-cat-bar"><div style="width:${expense > 0 ? Math.round((cashTotal / expense) * 100) : 0}%;background:#64748b;height:100%;border-radius:4px;opacity:.6"></div></div>
+        <span class="lstat-cat-amt">${cashCount}건 · ${fmtShort(cashTotal)}</span>
+      </div>` : '';
+      return `<div class="card" style="margin-bottom:12px">
+        <div class="card-title">💳 카드별 지출</div>
+        <div style="display:flex;flex-direction:column;gap:8px">${rows}${cashRow}</div>
+      </div>`;
+    })()}
   `;
 }
 

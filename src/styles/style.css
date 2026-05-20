@@ -3278,6 +3278,51 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
 /* ── 예측 차트 래퍼 ─────────────────────────────────────── */
 .chart-wrap svg { overflow: visible; }
 
+/* ── 가계부 카드 선택 칩 ────────────────────────────────── */
+#ledger-card-picker-row {
+  overflow: hidden;
+}
+#ledger-card-chips {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+#ledger-card-chips::-webkit-scrollbar { display: none; }
+.ledger-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+.ledger-card-chip:active { transform: scale(0.93); }
+.ledger-card-chip.active {
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.5);
+  color: var(--accent2);
+}
+
+/* ── 일별 시트 카드 뱃지 ──────────────────────────────── */
+.lday-card-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 /* ── 검색 필터 칩 ─────────────────────────────────────── */
 .search-filter-chip {
   background: var(--bg3);
