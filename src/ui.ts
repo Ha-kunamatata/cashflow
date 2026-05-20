@@ -1308,8 +1308,8 @@ export function saveCard() {
   if (!name) { alert('카드명을 입력해주세요'); return; }
   if (payDay < 1 || payDay > 31) { alert('결제일은 1~31일 사이여야 합니다'); return; }
 
-  if (!state.cards || state.cards.length === 0) {
-    state.cards = JSON.parse(JSON.stringify(DEFAULT_CARDS));
+  if (!state.cards) {
+    state.cards = [];
   }
 
   if (_editCardId) {
@@ -1335,7 +1335,7 @@ export function saveCard() {
 
 export function deleteCard(id) {
   if (!confirm('카드를 삭제하면 해당 카드의 변동 지출 데이터도 사라집니다.\n계속할까요?')) return;
-  if (!state.cards) state.cards = JSON.parse(JSON.stringify(DEFAULT_CARDS));
+  if (!state.cards) state.cards = [];
   state.cards = state.cards.filter(c => c.id !== id);
   // 해당 카드 데이터도 정리
   for (const ym of Object.keys(state.cardData)) {

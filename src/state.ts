@@ -34,10 +34,7 @@ export interface StateShape {
   ledgerTemplates: LedgerTemplate[];
 }
 
-export const DEFAULT_CARDS: Card[] = [
-  { id: 'hyundai', name: '현대카드', color: '#3b82f6', payDay: 1 },
-  { id: 'kookmin', name: '국민카드', color: '#f97316', payDay: 3 },
-];
+export const DEFAULT_CARDS: Card[] = [];
 
 export const state: StateShape = {
   balance: 0,
