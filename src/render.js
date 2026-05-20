@@ -3323,6 +3323,12 @@ export function renderFinance() {
   // ── 포트폴리오 요약 카드 갱신 ──────────────────────────
   _updateFinancePortfolioCard(watchlist);
 
+  // ── API 키 없음 배너 ──────────────────────────────────
+  const apiBanner = document.getElementById('fin-api-banner');
+  if (apiBanner) {
+    apiBanner.style.display = state.alphaVantageKey ? 'none' : '';
+  }
+
   if (!watchlist.length) {
     container.innerHTML = `
       <div class="fin-empty">
@@ -3562,7 +3568,34 @@ export async function fetchStockPrice(item) {
       } catch {}
     }
 
-    // ── 2. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
+    // ── 2. 주식/ETF: Alpha Vantage (API 키 있을 때 우선) ────────
+    const avKey = state.alphaVantageKey;
+    if (avKey) {
+      const avSymbol = market === 'KRX'
+        ? symbol.replace(/\..+$/, '') + '.KSC'
+        : symbol;
+      try {
+        const r = await fetch(
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(avSymbol)}&apikey=${encodeURIComponent(avKey)}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        if (r.ok) {
+          const json = await r.json();
+          const q = json['Global Quote'];
+          const p = parseFloat(q?.['05. price']);
+          const prev = parseFloat(q?.['08. previous close']);
+          if (p > 0) {
+            const chg = p - prev;
+            const chgPct = prev > 0 ? (chg / prev * 100) : 0;
+            const currency = market === 'KRX' ? 'KRW' : 'USD';
+            setData(p, chg, chgPct, currency, item.name || q?.['01. symbol'] || symbol);
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // ── 3. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
     // 프록시 3종 + yahoo 도메인 2종을 동시에 시도하여 가장 먼저 오는 결과 사용
     const PROXIES = [
       { fn: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`, raw: true },
