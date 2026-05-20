@@ -1294,7 +1294,7 @@ export function saveReportCard() {
 
   ctx.font = 'bold 11px monospace';
   ctx.fillStyle = 'rgba(165,180,252,0.5)';
-  ctx.fillText('CASH FLOW · 내 자금 흐름', 40, brandY + 4);
+  ctx.fillText('캐플 : cashflow', 40, brandY + 4);
 
   const dateStr = `${now.getFullYear()}.${p2(now.getMonth() + 1)}.${p2(now.getDate())}`;
   ctx.fillText(dateStr, W - 40 - ctx.measureText(dateStr).width, brandY + 4);

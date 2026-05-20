@@ -451,6 +451,7 @@ initAuth(
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('topbar').style.display = 'flex';
     document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('fab-speed-dial').style.display = '';
 
     // 아바타
     const img = document.getElementById('user-avatar-img');
@@ -540,6 +541,7 @@ initAuth(
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
+    document.getElementById('fab-speed-dial').style.display = 'none';
     hideLoading();
     closeSheet('profile-sheet');
     closeSheet('signout-sheet');
