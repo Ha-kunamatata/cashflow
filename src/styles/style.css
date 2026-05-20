@@ -1987,7 +1987,7 @@ body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
 }
 
 /* ── 마크다운 렌더링 ── */
-.ai-content { font-size: 13px; color: var(--text2); line-height: 1.8; }
+.ai-content { font-size: 13px; color: var(--text2); line-height: 1.8; overflow-wrap: break-word; word-break: break-word; }
 .ai-content strong { color: var(--text); font-weight: 800; }
 .ai-content em { color: var(--accent3); font-style: italic; }
 .ai-content .ai-h1, .ai-content .ai-h2 {
@@ -3260,6 +3260,8 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
 .recent-tx-amount { font-family: var(--mono); font-size: 14px; font-weight: 800; flex-shrink: 0; }
 .recent-tx-amount.green { color: var(--green2); }
 .recent-tx-amount.red { color: var(--red2); }
+.btn-quick-add { transition: background 0.15s, transform 0.15s; }
+.btn-quick-add:active { background: rgba(59,130,246,0.25) !important; transform: scale(0.9); }
 
 /* ── 마이크로 인터랙션 강화 ─────────────────────────────── */
 .btn, .icon-btn, .form-cat-chip, .goal-share-btn, .wish-link-btn, .period-btn {

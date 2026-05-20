@@ -94,8 +94,10 @@ import {
   saveSetting,
   onDangerLineChange,
   exportData,
+  exportCsvData,
   importDataClick,
   importData,
+  addQuickLedgerItem,
   resetAll,
   openGoalForm,
   saveGoal,
@@ -965,6 +967,7 @@ document.getElementById('btn-settings-signout')?.addEventListener('click', () =>
 document.getElementById('setting-danger')?.addEventListener('change', (e) => saveSetting('dangerLine', e.target.value));
 document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
 document.getElementById('btn-export')?.addEventListener('click', exportData);
+document.getElementById('btn-export-csv')?.addEventListener('click', exportCsvData);
 document.getElementById('btn-import')?.addEventListener('click', importDataClick);
 document.getElementById('import-file')?.addEventListener('change', importData);
 document.getElementById('btn-reset')?.addEventListener('click', () => {
@@ -1060,7 +1063,7 @@ document.getElementById('btn-gemini-help')?.addEventListener('click', () => {
   if (btn) btn.style.background = open ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.28)';
 });
 document.getElementById('btn-save-alpha-key')?.addEventListener('click', saveAlphaVantageKey);
-document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);
+document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', () => refreshHomeInsight(true));
 document.getElementById('btn-ai-insight-expand')?.addEventListener('click', () => openSheet('ai-insight-full-sheet'));
 document.getElementById('btn-ai-insight-full-close')?.addEventListener('click', () => closeSheet('ai-insight-full-sheet'));
 document.getElementById('ai-insight-full-sheet')?.addEventListener('click', (e) => closeSheetOutside(e, 'ai-insight-full-sheet'));
@@ -1698,6 +1701,17 @@ window.closeBadgeDetail = function() {
 
 // 시트 내부 navigate 버튼용 글로벌 핸들러
 window._nav = (page) => navigate(page);
+
+// 홈 최근 거래 빠른 추가 버튼 이벤트 델리게이션
+document.getElementById('home-recent-tx')?.addEventListener('click', (e) => {
+  const btn = (e.target as Element).closest('.btn-quick-add');
+  if (!btn) return;
+  e.stopPropagation();
+  try {
+    const item = JSON.parse((btn as HTMLElement).dataset.item || '{}');
+    if (item.amount) addQuickLedgerItem(item);
+  } catch (_) {}
+});
 
 // ══════════════════════════════════════════════════════════════
 // 스피드 다이얼 FAB
