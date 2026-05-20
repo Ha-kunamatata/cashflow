@@ -749,7 +749,20 @@
         <div id="household-section"></div>
       </div>
       <div class="card">
-        <div class="card-title">🤖 Gemini AI 설정</div>
+        <div class="card-title">🤖 Gemini AI 설정
+          <button id="btn-gemini-help" style="float:right;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(99,102,241,0.12);color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;line-height:1" aria-label="API 키 발급 방법">?</button>
+        </div>
+        <div id="gemini-help-panel" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(129,140,248,0.2);border-radius:12px;padding:12px;margin-bottom:10px;font-size:12px;line-height:1.7;color:var(--text2)">
+          <div style="font-weight:700;color:#a78bfa;margin-bottom:6px">📋 Gemini API 키 발급 방법</div>
+          <ol style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline">aistudio.google.com/apikey</a> 접속</li>
+            <li>Google 계정으로 로그인</li>
+            <li><strong style="color:var(--text)">Create API key</strong> 버튼 클릭</li>
+            <li>생성된 키(<code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px;font-size:11px">AIza…</code>)를 복사</li>
+            <li>아래 입력창에 붙여넣고 <strong style="color:var(--text)">저장</strong></li>
+          </ol>
+          <div style="margin-top:8px;padding:7px 10px;background:rgba(52,211,153,0.08);border-radius:8px;font-size:11px;color:var(--text3)">✅ 무료 플랜으로 충분합니다 · 키는 이 기기에만 저장됩니다</div>
+        </div>
         <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px">
           <div><div class="setting-label">Gemini API 키</div><div class="setting-sub">Google AI Studio에서 발급 · 기기에만 저장됨</div></div>
           <div style="display:flex;gap:8px;width:100%">

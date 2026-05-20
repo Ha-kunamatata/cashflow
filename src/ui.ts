@@ -831,7 +831,7 @@ export function initGeminiKeyUI() {
   if (!hasGeminiKey()) {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="window._nav?.('settings')" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
 }
@@ -865,7 +865,7 @@ export function saveGeminiKey() {
   } else {
     const content = document.getElementById('ai-insight-content');
     if (content) {
-      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="import('./ui').then(m=>m.navigate('settings'))" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
+      content.innerHTML = `🤖 AI 인사이트를 사용하려면 설정 탭에서 Gemini API 키를 입력하세요. (무료) <button class="btn btn-ghost" onclick="window._nav?.('settings')" style="font-size:11px;padding:3px 8px;margin-left:4px"><div class="ripple-container"></div>설정으로 →</button>`;
     }
   }
 }

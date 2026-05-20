@@ -1051,6 +1051,14 @@ document.getElementById('budget-page-content')?.addEventListener('click', (e) =>
 document.getElementById('btn-save-report-card')?.addEventListener('click', saveReportCard);
 document.getElementById('btn-coaching-refresh')?.addEventListener('click', () => renderWeeklyCoachingCard(true));
 document.getElementById('btn-save-gemini-key')?.addEventListener('click', saveGeminiKey);
+document.getElementById('btn-gemini-help')?.addEventListener('click', () => {
+  const panel = document.getElementById('gemini-help-panel');
+  const btn = document.getElementById('btn-gemini-help');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (btn) btn.style.background = open ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.28)';
+});
 document.getElementById('btn-save-alpha-key')?.addEventListener('click', saveAlphaVantageKey);
 document.getElementById('btn-ai-insight-refresh')?.addEventListener('click', refreshHomeInsight);
 document.getElementById('btn-ai-insight-expand')?.addEventListener('click', () => openSheet('ai-insight-full-sheet'));
