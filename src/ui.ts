@@ -213,6 +213,9 @@ export function saveSetting(key, val) {
 
     save();
     renderModule.renderHome();
+    if (document.getElementById('page-forecast')?.classList.contains('active')) {
+      renderModule.renderForecast();
+    }
   }
 }
 
@@ -752,6 +755,35 @@ export function exportData() {
   a.click();
 }
 
+export function exportCsvData() {
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  const BOM = '﻿'; // Excel UTF-8 BOM
+  const rows: string[] = ['날짜,요일,유형,카테고리,금액,메모,태그'];
+  const sorted = Object.entries(state.ledgerData || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  for (const [dk, items] of sorted) {
+    const dow = DAYS[new Date(dk).getDay()];
+    for (const item of items) {
+      const type = item.type === 'income' ? '수입' : '지출';
+      const memo = (item.memo || '').replace(/"/g, '""');
+      rows.push(`${dk},${dow},${type},${item.category || ''},${item.amount},"${memo}",${item.tag || ''}`);
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([BOM + rows.join('\n')], { type: 'text/csv;charset=utf-8;' }));
+  a.download = `cashflow_${dateKey(today())}.csv`;
+  a.click();
+}
+
+export function addQuickLedgerItem(item: { type: string; category: string; amount: number; memo?: string }) {
+  const dk = dateKey(today());
+  if (!state.ledgerData) state.ledgerData = {};
+  if (!state.ledgerData[dk]) state.ledgerData[dk] = [];
+  state.ledgerData[dk].push({ id: uid(), type: item.type, category: item.category, amount: item.amount, memo: item.memo || '' });
+  syncLedgerToBalance();
+  save();
+  showBadge(`✅ ${item.category} ${fmtShort(item.amount)} 오늘 추가됨`);
+}
+
 export function importDataClick() {
   document.getElementById('import-file').click();
 }
@@ -894,11 +926,34 @@ export function saveAlphaVantageKey() {
 }
 
 // ── 홈 AI 인사이트 ────────────────────────────────────
-export async function refreshHomeInsight() {
+const _INSIGHT_CACHE_KEY = 'cashflow_home_insight_cache';
+const _INSIGHT_TTL = 60 * 60 * 1000; // 1시간
+
+export async function refreshHomeInsight(force = false) {
   if (!hasGeminiKey()) return;
   const content = document.getElementById('ai-insight-content');
   const refreshBtn = document.getElementById('btn-ai-insight-refresh');
   if (!content) return;
+
+  // 캐시 확인 (강제 새로고침 아닐 때)
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(_INSIGHT_CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < _INSIGHT_TTL) {
+        const rendered = `<div class="ai-content">${cached.html}</div>`;
+        content.innerHTML = rendered;
+        const fullContent = document.getElementById('ai-insight-full-content');
+        if (fullContent) fullContent.innerHTML = rendered;
+        content.onclick = () => openSheet('ai-insight-full-sheet');
+        const timeEl = document.getElementById('ai-insight-time');
+        const timeStr = new Date(cached.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) + ' 업데이트';
+        if (timeEl) timeEl.textContent = timeStr;
+        const fullTimeEl = document.getElementById('ai-insight-full-time');
+        if (fullTimeEl) fullTimeEl.textContent = timeStr;
+        return;
+      }
+    } catch (_) {}
+  }
 
   // 스켈레톤 로딩
   content.innerHTML = `<div class="ai-skeleton-wrap">
@@ -912,22 +967,19 @@ export async function refreshHomeInsight() {
 
   try {
     const text = await getHomeInsight(state);
-    const rendered = `<div class="ai-content">${renderMarkdown(text)}</div>`;
+    const html = renderMarkdown(text);
+    localStorage.setItem(_INSIGHT_CACHE_KEY, JSON.stringify({ ts: Date.now(), html }));
+    const rendered = `<div class="ai-content">${html}</div>`;
     content.innerHTML = rendered;
-    // 전체 보기 시트에도 동일 내용 채워두기
     const fullContent = document.getElementById('ai-insight-full-content');
     if (fullContent) fullContent.innerHTML = rendered;
-    // 카드 바디 클릭 시 전체 보기 시트 오픈
     content.onclick = () => openSheet('ai-insight-full-sheet');
-    // 업데이트 시간 표시
+    const now = new Date();
+    const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트`;
     const timeEl = document.getElementById('ai-insight-time');
-    if (timeEl) {
-      const now = new Date();
-      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 업데이트`;
-      timeEl.textContent = timeStr;
-      const fullTimeEl = document.getElementById('ai-insight-full-time');
-      if (fullTimeEl) fullTimeEl.textContent = timeStr;
-    }
+    if (timeEl) timeEl.textContent = timeStr;
+    const fullTimeEl = document.getElementById('ai-insight-full-time');
+    if (fullTimeEl) fullTimeEl.textContent = timeStr;
   } catch (e) {
     content.innerHTML = `<div class="ai-error"><span>⚠️</span><span>${e.message}</span></div>`;
   } finally {

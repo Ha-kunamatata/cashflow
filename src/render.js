@@ -698,6 +698,7 @@ export function renderHome() {
         const icon = RECENT_ICONS[item.category] || (item.type === 'income' ? '💰' : '💳');
         const label = item.memo || item.category || '기타';
         const dateStr = item._dk.slice(5).replace('-', '/');
+        const quickData = JSON.stringify({ type: item.type, category: item.category, amount: item.amount, memo: item.memo || '' });
         return `<div class="recent-tx-row stagger-item" style="${i > 0 ? 'border-top:1px solid var(--border);' : ''}--stagger-idx:${i}">
           <span class="recent-tx-icon">${icon}</span>
           <div class="recent-tx-info">
@@ -705,6 +706,7 @@ export function renderHome() {
             <div class="recent-tx-meta">${dateStr} · ${escapeHtml(item.category || '')}</div>
           </div>
           <div class="recent-tx-amount ${item.type === 'income' ? 'green' : 'red'}">${item.type === 'income' ? '+' : '-'}${fmtShort(item.amount)}</div>
+          <button class="btn-quick-add" data-item='${quickData.replace(/'/g, "&#39;")}' title="오늘 똑같이 추가" style="flex-shrink:0;margin-left:8px;width:28px;height:28px;border-radius:8px;border:1px solid rgba(96,165,250,0.25);background:rgba(59,130,246,0.10);color:#60a5fa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
         </div>`;
       }).join('');
       recentEl.innerHTML = `
