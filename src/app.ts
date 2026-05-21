@@ -239,15 +239,42 @@ initRipple();
       track.style.transform = `translate3d(${x}px,0,0)`;
     }
 
+    function applyHeight(animated: boolean) {
+      const h = slides[cur].offsetHeight;
+      if (h <= 0) return;
+      slidesEl.style.transition = animated
+        ? 'height 0.42s cubic-bezier(0.25,0.46,0.45,0.94)'
+        : 'none';
+      slidesEl.style.height = h + 'px';
+    }
+
     function goTo(idx: number, animated = true) {
       if (isDesktop()) return;
       cur = Math.max(0, Math.min(N - 1, idx));
       setTrack(snapX(cur), animated);
       updateIndicator(cur);
+      applyHeight(animated);
     }
 
     dotsEl.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
     goTo(0, false);
+
+    // 콘텐츠 변경(renderHome 등) 시 현재 슬라이드 높이 자동 갱신
+    if (typeof ResizeObserver !== 'undefined') {
+      let _roTimer: any;
+      const ro = new ResizeObserver(() => {
+        clearTimeout(_roTimer);
+        _roTimer = setTimeout(() => {
+          if (isDesktop() || isDragging) return;
+          const h = slides[cur].offsetHeight;
+          if (h > 0) {
+            slidesEl.style.transition = 'height 0.28s ease';
+            slidesEl.style.height = h + 'px';
+          }
+        }, 60);
+      });
+      slides.forEach(s => ro.observe(s));
+    }
 
     slidesEl.addEventListener('touchstart', (e) => {
       if (isDesktop()) return;
@@ -261,6 +288,10 @@ initRipple();
       lastT = Date.now();
       track.style.transition = 'none';
       track.style.transform = `translate3d(${trackX}px,0,0)`;
+      // 높이 애니메이션도 동시에 인터럽트
+      slidesEl.style.transition = 'none';
+      const curH = slidesEl.offsetHeight;
+      if (curH > 0) slidesEl.style.height = curH + 'px';
     }, { passive: true });
 
     slidesEl.addEventListener('touchmove', (e) => {
