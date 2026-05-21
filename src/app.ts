@@ -176,44 +176,147 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak';
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
-// ── 홈 위젯 스택 (모바일: 스와이프 카드 / 데스크탑: 전체 표시) ─
+// ── 홈 위젯 스택 (모바일: 실시간 드래그 스와이프 / 데스크탑: 전체 표시) ─
 (function _initWidgetStacks() {
   const isDesktop = () => window.innerWidth >= 1100;
 
-  function setupStack(stack: HTMLElement) {
-    const slides = Array.from(stack.querySelectorAll<HTMLElement>('.ws-slide'));
-    const dots = Array.from(stack.querySelectorAll<HTMLElement>('.ws-dot'));
-    if (!slides.length) return;
-    let current = 0;
+  // 애니메이션 도중 인터럽트를 위해 현재 렌더된 translateX 값 읽기
+  function getComputedX(el: HTMLElement): number {
+    try {
+      const t = window.getComputedStyle(el).transform;
+      if (!t || t === 'none') return 0;
+      const m = t.match(/matrix\([^,]+,[^,]+,[^,]+,[^,]+,\s*([^,\s]+)/);
+      return m ? parseFloat(m[1]) : 0;
+    } catch { return 0; }
+  }
 
-    function goTo(idx: number) {
-      if (isDesktop()) return; // 데스크탑: CSS가 모두 표시
-      idx = Math.max(0, Math.min(slides.length - 1, idx));
-      slides.forEach((s, i) => s.classList.toggle('active', i === idx));
-      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-      current = idx;
+  function setupStack(stack: HTMLElement) {
+    const slidesEl = stack.querySelector<HTMLElement>('.ws-slides');
+    const dotsEl   = Array.from(stack.querySelectorAll<HTMLElement>('.ws-dot'));
+    const labelEl  = stack.querySelector<HTMLElement>('.ws-label');
+    if (!slidesEl) return;
+
+    // DOM 재구성: 기존 슬라이드를 .ws-track 으로 감싸기
+    const rawSlides = Array.from(slidesEl.querySelectorAll<HTMLElement>(':scope > .ws-slide'));
+    const N = rawSlides.length;
+    if (!N) return;
+
+    const track = document.createElement('div');
+    track.className = 'ws-track';
+    rawSlides.forEach(s => { s.classList.remove('active'); track.appendChild(s); });
+    slidesEl.insertBefore(track, slidesEl.firstChild);
+
+    // 레이블 재구성: 텍스트 + 슬라이드 카운터
+    if (labelEl) {
+      const title = (labelEl.childNodes[0]?.textContent || '').trim();
+      labelEl.innerHTML = `<span class="ws-label-text">${title}</span><span class="ws-counter ws-cnt">1 / ${N}</span>`;
     }
 
-    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+    // 도트 SVG 아이콘 제거 (CSS pill 스타일로 대체)
+    dotsEl.forEach(d => { d.innerHTML = ''; });
 
-    // Touch swipe (모바일 전용)
-    let startX = 0, startY = 0, dragging = false;
-    const slidesEl = stack.querySelector<HTMLElement>('.ws-slides');
-    if (!slidesEl) return;
+    const counter = stack.querySelector<HTMLElement>('.ws-cnt');
+
+    let cur = 0;
+    let trackX = 0;
+    let startX = 0, startY = 0, startTrackX = 0;
+    let isDragging = false;
+    let isHoriz: boolean | null = null;
+    let velX = 0, lastX = 0, lastT = 0;
+
+    function snapX(idx: number) { return -(idx * slidesEl.offsetWidth); }
+
+    function updateIndicator(idx: number) {
+      dotsEl.forEach((d, i) => d.classList.toggle('active', i === idx));
+      if (counter) counter.textContent = `${idx + 1} / ${N}`;
+    }
+
+    function setTrack(x: number, animated: boolean) {
+      trackX = x;
+      track.style.transition = animated
+        ? 'transform 0.42s cubic-bezier(0.25,0.46,0.45,0.94)'
+        : 'none';
+      track.style.transform = `translate3d(${x}px,0,0)`;
+    }
+
+    function goTo(idx: number, animated = true) {
+      if (isDesktop()) return;
+      cur = Math.max(0, Math.min(N - 1, idx));
+      setTrack(snapX(cur), animated);
+      updateIndicator(cur);
+    }
+
+    dotsEl.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+    goTo(0, false);
+
     slidesEl.addEventListener('touchstart', (e) => {
       if (isDesktop()) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dragging = true;
+      const t = e.touches[0];
+      startX = lastX = t.clientX;
+      startY = t.clientY;
+      // 애니메이션 도중 인터럽트: 현재 렌더된 위치 그대로 시작
+      startTrackX = getComputedX(track);
+      trackX = startTrackX;
+      isDragging = false; isHoriz = null; velX = 0;
+      lastT = Date.now();
+      track.style.transition = 'none';
+      track.style.transform = `translate3d(${trackX}px,0,0)`;
     }, { passive: true });
-    slidesEl.addEventListener('touchend', (e) => {
-      if (!dragging || isDesktop()) return;
-      dragging = false;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = Math.abs(e.changedTouches[0].clientY - startY);
-      if (Math.abs(dx) > 42 && Math.abs(dx) > dy) {
-        goTo(dx < 0 ? current + 1 : current - 1);
+
+    slidesEl.addEventListener('touchmove', (e) => {
+      if (isDesktop()) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+
+      // 방향 감지: 5px 이상 움직여야 수평/수직 판단
+      if (isHoriz === null) {
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        isHoriz = Math.abs(dx) > Math.abs(dy) * 0.85;
       }
+      if (!isHoriz) return;
+      isDragging = true;
+      slidesEl.classList.add('ws-dragging');
+
+      // 속도 추적 (16ms 간격)
+      const now = Date.now();
+      if (now - lastT > 16) {
+        velX = (t.clientX - lastX) / (now - lastT);
+        lastX = t.clientX; lastT = now;
+      }
+
+      const W = slidesEl.offsetWidth;
+      const minX = snapX(N - 1);
+      let newX = startTrackX + dx;
+      // 고무줄 저항: 양 끝에서 18% 감쇠
+      if (newX > 0)    newX = newX * 0.18;
+      if (newX < minX) newX = minX + (newX - minX) * 0.18;
+
+      track.style.transform = `translate3d(${newX}px,0,0)`;
+      trackX = newX;
+
+      // 드래그 중 인디케이터 실시간 업데이트
+      const progress = Math.max(0, Math.min(N - 1, -newX / W));
+      updateIndicator(Math.round(progress));
+    }, { passive: true });
+
+    slidesEl.addEventListener('touchend', () => {
+      slidesEl.classList.remove('ws-dragging');
+      if (!isDragging || isDesktop()) { isDragging = false; return; }
+      isDragging = false; isHoriz = null;
+
+      const W = slidesEl.offsetWidth;
+      let target = cur;
+      // 빠른 플릭 (0.3px/ms 이상): 속도 방향으로 이동
+      if (Math.abs(velX) > 0.3) {
+        target = velX < 0 ? cur + 1 : cur - 1;
+      } else {
+        // 느린 드래그: 30% 이상 넘어가면 이동
+        const ratio = (-trackX / W) - cur;
+        if (ratio > 0.3) target = cur + 1;
+        else if (ratio < -0.3) target = cur - 1;
+      }
+      goTo(target, true);
     }, { passive: true });
   }
 

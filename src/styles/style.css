@@ -2391,69 +2391,87 @@ body.light-theme .topbar-search-btn { background: rgba(0,0,0,0.05); border-color
   border-radius: 18px;
   border: 1px solid var(--border);
   overflow: hidden;
+  position: relative;
 }
+
+/* 헤더 */
 .ws-label {
+  display: flex;
+  align-items: center;
+  padding: 11px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.ws-label-text {
   font-size: 10px;
   font-weight: 800;
   color: var(--text3);
-  letter-spacing: 0.8px;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
-  padding: 10px 16px 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  flex: 1;
 }
-.ws-nav-hint {
-  font-size: 9px;
-  font-weight: 400;
+.ws-counter {
+  font-size: 10px;
   color: var(--text3);
-  opacity: 0.6;
-  margin-left: auto;
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-  text-transform: none;
+  transition: opacity 0.2s;
 }
+.ws-nav-hint { display: none; }
+
+/* 슬라이드 컨테이너 */
 .ws-slides {
   position: relative;
   overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ws-slides.ws-dragging { cursor: grabbing; }
+
+/* 가로 트랙 — JS가 translate3d로 제어 */
+.ws-track {
+  display: flex;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 .ws-slide {
-  display: none;
-  padding: 4px 14px 6px;
-  animation: wsFadeIn 0.3s ease both;
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  box-sizing: border-box;
 }
-.ws-slide.active {
-  display: block;
-}
-@keyframes wsFadeIn {
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
+
+/* 페이지 인디케이터 (pill dots) */
 .ws-dots {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0 10px;
+  gap: 6px;
+  padding: 9px 0 11px;
   border-top: 1px solid var(--border);
 }
 .ws-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text3);
+  height: 5px;
+  width: 5px;
+  border-radius: 3px;
+  background: var(--text3);
+  opacity: 0.25;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  opacity: 0.45;
+  flex-shrink: 0;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              background 0.25s ease;
 }
 .ws-dot.active {
-  background: rgba(99,102,241,0.12);
-  color: var(--accent2);
+  width: 22px;
   opacity: 1;
+  background: var(--accent2);
 }
-.ws-dot svg { pointer-events: none; }
 
 /* ── 홈 예산 바 위젯 ────────────────────────────────────────── */
 #home-budget-widget .card { padding: 14px 16px; cursor: pointer; transition: opacity 0.15s; }
@@ -3616,21 +3634,24 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
     letter-spacing: 1px;
   }
   .ws-nav-hint { display: none; }
-  .ws-slides {
-    display: block;
+  /* 데스크탑: 트랙을 수직 방향으로, 모든 슬라이드 표시 */
+  .ws-slides { cursor: default; }
+  .ws-track {
+    flex-direction: column;
+    transform: translate3d(0, 0, 0) !important;
+    transition: none !important;
   }
-  /* 모든 슬라이드 동시 표시 */
   .ws-slide {
-    display: block !important;
-    animation: none !important;
+    flex: 0 0 auto;
+    width: 100%;
     padding: 6px 14px 8px;
   }
   .ws-slide + .ws-slide {
     border-top: 1px solid var(--border);
     padding-top: 10px;
   }
-  /* 도트 → 슬라이드 제목 탭으로 교체 */
   .ws-dots { display: none; }
+  .ws-counter { display: none; }
 
   /* ───────────────────────────────────────────────────── */
   /* 4. 인라인 패널 (가계부 캘린더) — 스타일 개선          */
