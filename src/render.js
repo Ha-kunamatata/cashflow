@@ -380,7 +380,10 @@ function _renderTodayTimeline() {
   if (!el) return;
   const dk = dateKey(today());
   const items = (state.ledgerData?.[dk] || []).filter(i => i.type === 'expense');
-  if (!items.length) { el.innerHTML = ''; return; }
+  if (!items.length) {
+    el.innerHTML = `<div style="text-align:center;padding:14px 0 8px;color:var(--text3);font-size:12px">오늘 지출 기록이 없어요 ✨</div>`;
+    return;
+  }
   const totalExp = items.reduce((s, i) => s + i.amount, 0);
   el.innerHTML = `
     <div class="card" style="padding:12px 14px">
@@ -398,6 +401,63 @@ function _renderTodayTimeline() {
           </div>
           <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--red2);flex-shrink:0">-${fmtShort(i.amount)}</div>
         </div>`).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 홈 — 이달 카테고리별 지출 분석 (home-cat-ring)
+// ════════════════════════════════════════════════════════
+function _renderHomeCatBreakdown() {
+  const el = document.getElementById('home-cat-ring');
+  if (!el) return;
+  const now = today();
+  const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
+  const ledger = state.ledgerData || {};
+
+  const catMap = {};
+  for (const [dk, items] of Object.entries(ledger)) {
+    if (!dk.startsWith(ym)) continue;
+    for (const item of items) {
+      if (item.type !== 'expense') continue;
+      catMap[item.category] = (catMap[item.category] || 0) + item.amount;
+    }
+  }
+
+  const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    el.innerHTML = `<div style="text-align:center;padding:14px 0 8px;color:var(--text3);font-size:12px">이번 달 가계부 지출 기록이 없어요</div>`;
+    return;
+  }
+
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  const top = entries.slice(0, 5);
+  const COLORS = ['#818cf8','#34d399','#fb923c','#f472b6','#60a5fa'];
+  const others = entries.slice(5).reduce((s, [, v]) => s + v, 0);
+
+  el.innerHTML = `
+    <div class="card" style="padding:12px 14px;margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:14px">📊</span>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">이달 카테고리별 지출</div>
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--text3);margin-left:auto">${fmtShort(total)}</span>
+      </div>
+      ${top.map(([cat, amt], i) => {
+        const pct = Math.round((amt / total) * 100);
+        return `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:8px;height:8px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></div>
+                <span style="font-size:11px;color:var(--text2);font-weight:600">${escapeHtml(cat)}</span>
+              </div>
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">${fmtShort(amt)} <span style="opacity:.7">${pct}%</span></span>
+            </div>
+            <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${COLORS[i]};border-radius:3px;transition:width 0.6s ease"></div>
+            </div>
+          </div>`;
+      }).join('')}
+      ${others > 0 ? `<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:2px">+ ${entries.length - 5}개 더 · ${fmtShort(others)}</div>` : ''}
     </div>`;
 }
 
@@ -595,6 +655,7 @@ export function renderHome() {
 
   _renderSparkline();
   _renderTodayTimeline();
+  _renderHomeCatBreakdown();
   renderHomeBudgetBars();
   renderHomeForecastWidget();
   renderWeeklyCard();
@@ -4350,7 +4411,20 @@ export function renderHomeBudgetBars() {
   const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
 
   const cats = Object.keys(budget).filter(c => budget[c] > 0);
-  if (!cats.length) { el.innerHTML = ''; return; }
+  if (!cats.length) {
+    el.innerHTML = `
+      <div class="card" style="padding:16px;text-align:center;cursor:pointer" id="home-budget-widget-card">
+        <div style="font-size:28px;margin-bottom:8px">💰</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">예산이 설정되지 않았어요</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.5">예산을 설정하면 카테고리별<br>지출 현황을 한눈에 볼 수 있어요</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--accent2);font-weight:700">예산 설정하러 가기 →</div>
+      </div>`;
+    document.getElementById('home-budget-widget-card')?.addEventListener('click', () => {
+      document.querySelector('.nav-btn[data-page="ledger"]')?.click();
+      setTimeout(() => document.querySelector('.ledger-sub-tab[data-tab="budget"]')?.click(), 200);
+    });
+    return;
+  }
 
   const totalBgt = cats.reduce((s, c) => s + budget[c], 0);
   const totalAct = cats.reduce((s, c) => s + (actual[c] || 0), 0);
