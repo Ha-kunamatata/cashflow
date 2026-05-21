@@ -2428,12 +2428,15 @@ body.light-theme .topbar-search-btn { background: rgba(0,0,0,0.05); border-color
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
+  min-height: 80px;
+  transition: height 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .ws-slides.ws-dragging { cursor: grabbing; }
 
 /* 가로 트랙 — JS가 translate3d로 제어 */
 .ws-track {
   display: flex;
+  align-items: flex-start; /* 각 슬라이드가 콘텐츠 높이만큼만 차지 */
   will-change: transform;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
@@ -3635,9 +3638,15 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   }
   .ws-nav-hint { display: none; }
   /* 데스크탑: 트랙을 수직 방향으로, 모든 슬라이드 표시 */
-  .ws-slides { cursor: default; }
+  .ws-slides {
+    cursor: default;
+    height: auto !important;
+    transition: none !important;
+    min-height: 0;
+  }
   .ws-track {
     flex-direction: column;
+    align-items: stretch; /* 데스크탑은 full-width */
     transform: translate3d(0, 0, 0) !important;
     transition: none !important;
   }
