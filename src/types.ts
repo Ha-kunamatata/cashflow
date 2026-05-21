@@ -50,6 +50,7 @@ export interface Card {
   name: string;
   payDay: number; // 결제일 (매월 며칠)
   color?: string;
+  type?: 'credit' | 'debit'; // 신용카드 | 체크카드
 }
 
 /** 자산 항목 */

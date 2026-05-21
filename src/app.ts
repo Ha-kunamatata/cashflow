@@ -155,6 +155,11 @@ import {
   applyBudgetCarryover,
   convertWishToGoal,
   selectLedgerCard,
+  openCatSheet,
+  closeCatSheet,
+  openPaymentSheet,
+  closePaymentSheet,
+  selectPaymentMethod,
 } from './ui';
 
 import { LEDGER_CAT_COLORS } from './config';
@@ -1164,6 +1169,24 @@ document.getElementById('btn-ledger-item-save')?.addEventListener('click', () =>
 document.getElementById('btn-ledger-item-cancel')?.addEventListener('click', closeLedgerItemForm);
 document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
   if (e.target?.id === 'ledger-item-sheet') closeLedgerItemForm();
+});
+
+// 카테고리 서브시트
+document.getElementById('btn-open-cat-sheet')?.addEventListener('click', openCatSheet);
+document.getElementById('btn-close-cat-sheet')?.addEventListener('click', closeCatSheet);
+document.getElementById('ledger-cat-sheet')?.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement)?.id === 'ledger-cat-sheet') closeCatSheet();
+});
+
+// 결제수단 서브시트
+document.getElementById('btn-open-payment-sheet')?.addEventListener('click', openPaymentSheet);
+document.getElementById('btn-close-payment-sheet')?.addEventListener('click', closePaymentSheet);
+document.getElementById('ledger-payment-sheet')?.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement)?.id === 'ledger-payment-sheet') closePaymentSheet();
+});
+document.getElementById('ledger-payment-list')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('[data-pay-id]') as HTMLElement | null;
+  if (btn !== null) selectPaymentMethod(btn.dataset.payId || '');
 });
 
 // 설정 탭

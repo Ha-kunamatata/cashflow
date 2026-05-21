@@ -544,6 +544,8 @@ export function selectLedgerCatGroup(groupName) {
 export function selectLedgerCat(catName) {
   _ledgerCategory = catName;
   _renderCatChips();
+  _updateCatRow();
+  closeCatSheet();
 }
 
 function _updateCalcDisplay() {
@@ -602,6 +604,96 @@ function _setupCalcKeypad() {
   });
 }
 
+function _updateCatRow() {
+  const iconEl  = document.getElementById('bs-cat-icon');
+  const labelEl = document.getElementById('bs-cat-label');
+  if (iconEl)  iconEl.textContent  = CAT_ICONS[_ledgerCategory] || '📌';
+  if (labelEl) labelEl.textContent = _ledgerCategory;
+}
+
+function _updatePaymentRow() {
+  const rowEl   = document.getElementById('btn-open-payment-sheet') as HTMLElement | null;
+  const labelEl = document.getElementById('bs-payment-label');
+  if (!labelEl) return;
+  if (_ledgerItemType !== 'expense' || (state.cards || []).length === 0) {
+    if (rowEl) rowEl.style.display = 'none';
+    return;
+  }
+  if (rowEl) rowEl.style.display = '';
+  if (!_ledgerCardId) {
+    labelEl.textContent = '현금';
+  } else {
+    const card = (state.cards || []).find(c => c.id === _ledgerCardId);
+    labelEl.textContent = card ? card.name : '현금';
+  }
+}
+
+export function openCatSheet() {
+  _renderCatGroupTabs();
+  _renderCatChips();
+  openSheet('ledger-cat-sheet');
+}
+
+export function closeCatSheet() {
+  closeSheet('ledger-cat-sheet');
+}
+
+export function openPaymentSheet() {
+  _renderPaymentSheet();
+  openSheet('ledger-payment-sheet');
+}
+
+export function closePaymentSheet() {
+  closeSheet('ledger-payment-sheet');
+}
+
+function _renderPaymentSheet() {
+  const el = document.getElementById('ledger-payment-list');
+  if (!el) return;
+  const cards = state.cards || [];
+  const debitCards  = cards.filter(c => c.type !== 'credit');
+  const creditCards = cards.filter(c => c.type === 'credit');
+
+  const opt = (id: string, emoji: string, name: string, sel: boolean, color?: string) => `
+    <button class="pay-option${sel ? ' pay-selected' : ''}" data-pay-id="${escapeHtml(id)}">
+      ${color
+        ? `<span class="pay-option-dot" style="background:${color}"></span>`
+        : `<span class="pay-option-emoji">${emoji}</span>`}
+      <span class="pay-option-name">${name}</span>
+      ${sel ? '<span class="pay-option-check">✓</span>' : ''}
+    </button>`;
+
+  let html = opt('', '💵', '현금', !_ledgerCardId);
+  if (debitCards.length > 0) {
+    html += `<div class="pay-section-label">체크카드</div>`;
+    html += debitCards.map(c => opt(c.id, '', escapeHtml(c.name), _ledgerCardId === c.id, c.color || '#6366f1')).join('');
+  }
+  if (creditCards.length > 0) {
+    html += `<div class="pay-section-label">신용카드</div>`;
+    html += creditCards.map(c => opt(c.id, '', escapeHtml(c.name), _ledgerCardId === c.id, c.color || '#6366f1')).join('');
+  }
+  el.innerHTML = html;
+}
+
+export function selectPaymentMethod(cardId: string) {
+  _ledgerCardId = cardId || null;
+  _renderCardPicker();
+  _updatePaymentRow();
+  closePaymentSheet();
+}
+
+function _syncCardDataFromLedger(ym: string, cardId: string) {
+  const ymDash = ym.slice(0, 4) + '-' + ym.slice(4);
+  const total = Object.entries(state.ledgerData || {})
+    .filter(([dk]) => dk.startsWith(ymDash))
+    .flatMap(([, items]) => items)
+    .filter(i => i.type === 'expense' && i.cardId === cardId)
+    .reduce((s, i) => s + i.amount, 0);
+  if (!state.cardData) (state as any).cardData = {};
+  if (!(state as any).cardData[ym]) (state as any).cardData[ym] = {};
+  (state as any).cardData[ym][cardId] = total;
+}
+
 function _renderItemFormType() {
   const expBtn = document.getElementById('ledger-type-expense');
   const incBtn = document.getElementById('ledger-type-income');
@@ -609,6 +701,8 @@ function _renderItemFormType() {
   if (incBtn) incBtn.className = `calc-type-btn ${_ledgerItemType === 'income' ? 'income-active' : ''}`;
 
   _updateCalcDisplay();
+  _updateCatRow();
+  _updatePaymentRow();
   _renderCatGroupTabs();
   _renderCatChips();
   _renderCardPicker();
@@ -714,7 +808,6 @@ export function saveLedgerItem() {
   const memo = (document.getElementById('ledger-item-memo') as HTMLInputElement)?.value.trim() || '';
 
   if (!amt) {
-    // 금액 없으면 표시 흔들기
     const disp = document.getElementById('calc-amount-display');
     if (disp) { disp.style.animation = 'none'; disp.offsetHeight; disp.style.animation = 'shake 0.3s ease'; }
     return;
@@ -723,6 +816,12 @@ export function saveLedgerItem() {
 
   if (!state.ledgerData) state.ledgerData = {};
   if (!state.ledgerData[_ledgerItemDate]) state.ledgerData[_ledgerItemDate] = [];
+
+  // Capture old cardId before editing (for card sync)
+  const oldItem    = _ledgerItemId
+    ? (state.ledgerData[_ledgerItemDate] || []).find(i => i.id === _ledgerItemId)
+    : null;
+  const oldCardId  = oldItem?.cardId;
 
   const item = {
     id:       _ledgerItemId || uid(),
@@ -744,6 +843,11 @@ export function saveLedgerItem() {
 
   if (item.type === 'expense') _pushRecentCat(item.category);
 
+  // Auto-sync card spending totals
+  const ym = _ledgerItemDate.slice(0, 7).replace('-', '');
+  if (item.type === 'expense' && item.cardId) _syncCardDataFromLedger(ym, item.cardId);
+  if (oldCardId && oldCardId !== item.cardId) _syncCardDataFromLedger(ym, oldCardId);
+
   syncLedgerToBalance();
   save();
 
@@ -759,8 +863,15 @@ export function deleteLedgerItem(dateStr, itemId) {
   if (!confirm('항목을 삭제할까요?')) return;
   if (!state.ledgerData?.[dateStr]) return;
 
+  const deleted = state.ledgerData[dateStr].find(i => i.id === itemId);
   state.ledgerData[dateStr] = state.ledgerData[dateStr].filter(i => i.id !== itemId);
   if (state.ledgerData[dateStr].length === 0) delete state.ledgerData[dateStr];
+
+  // Auto-sync card spending on delete
+  if (deleted?.type === 'expense' && deleted?.cardId) {
+    const ym = dateStr.slice(0, 7).replace('-', '');
+    _syncCardDataFromLedger(ym, deleted.cardId);
+  }
 
   syncLedgerToBalance();
   save();
@@ -1451,6 +1562,7 @@ export function openCardForm(id) {
 
   document.getElementById('card-form-title').textContent = card ? '카드 수정' : '카드 추가';
   document.getElementById('cf-name').value = card?.name || '';
+  (document.getElementById('cf-type') as HTMLSelectElement).value = card?.type || 'debit';
   document.getElementById('cf-color').value = card?.color || '#3b82f6';
   document.getElementById('cf-payday').value = card?.payDay || 1;
   openSheet('card-form-overlay');
@@ -1462,8 +1574,9 @@ export function hideCardForm() {
 }
 
 export function saveCard() {
-  const name = document.getElementById('cf-name').value.trim();
-  const color = document.getElementById('cf-color').value;
+  const name   = document.getElementById('cf-name').value.trim();
+  const type   = ((document.getElementById('cf-type') as HTMLSelectElement)?.value || 'debit') as 'credit' | 'debit';
+  const color  = document.getElementById('cf-color').value;
   const payDay = parseInt(document.getElementById('cf-payday').value, 10) || 1;
 
   if (!name) { alert('카드명을 입력해주세요'); return; }
@@ -1476,10 +1589,10 @@ export function saveCard() {
   if (_editCardId) {
     const idx = state.cards.findIndex(c => c.id === _editCardId);
     if (idx >= 0) {
-      state.cards[idx] = { ...state.cards[idx], name, color, payDay };
+      state.cards[idx] = { ...state.cards[idx], name, type, color, payDay };
     }
   } else {
-    state.cards.push({ id: uid(), name, color, payDay });
+    state.cards.push({ id: uid(), name, type, color, payDay });
   }
 
   save();
