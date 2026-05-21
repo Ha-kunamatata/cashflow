@@ -563,6 +563,11 @@ function _updateCalcDisplay() {
   const num = parseInt(_calcAmountStr || '0', 10) || 0;
   valEl.textContent = num.toLocaleString('ko-KR');
 
+  // pop animation on value change
+  valEl.classList.remove('updated');
+  void (valEl as HTMLElement).offsetWidth;
+  valEl.classList.add('updated');
+
   if (exprEl) {
     if (_calcOp !== null) {
       exprEl.textContent = `${_calcLeft.toLocaleString('ko-KR')} ${_calcOp}`;

@@ -3683,33 +3683,40 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   .ws-dots { display: none; }
   .ws-counter { display: none; }
 
-  /* ── summary-grid: 2×2 카드 레이아웃 복원 ─────────────── */
+  /* ── summary-grid: 2×2 카드 레이아웃 ──────────────────── */
   .ws-slide .summary-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 0;
   }
   .ws-slide .summary-item {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 14px 14px 12px;
-    border-radius: 14px;
-    min-height: 88px;
-    box-shadow: none;
+    padding: 16px 14px 14px;
+    border-radius: 16px;
+    min-height: 96px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
     overflow: hidden;
     position: relative;
     cursor: pointer;
-    transition: background .15s, transform .15s;
+    transition: transform .18s cubic-bezier(.34,1.2,.64,1), box-shadow .18s;
+    border-top-width: 2px;
   }
-  .ws-slide .summary-item:hover { transform: translateY(-2px); }
+  .ws-slide .summary-item:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.2); }
   .ws-slide .summary-item::before { display: none; }
+  /* 컬러 상단 강조선 */
+  .ws-slide [data-action="entries-income"]  { border-top-color: var(--green2); }
+  .ws-slide [data-action="entries-expense"] { border-top-color: var(--red2); }
+  .ws-slide [data-action="entries-halbu"]   { border-top-color: var(--accent2); }
+  .ws-slide [data-action="forecast"]        { border-top-color: #a78bfa; }
+  .ws-slide [data-action="ledger"]          { border-top-color: var(--orange); }
   .ws-slide .summary-item-top {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 7px;
+    margin-bottom: 10px;
     justify-content: flex-start;
   }
   .ws-slide .summary-item-label {
@@ -3720,21 +3727,26 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
     white-space: nowrap;
     order: 2;
   }
+  /* 아이콘을 작은 배경 칩으로 */
   .ws-slide .summary-item-icon {
-    font-size: 14px;
+    font-size: 13px;
     flex-shrink: 0;
     order: 1;
     line-height: 1;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    background: rgba(255,255,255,.07);
   }
   .ws-slide .summary-item-value {
-    font-size: 20px;
+    font-size: clamp(16px, 1.5vw, 22px);
     font-weight: 900;
     letter-spacing: -0.5px;
     line-height: 1;
   }
   .ws-slide .summary-item-sub {
     font-size: 10px;
-    margin-top: 4px;
+    margin-top: 5px;
     color: var(--text3);
     display: block;
     white-space: nowrap;
@@ -3743,7 +3755,7 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   }
   .ws-slide .budget-bar {
     display: block;
-    margin-top: 8px;
+    margin-top: 10px;
     width: 100%;
     height: 3px;
     background: rgba(255,255,255,.08);
@@ -3768,7 +3780,6 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   .ws-slide .forecast-mini-val { font-size: 13px; }
 
   .ws-slide .home-section-hdr + div .card { margin-bottom: 0; }
-  }
   .ws-slide .summary-item-sub { display: none; }
   .ws-slide .budget-bar { display: none; }
 
@@ -4208,7 +4219,7 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 12px 4px;
   overflow-y: auto;
   flex: 1;
 }
@@ -4216,34 +4227,73 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 0;
   padding: 14px 4px 12px;
-  border-radius: 14px;
-  border: 1.5px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  border: 1.5px solid rgba(255,255,255,.05);
   background: var(--bg3);
   cursor: pointer;
-  transition: border-color .15s, background .15s, transform .1s;
+  transition: border-color .18s, background .18s, transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .18s;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
 }
-.bs-cat-card:active { transform: scale(0.94); background: var(--bg4); }
+.bs-cat-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.04), transparent 60%);
+  pointer-events: none;
+}
+.bs-cat-card:active { transform: scale(0.9); }
 .bs-cat-card.bs-cat-selected {
   border-color: var(--cat-col, var(--accent2));
-  background: color-mix(in srgb, var(--cat-col, var(--accent2)) 12%, transparent);
+  background: color-mix(in srgb, var(--cat-col, var(--accent2)) 10%, var(--bg3));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cat-col, var(--accent2)) 35%, transparent),
+              0 4px 16px color-mix(in srgb, var(--cat-col, var(--accent2)) 20%, transparent);
 }
+
+/* 아이콘: 컬러 원형 배경 */
 .bs-cat-card-icon {
-  font-size: 26px;
-  line-height: 1;
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cat-col, #6366f1) 14%, var(--bg2));
+  font-size: 24px;
+  margin-bottom: 8px;
+  transition: background .18s, transform .15s;
+  flex-shrink: 0;
 }
+.bs-cat-card:active .bs-cat-card-icon { transform: scale(0.9); }
+.bs-cat-card.bs-cat-selected .bs-cat-card-icon {
+  background: color-mix(in srgb, var(--cat-col, #6366f1) 22%, var(--bg2));
+}
+
 .bs-cat-card-name {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text2);
+  color: var(--text3);
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.25;
   word-break: keep-all;
+  transition: color .18s;
 }
-.bs-cat-card.bs-cat-selected .bs-cat-card-name { color: var(--text); }
+.bs-cat-card.bs-cat-selected .bs-cat-card-name {
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* 라이트 테마 카테고리 카드 */
+body.light-theme .bs-cat-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+body.light-theme .bs-cat-card.bs-cat-selected {
+  background: color-mix(in srgb, var(--cat-col, #6366f1) 8%, #fff);
+}
+body.light-theme .bs-cat-card-icon {
+  background: color-mix(in srgb, var(--cat-col, #6366f1) 12%, #fff);
+}
 
 .bs-cat-bottom {
   padding: 8px 14px 10px;
@@ -4360,3 +4410,183 @@ body.light-theme .bs-info-row:active { background: rgba(0,0,0,.04); }
   .bs-cat-panel   { width: min(92vw, 480px); border-radius: 24px; margin-bottom: 40px; }
   .bs-pay-panel   { width: min(92vw, 480px); border-radius: 24px; margin-bottom: 40px; }
 }
+
+/* ════════════════════════════════════════════════════════
+   뱅크샐러드급 퀄리티 업그레이드 — 전역 폴리시
+   ════════════════════════════════════════════════════════ */
+
+/* ── 거래내역 카드 (lday-card) 고도화 ───────────────────
+   BankSalad: 큼직한 컬러 원형 아이콘, 볼드 이름, 오른쪽 금액
+   ──────────────────────────────────────────────────────── */
+.lday-card {
+  padding: 13px 8px;
+  gap: 14px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .12s, transform .16s cubic-bezier(.34,1.2,.64,1);
+}
+.lday-card:active { transform: scale(0.985); background: rgba(255,255,255,.06); }
+.lday-card-icon-wrap {
+  width: 46px; height: 46px;
+  border-radius: 15px;
+  font-size: 22px;
+  border: none !important;
+  box-shadow: none;
+  transition: transform .16s cubic-bezier(.34,1.56,.64,1);
+}
+.lday-card:active .lday-card-icon-wrap { transform: scale(0.88); }
+.lday-card-name { font-size: 15px; font-weight: 700; }
+.lday-card-meta { font-size: 12px; gap: 5px; margin-top: 3px; }
+.lday-card-amount { font-size: 16px; font-weight: 900; letter-spacing: -0.4px; }
+.lday-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+/* 수정/삭제 버튼 더 세련되게 */
+.lday-card-action-btn {
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  transition: background .12s, transform .12s;
+}
+.lday-card-action-btn:active { transform: scale(0.93); }
+
+/* ── PC에서 lday-card hover lift ───────────────────────── */
+@media (min-width: 640px) {
+  .lday-card {
+    border-radius: 12px;
+    padding: 13px 14px;
+    margin-bottom: 1px;
+    border-bottom: none;
+  }
+  .lday-card:hover {
+    background: rgba(255,255,255,.06);
+    transform: translateX(3px);
+  }
+  .lday-card:active { transform: scale(0.99); }
+  body.light-theme .lday-card:hover { background: rgba(0,0,0,.035); }
+}
+
+/* ── 가계부 달력 월별 요약 카드 개선 ─────────────────────── */
+.ledger-cal-sum-item {
+  padding: 12px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .12s, transform .15s cubic-bezier(.34,1.2,.64,1), border-color .15s;
+}
+.ledger-cal-sum-item:active {
+  transform: scale(0.94);
+  background: rgba(255,255,255,.08);
+}
+.ledger-cal-sum-lbl { font-size: 10px; letter-spacing: 0.2px; margin-bottom: 4px; }
+.ledger-cal-sum-val { font-size: 13px; letter-spacing: -0.3px; }
+body.light-theme .ledger-cal-sum-item:active { background: rgba(0,0,0,.06); }
+
+/* ── 홈 섹션 헤더 개선 (BankSalad 라인 강조) ─────────────── */
+.home-section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-section-hdr::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.7;
+}
+
+/* ── 바텀 탭바 active 상태 개선 ──────────────────────────── */
+.nav-btn svg {
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), color .18s;
+}
+.nav-btn.active svg {
+  transform: scale(1.12) translateY(-1.5px);
+}
+.nav-indicator {
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+}
+.nav-btn.active .nav-indicator {
+  opacity: 1;
+  width: 34px;
+}
+
+/* ── 캘린더 날짜 셀 선택 애니메이션 ──────────────────────── */
+.ledger-cal-cell {
+  transition: background .15s, transform .15s cubic-bezier(.34,1.4,.64,1);
+}
+.ledger-cal-cell:active { transform: scale(0.85); }
+
+/* ── 날짜 인라인 패널 헤더 ──────────────────────────────── */
+.ledger-inline-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ledger-inline-hdr-date {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.ledger-inline-hdr-sum {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+
+/* ── 예산 진행 바 개선 ─────────────────────────────────── */
+.budget-bar-fill {
+  transition: width .6s cubic-bezier(.2,.8,.2,1);
+}
+
+/* ── 카드/버튼 전역 ripple 피드백 강화 ─────────────────── */
+.summary-item:active {
+  transform: scale(0.97) !important;
+}
+.nav-btn:active {
+  opacity: 0.7;
+}
+
+/* ── BS 확인 버튼 탭 피드백 강화 ─────────────────────── */
+.bs-confirm-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 0 5px rgba(22,163,74,.18), 0 4px 20px rgba(22,163,74,.3);
+}
+
+/* ── 결제수단 선택 호버 개선 ──────────────────────────── */
+.pay-option { transition: background .12s, transform .14s; }
+.pay-option:active { transform: scale(0.98); }
+
+/* ── 모달 오버레이 배경 강화 ──────────────────────────── */
+.sheet-overlay {
+  transition: background .25s, backdrop-filter .25s;
+}
+.sheet-overlay.show {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── 뱅크샐러드 스타일 숫자 애니메이션 (금액 업데이트 시) ── */
+@keyframes bs-num-pop {
+  0%   { transform: scale(1.15); opacity: .8; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.bs-amount-value.updated {
+  animation: bs-num-pop .25s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+/* ── 라이트 테마 추가 오버라이드 ──────────────────────── */
+body.light-theme .lday-card-wrap .lday-card { background: #fff; }
+body.light-theme .lday-card { border-bottom-color: rgba(0,0,0,.05); }
+body.light-theme .ledger-cal-sum-item { background: #f8fafc; border-color: #e2e8f0; }
