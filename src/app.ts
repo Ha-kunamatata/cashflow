@@ -176,8 +176,10 @@ import { BADGE_DEFS, RARITY_CONFIG } from './streak';
 // ── 리플 초기화 ────────────────────────────────────────
 initRipple();
 
-// ── 홈 위젯 스택 (스와이프 카드) ───────────────────────
+// ── 홈 위젯 스택 (모바일: 스와이프 카드 / 데스크탑: 전체 표시) ─
 (function _initWidgetStacks() {
+  const isDesktop = () => window.innerWidth >= 1100;
+
   function setupStack(stack: HTMLElement) {
     const slides = Array.from(stack.querySelectorAll<HTMLElement>('.ws-slide'));
     const dots = Array.from(stack.querySelectorAll<HTMLElement>('.ws-dot'));
@@ -185,6 +187,7 @@ initRipple();
     let current = 0;
 
     function goTo(idx: number) {
+      if (isDesktop()) return; // 데스크탑: CSS가 모두 표시
       idx = Math.max(0, Math.min(slides.length - 1, idx));
       slides.forEach((s, i) => s.classList.toggle('active', i === idx));
       dots.forEach((d, i) => d.classList.toggle('active', i === idx));
@@ -193,17 +196,18 @@ initRipple();
 
     dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
 
-    // Touch swipe
+    // Touch swipe (모바일 전용)
     let startX = 0, startY = 0, dragging = false;
     const slidesEl = stack.querySelector<HTMLElement>('.ws-slides');
     if (!slidesEl) return;
     slidesEl.addEventListener('touchstart', (e) => {
+      if (isDesktop()) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       dragging = true;
     }, { passive: true });
     slidesEl.addEventListener('touchend', (e) => {
-      if (!dragging) return;
+      if (!dragging || isDesktop()) return;
       dragging = false;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = Math.abs(e.changedTouches[0].clientY - startY);

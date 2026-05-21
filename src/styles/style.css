@@ -3474,3 +3474,268 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ════════════════════════════════════════════════════════
+   PC / 반응형 강화 — 태블릿 & 데스크탑
+   ════════════════════════════════════════════════════════ */
+
+/* ── 태블릿 (768px+) ────────────────────────────────────── */
+@media (min-width: 768px) {
+  /* 헤더 잔고 최대폭 확장 */
+  .topbar-balance-amount { max-width: 200px; font-size: 17px; }
+  /* 카드/그리드 간격 */
+  .card { border-radius: 22px; }
+  /* 가계부 캘린더 셀 여백 */
+  .ledger-day { min-height: 64px; }
+  /* 시트 너비 */
+  .sheet-panel { width: min(92vw, 580px); }
+  .calc-sheet-panel { width: min(92vw, 500px); }
+  /* 목표 카드 2열 */
+  #goals-list .goal-card { max-width: 100%; }
+  /* 검색 결과 패딩 */
+  .search-result-card { padding: 12px 20px; }
+  .search-date-header { padding: 8px 20px 4px; }
+}
+
+/* ── 데스크탑 (1100px+): 전면 PC 최적화 ─────────────────── */
+@media (min-width: 1100px) {
+
+  /* ───────────────────────────────────────────────────── */
+  /* 1. 시트 / 모달 — 하단이 아닌 화면 중앙으로            */
+  /* ───────────────────────────────────────────────────── */
+  .sheet-overlay {
+    align-items: center;
+    padding: 40px 20px;
+  }
+  .sheet-overlay.ai-fullscreen {
+    align-items: stretch;
+    padding: 0;
+  }
+  .sheet-panel {
+    width: min(90vw, 660px);
+    max-height: 88vh;
+    overflow-y: auto;
+    border-radius: 24px;             /* 상단만 → 전체 라운드 */
+    transform: scale(0.94);
+    transition: transform .26s cubic-bezier(.2,.8,.2,1),
+                opacity .22s ease;
+    opacity: 0;
+  }
+  .sheet-overlay.show .sheet-panel {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  /* 가계부 입력 calc 시트 — 중앙 모달 */
+  .sheet-overlay-top {
+    align-items: center !important;
+  }
+  .calc-sheet-panel {
+    width: min(90vw, 500px);
+    border-radius: 24px;
+    max-height: 92vh;
+    transform: scale(0.94);
+    transition: transform .28s cubic-bezier(.2,.8,.2,1),
+                opacity .22s ease;
+    opacity: 0;
+  }
+  .sheet-overlay.show .calc-sheet-panel {
+    transform: scale(1);
+    opacity: 1;
+  }
+  /* 계산기 내부 레이아웃 조정 */
+  .calc-numpad {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 2. 검색 오버레이 — 사이드바 오프셋 + 중앙 박스형      */
+  /* ───────────────────────────────────────────────────── */
+  #search-overlay {
+    left: 116px;    /* 사이드바 너비 제외 */
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 100px 40px 40px;
+    background: rgba(5, 10, 25, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: none;    /* 데스크탑에서는 fade 대신 즉시 표시 */
+  }
+  .search-header {
+    width: min(100%, 760px);
+    border-radius: 20px 20px 0 0;
+    padding: 14px 20px;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.3);
+  }
+  #search-filter-bar {
+    width: min(100%, 760px);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-bottom: none;
+    background: var(--bg2);
+  }
+  .search-results {
+    width: min(100%, 760px);
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    border-radius: 0 0 20px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-top: none;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+  }
+  .search-input-wrap {
+    background: var(--bg3);
+    flex: 1;
+  }
+  #search-input { font-size: 16px; }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 3. 홈 위젯 스택 — 3열 그리드, 캐러셀 비활성화         */
+  /* ───────────────────────────────────────────────────── */
+  .home-widget-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .home-widget-stack {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 0;
+  }
+  .ws-label {
+    display: flex;
+    font-size: 9px;
+    padding: 8px 14px 4px;
+    letter-spacing: 1px;
+  }
+  .ws-nav-hint { display: none; }
+  .ws-slides {
+    display: block;
+  }
+  /* 모든 슬라이드 동시 표시 */
+  .ws-slide {
+    display: block !important;
+    animation: none !important;
+    padding: 6px 14px 8px;
+  }
+  .ws-slide + .ws-slide {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  /* 도트 → 슬라이드 제목 탭으로 교체 */
+  .ws-dots { display: none; }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 4. 인라인 패널 (가계부 캘린더) — 스타일 개선          */
+  /* ───────────────────────────────────────────────────── */
+  #ledger-day-inline-panel.open {
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 0 12px 12px;
+    margin-top: 6px;
+    background: var(--bg2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 5. 카드 hover / 인터랙션                              */
+  /* ───────────────────────────────────────────────────── */
+  .card:hover {
+    border-color: rgba(99,102,241,0.2);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .entry-item:hover { border-color: rgba(99,102,241,0.25); }
+  .goal-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+  .wish-card:hover { border-left-width: 4px; }
+  .summary-item:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+  .btn:not(:active):hover { filter: brightness(1.08); }
+  .icon-btn:hover { background: rgba(255,255,255,0.1); }
+  .nav-btn:hover .nav-indicator { opacity: 0.06; width: auto; }
+  .form-input:hover, .form-select:hover, .setting-input:hover, .field:hover {
+    border-color: rgba(99,102,241,0.28);
+  }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 6. 타이포그래피 / 여백 스케일업                       */
+  /* ───────────────────────────────────────────────────── */
+  .balance-amount { font-size: clamp(38px, 4vw, 58px); }
+  .balance-card   { padding: 28px 28px 24px; }
+  .card           { padding: 18px 20px; }
+  .card-title     { font-size: 13px; }
+  .summary-item   { padding: 16px 14px; }
+  .summary-item-value { font-size: clamp(20px, 2.2vw, 28px); }
+  .sheet-title    { font-size: 22px; }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 7. 스크롤바 — 미니멀 데스크탑 스타일                  */
+  /* ───────────────────────────────────────────────────── */
+  * { scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.25) transparent; }
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(99,102,241,0.2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.38); }
+  body.light-theme ::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.18); }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 8. 라이트 모드 데스크탑 픽스                          */
+  /* ───────────────────────────────────────────────────── */
+  body.light-theme .sheet-panel { border-radius: 24px; }
+  body.light-theme .calc-sheet-panel { border-radius: 24px; }
+  body.light-theme .search-results { background: #fff; }
+  body.light-theme .search-header  { background: #fff; }
+  body.light-theme #search-filter-bar { background: #f8fafc; }
+
+  /* ───────────────────────────────────────────────────── */
+  /* 9. 포커스 링 (키보드 접근성)                          */
+  /* ───────────────────────────────────────────────────── */
+  :focus-visible {
+    outline: 2px solid rgba(99,102,241,0.6);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ── 와이드 스크린 (1400px+) ─────────────────────────────── */
+@media (min-width: 1400px) {
+  .sheet-panel     { max-width: 720px; }
+  .calc-sheet-panel { max-width: 540px; }
+  #search-overlay  { padding-top: 110px; }
+  .search-header, #search-filter-bar, .search-results { max-width: 840px; }
+
+  /* 홈 위젯 스택 좀 더 넓게 */
+  .home-widget-row { gap: 18px; }
+  .ws-slide { padding: 8px 16px 12px; }
+
+  /* 카드 패딩 */
+  .card { padding: 20px 22px; }
+  .balance-card { padding: 32px 32px 28px; }
+}
+
+/* ── 초와이드 (1680px+): 최대 컨텐츠 너비 제한 ──────────── */
+@media (min-width: 1680px) {
+  .page { max-width: 1600px; }
+  .topbar { max-width: 1600px; left: calc(50% - 800px + 116px / 2); }
+}
+
+/* ── 마우스 포인터 환경: 터치 리플 최소화 ────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  /* 마우스 환경에서는 active 스케일 줄이기 */
+  .btn:active { transform: scale(0.98); }
+  .icon-btn:active { transform: scale(0.94); }
+  .summary-item:active { transform: translateY(0); }
+  /* 클릭 커서 명확화 */
+  .card[data-action], [data-action], .btn, .icon-btn,
+  .nav-btn, .calc-cat-item, .ledger-card-chip,
+  .search-filter-chip, .ws-dot { cursor: pointer; }
+}
