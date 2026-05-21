@@ -3615,28 +3615,50 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   #search-input { font-size: 16px; }
 
   /* ───────────────────────────────────────────────────── */
-  /* 3. 홈 위젯 스택 — 3열 그리드, 캐러셀 비활성화         */
+  /* 3. 홈 위젯 — 비대칭 2열 대시보드 레이아웃              */
   /* ───────────────────────────────────────────────────── */
+
+  /* 위젯 행: 좌(지출현황) 2행 스팬 + 우(예산/자산) 2개 스택 */
   .home-widget-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    margin-bottom: 0;
+    align-items: start;
   }
+  [data-stack="spending"] { grid-column: 1; grid-row: 1 / 3; }
+  [data-stack="budget"]   { grid-column: 2; grid-row: 1; }
+  [data-stack="assets"]   { grid-column: 2; grid-row: 2; }
+
   .home-widget-stack {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 20px;
     overflow: hidden;
     margin-bottom: 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,.14);
   }
+
+  /* 위젯 헤더 */
   .ws-label {
     display: flex;
-    font-size: 9px;
-    padding: 8px 14px 4px;
-    letter-spacing: 1px;
+    align-items: center;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+    background: rgba(255,255,255,.02);
+  }
+  .ws-label-text {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    text-transform: uppercase;
+    flex: 1;
   }
   .ws-nav-hint { display: none; }
+
   /* 데스크탑: 트랙을 수직 방향으로, 모든 슬라이드 표시 */
   .ws-slides {
     cursor: default;
@@ -3646,72 +3668,106 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   }
   .ws-track {
     flex-direction: column;
-    align-items: stretch; /* 데스크탑은 full-width */
+    align-items: stretch;
     transform: translate3d(0, 0, 0) !important;
     transition: none !important;
   }
   .ws-slide {
     flex: 0 0 auto;
     width: 100%;
-    padding: 6px 14px 8px;
+    padding: 14px 18px 16px;
   }
   .ws-slide + .ws-slide {
     border-top: 1px solid var(--border);
-    padding-top: 10px;
   }
   .ws-dots { display: none; }
   .ws-counter { display: none; }
 
-  /* ── 위젯 스택 내부 컴팩트 레이아웃 ─────────────────────── */
-
-  /* summary-grid: 4열 → 1열 가로 목록 */
+  /* ── summary-grid: 2×2 카드 레이아웃 복원 ─────────────── */
   .ws-slide .summary-grid {
-    grid-template-columns: 1fr;
-    gap: 3px;
-    margin-bottom: 4px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 0;
   }
   .ws-slide .summary-item {
     display: flex;
-    align-items: center;
-    padding: 6px 10px;
-    border-radius: 10px;
-    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 14px 12px;
+    border-radius: 14px;
+    min-height: 88px;
     box-shadow: none;
-    overflow: visible;
-    transform: none !important;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: background .15s, transform .15s;
   }
+  .ws-slide .summary-item:hover { transform: translateY(-2px); }
   .ws-slide .summary-item::before { display: none; }
   .ws-slide .summary-item-top {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    margin-bottom: 8px;
     justify-content: flex-start;
-    margin-bottom: 0;
-    flex: 1;
-    min-width: 0;
   }
   .ws-slide .summary-item-label {
-    order: 2;
     font-size: 11px;
     letter-spacing: 0;
+    font-weight: 700;
+    color: var(--text3);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 600;
+    order: 2;
   }
-  .ws-slide .summary-item-icon { order: 1; font-size: 12px; flex-shrink: 0; line-height: 1; }
-  .ws-slide .summary-item-value {
-    font-size: 13px;
-    letter-spacing: -0.2px;
-    font-weight: 800;
-    margin-left: auto;
+  .ws-slide .summary-item-icon {
+    font-size: 14px;
     flex-shrink: 0;
-    max-width: 120px;
-    text-align: right;
+    order: 1;
+    line-height: 1;
+  }
+  .ws-slide .summary-item-value {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .ws-slide .summary-item-sub {
+    font-size: 10px;
+    margin-top: 4px;
+    color: var(--text3);
+    display: block;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+  .ws-slide .budget-bar {
+    display: block;
+    margin-top: 8px;
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  /* ── 섹션 헤더 / 카드 ─────────────────────────────────── */
+  .ws-slide .home-section-hdr {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin: 0 0 8px;
+  }
+  .ws-slide .card { padding: 12px 14px; }
+  .ws-slide .card-title { font-size: 11px; margin-bottom: 8px; }
+
+  /* forecast 미니 셀 */
+  .ws-slide .forecast-mini-cell { padding: 8px 4px; }
+  .ws-slide .forecast-mini-val { font-size: 13px; }
+
+  .ws-slide .home-section-hdr + div .card { margin-bottom: 0; }
   }
   .ws-slide .summary-item-sub { display: none; }
   .ws-slide .budget-bar { display: none; }
@@ -3815,9 +3871,16 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   #search-overlay  { padding-top: 110px; }
   .search-header, #search-filter-bar, .search-results { max-width: 840px; }
 
-  /* 홈 위젯 스택 좀 더 넓게 */
-  .home-widget-row { gap: 18px; }
-  .ws-slide { padding: 8px 16px 12px; }
+  /* 1400px+: 위젯 3열 레이아웃 */
+  .home-widget-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 18px;
+  }
+  [data-stack="spending"] { grid-column: 1; grid-row: 1; }
+  [data-stack="budget"]   { grid-column: 2; grid-row: 1; }
+  [data-stack="assets"]   { grid-column: 3; grid-row: 1; }
+  .ws-slide { padding: 14px 18px 16px; }
 
   /* 카드 패딩 */
   .card { padding: 20px 22px; }
