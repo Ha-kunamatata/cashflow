@@ -1146,8 +1146,8 @@ document.getElementById('ledger-cat-groups')?.addEventListener('click', (e) => {
   if (btn) selectLedgerCatGroup(btn.dataset.group);
 });
 document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.calc-cat-item');
-  if (btn) selectLedgerCat(btn.dataset.cat);
+  const btn = (e.target as HTMLElement).closest('.bs-cat-card') as HTMLElement | null;
+  if (btn) selectLedgerCat(btn.dataset.cat || '');
 });
 document.getElementById('ledger-tag-row')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.ledger-tag-btn');
@@ -1174,6 +1174,7 @@ document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
 // 카테고리 서브시트
 document.getElementById('btn-open-cat-sheet')?.addEventListener('click', openCatSheet);
 document.getElementById('btn-close-cat-sheet')?.addEventListener('click', closeCatSheet);
+document.getElementById('btn-cat-confirm')?.addEventListener('click', closeCatSheet);
 document.getElementById('ledger-cat-sheet')?.addEventListener('click', (e) => {
   if ((e.target as HTMLElement)?.id === 'ledger-cat-sheet') closeCatSheet();
 });

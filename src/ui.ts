@@ -382,7 +382,9 @@ let _ledgerCatGroup  = Object.keys(LEDGER_CATEGORIES)[0];
 let _ledgerCategory  = LEDGER_CATEGORIES[Object.keys(LEDGER_CATEGORIES)[0]][0];
 let _ledgerItemTag   = null; // 소비 유형 태그
 let _ledgerCardId: string | null = null; // 선택된 카드 ID
-let _calcAmountStr   = '';   // 계산기 입력 문자열
+let _calcAmountStr   = '';   // 현재 입력 중인 피연산자 문자열
+let _calcLeft        = 0;    // 누적 좌항 값
+let _calcOp: string | null = null; // 대기 중인 연산자 (+, -, ×)
 
 
 // 날짜 셀 클릭 → 날짜 시트 열기
@@ -490,6 +492,8 @@ export function openLedgerItemForm(dateStr, itemId) {
 
   // 계산기 금액 초기화
   _calcAmountStr = existing?.amount ? String(existing.amount) : '';
+  _calcLeft = 0;
+  _calcOp = null;
   _updateCalcDisplay();
 
   const titleEl = document.getElementById('ledger-item-sheet-title');
@@ -511,6 +515,8 @@ export function openLedgerItemForm(dateStr, itemId) {
 
 export function closeLedgerItemForm() {
   _calcAmountStr = '';
+  _calcLeft = 0;
+  _calcOp = null;
   _ledgerCardId = null;
   closeSheet('ledger-item-sheet');
 }
@@ -545,18 +551,38 @@ export function selectLedgerCat(catName) {
   _ledgerCategory = catName;
   _renderCatChips();
   _updateCatRow();
-  closeCatSheet();
+  // 저장 버튼 누를 때 닫힘 (auto-close 제거)
 }
 
 function _updateCalcDisplay() {
-  const el = document.getElementById('calc-display-value');
-  const wrap = document.getElementById('calc-amount-display');
-  if (!el) return;
-  const num = parseInt(_calcAmountStr || '0', 10);
-  el.textContent = num.toLocaleString('ko-KR');
-  if (wrap) {
-    wrap.className = `calc-amount-display ${_ledgerItemType === 'expense' ? 'expense' : 'income'}`;
+  const valEl  = document.getElementById('calc-display-value');
+  const exprEl = document.getElementById('calc-expr-display');
+  const wrap   = document.getElementById('calc-amount-display');
+  if (!valEl) return;
+
+  const num = parseInt(_calcAmountStr || '0', 10) || 0;
+  valEl.textContent = num.toLocaleString('ko-KR');
+
+  if (exprEl) {
+    if (_calcOp !== null) {
+      exprEl.textContent = `${_calcLeft.toLocaleString('ko-KR')} ${_calcOp}`;
+      exprEl.style.display = '';
+    } else {
+      exprEl.textContent = '';
+      exprEl.style.display = 'none';
+    }
   }
+
+  if (wrap) {
+    wrap.className = `bs-amount-display ${_ledgerItemType === 'expense' ? 'expense' : 'income'}`;
+  }
+}
+
+function _calcApplyOp(left: number, op: string, right: number): number {
+  if (op === '+') return left + right;
+  if (op === '-') return Math.max(0, left - right);
+  if (op === '×') return left * right;
+  return right;
 }
 
 function _handleCalcKey(key: string) {
@@ -565,16 +591,50 @@ function _handleCalcKey(key: string) {
     saveLedgerItem();
     return;
   }
-  if (key === 'del' || key === 'clear') {
+
+  // 연산자 키 처리
+  if (key === '+' || key === '-' || key === '×') {
+    if (navigator.vibrate) navigator.vibrate(8);
+    const cur = parseInt(_calcAmountStr || '0', 10) || 0;
+    if (_calcOp !== null) {
+      _calcLeft = _calcApplyOp(_calcLeft, _calcOp, cur);
+    } else {
+      _calcLeft = cur;
+    }
+    _calcOp = key;
+    _calcAmountStr = '';
+    _updateCalcDisplay();
+    return;
+  }
+
+  if (key === 'del') {
     if (navigator.vibrate) navigator.vibrate(15);
-    if (key === 'del') _calcAmountStr = _calcAmountStr.slice(0, -1);
-    else _calcAmountStr = '';
+    if (_calcAmountStr) {
+      _calcAmountStr = _calcAmountStr.slice(0, -1);
+    } else if (_calcOp !== null) {
+      // 연산자 취소 → 좌항 복원
+      _calcAmountStr = String(_calcLeft);
+      _calcLeft = 0;
+      _calcOp = null;
+    }
+  } else if (key === 'clear' || key === 'C') {
+    if (navigator.vibrate) navigator.vibrate(15);
+    _calcAmountStr = '';
+    _calcLeft = 0;
+    _calcOp = null;
+  } else if (key === ',000') {
+    if (_calcAmountStr && _calcAmountStr !== '0' && _calcAmountStr.length < 8) {
+      _calcAmountStr += '000';
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
   } else if (key === '00') {
-    if (_calcAmountStr) { _calcAmountStr += '00'; if (navigator.vibrate) navigator.vibrate(8); }
-  } else {
-    if (_calcAmountStr.length >= 10) return;
+    if (_calcAmountStr && _calcAmountStr !== '0' && _calcAmountStr.length < 9) {
+      _calcAmountStr += '00';
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+  } else if (/^\d$/.test(key)) {
     if (_calcAmountStr === '0') _calcAmountStr = key;
-    else _calcAmountStr += key;
+    else if (_calcAmountStr.length < 10) _calcAmountStr += key;
     if (navigator.vibrate) navigator.vibrate(8);
   }
   _updateCalcDisplay();
@@ -629,7 +689,8 @@ function _updatePaymentRow() {
 }
 
 export function openCatSheet() {
-  _renderCatGroupTabs();
+  const titleEl = document.getElementById('bs-cat-sheet-title');
+  if (titleEl) titleEl.textContent = _ledgerItemType === 'income' ? '수입 카테고리 선택' : '지출 카테고리 선택';
   _renderCatChips();
   openSheet('ledger-cat-sheet');
 }
@@ -697,14 +758,12 @@ function _syncCardDataFromLedger(ym: string, cardId: string) {
 function _renderItemFormType() {
   const expBtn = document.getElementById('ledger-type-expense');
   const incBtn = document.getElementById('ledger-type-income');
-  if (expBtn) expBtn.className = `calc-type-btn ${_ledgerItemType === 'expense' ? 'expense-active' : ''}`;
-  if (incBtn) incBtn.className = `calc-type-btn ${_ledgerItemType === 'income' ? 'income-active' : ''}`;
+  if (expBtn) expBtn.className = `bs-type-pill${_ledgerItemType === 'expense' ? ' expense bs-type-active' : ''}`;
+  if (incBtn) incBtn.className = `bs-type-pill${_ledgerItemType === 'income'  ? ' income bs-type-active'  : ''}`;
 
   _updateCalcDisplay();
   _updateCatRow();
   _updatePaymentRow();
-  _renderCatGroupTabs();
-  _renderCatChips();
   _renderCardPicker();
   _setupCalcKeypad();
 }
@@ -767,26 +826,21 @@ function _renderCatGroupTabs() {
 function _renderCatChips() {
   const el = document.getElementById('ledger-cat-chips');
   if (!el) return;
-  let cats: string[];
-  if (_ledgerItemType === 'income') {
-    cats = LEDGER_INCOME_CATEGORIES;
-  } else if (_ledgerCatGroup === _RECENT_GROUP) {
-    cats = _getRecentCats();
-  } else {
-    cats = LEDGER_CATEGORIES[_ledgerCatGroup] || [];
-  }
 
-  el.className = 'calc-cat-grid';
+  // 전체 카테고리 플랫 리스트 (그룹 없음)
+  const cats: string[] = _ledgerItemType === 'income'
+    ? [...LEDGER_INCOME_CATEGORIES]
+    : (Object.values(LEDGER_CATEGORIES) as string[][]).flat();
+
+  el.className = 'bs-cat-grid-4';
   el.innerHTML = cats.map(cat => {
     const col = LEDGER_CAT_COLORS[cat] || '#64748b';
     const icon = CAT_ICONS[cat] || '📌';
-    const sel = cat === _ledgerCategory;
-    return `
-      <button class="calc-cat-item${sel ? ' active' : ''}" data-cat="${escapeHtml(cat)}"
-        style="--item-color:${col}">
-        <span class="calc-cat-icon">${icon}</span>
-        <span class="calc-cat-name">${escapeHtml(cat)}</span>
-      </button>`;
+    const sel  = cat === _ledgerCategory;
+    return `<button class="bs-cat-card${sel ? ' bs-cat-selected' : ''}" data-cat="${escapeHtml(cat)}" style="--cat-col:${col}">
+      <span class="bs-cat-card-icon">${icon}</span>
+      <span class="bs-cat-card-name">${escapeHtml(cat)}</span>
+    </button>`;
   }).join('');
 }
 
@@ -804,7 +858,11 @@ function _renderTagButtons() {
 }
 
 export function saveLedgerItem() {
-  const amt  = parseInt(_calcAmountStr || '0', 10) || Number((document.getElementById('ledger-item-amount') as HTMLInputElement)?.value) || 0;
+  // 연산자가 있으면 최종 계산
+  const rightVal = parseInt(_calcAmountStr || '0', 10) || 0;
+  const amt = _calcOp !== null
+    ? _calcApplyOp(_calcLeft, _calcOp, rightVal)
+    : (rightVal || Number((document.getElementById('ledger-item-amount') as HTMLInputElement)?.value) || 0);
   const memo = (document.getElementById('ledger-item-memo') as HTMLInputElement)?.value.trim() || '';
 
   if (!amt) {
