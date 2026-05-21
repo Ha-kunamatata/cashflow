@@ -3662,6 +3662,78 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   .ws-dots { display: none; }
   .ws-counter { display: none; }
 
+  /* ── 위젯 스택 내부 컴팩트 레이아웃 ─────────────────────── */
+
+  /* summary-grid: 4열 → 1열 가로 목록 */
+  .ws-slide .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  .ws-slide .summary-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 10px;
+    min-height: 0;
+    box-shadow: none;
+    overflow: visible;
+    transform: none !important;
+  }
+  .ws-slide .summary-item::before { display: none; }
+  .ws-slide .summary-item-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-start;
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 0;
+  }
+  .ws-slide .summary-item-label {
+    order: 2;
+    font-size: 11px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+  }
+  .ws-slide .summary-item-icon { order: 1; font-size: 12px; flex-shrink: 0; line-height: 1; }
+  .ws-slide .summary-item-value {
+    font-size: 13px;
+    letter-spacing: -0.2px;
+    font-weight: 800;
+    margin-left: auto;
+    flex-shrink: 0;
+    max-width: 120px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-slide .summary-item-sub { display: none; }
+  .ws-slide .budget-bar { display: none; }
+
+  /* ws-slide 내 섹션 헤더: 여백 축소 */
+  .ws-slide .home-section-hdr {
+    font-size: 10px;
+    margin: 4px 0 5px;
+    letter-spacing: 0.8px;
+  }
+
+  /* 위젯 내 카드 패딩 최적화 */
+  .ws-slide .card { padding: 12px 14px; }
+  .ws-slide .card-title { font-size: 11px; margin-bottom: 8px; }
+
+  /* forecast 미니 셀 */
+  .ws-slide .forecast-mini-cell { padding: 8px 4px; }
+  .ws-slide .forecast-mini-val { font-size: 13px; }
+
+  /* 위젯 스택 내 recent-tx 항목 */
+  .ws-slide .home-section-hdr + div .card { margin-bottom: 0; }
+
   /* ───────────────────────────────────────────────────── */
   /* 4. 인라인 패널 (가계부 캘린더) — 스타일 개선          */
   /* ───────────────────────────────────────────────────── */
