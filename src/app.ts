@@ -240,7 +240,7 @@ initRipple();
     }
 
     function applyHeight(animated: boolean) {
-      const h = slides[cur].offsetHeight;
+      const h = rawSlides[cur].offsetHeight;
       if (h <= 0) return;
       slidesEl.style.transition = animated
         ? 'height 0.42s cubic-bezier(0.25,0.46,0.45,0.94)'
@@ -266,14 +266,14 @@ initRipple();
         clearTimeout(_roTimer);
         _roTimer = setTimeout(() => {
           if (isDesktop() || isDragging) return;
-          const h = slides[cur].offsetHeight;
+          const h = rawSlides[cur].offsetHeight;
           if (h > 0) {
             slidesEl.style.transition = 'height 0.28s ease';
             slidesEl.style.height = h + 'px';
           }
         }, 60);
       });
-      slides.forEach(s => ro.observe(s));
+      rawSlides.forEach(s => ro.observe(s));
     }
 
     slidesEl.addEventListener('touchstart', (e) => {
