@@ -403,6 +403,8 @@ export function closeLedgerDaySheet() {
   closeSheet('ledger-day-sheet');
 }
 
+const _DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
 function _renderDaySheet() {
   const dateStr = _ledgerDayDate;
   if (!dateStr) return;
@@ -413,54 +415,69 @@ function _renderDaySheet() {
   const income  = items.filter(i => i.type === 'income' ).reduce((s, i) => s + i.amount, 0);
   const net     = income - expense;
 
-  const title = document.getElementById('ledger-day-sheet-date');
-  if (title) title.textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  // 날짜 헤더
+  const titleEl = document.getElementById('ledger-day-sheet-date');
+  if (titleEl) titleEl.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const daynameEl = document.getElementById('ledger-day-sheet-dayname');
+  if (daynameEl) daynameEl.textContent = `${d.getFullYear()}년 ${_DAY_NAMES[d.getDay()]}요일`;
 
+  // 요약 칩
   const summary = document.getElementById('ledger-day-sheet-summary');
   if (summary) {
+    const netColor = net >= 0 ? 'var(--green2)' : 'var(--red2)';
     summary.innerHTML = `
-      <div class="lday-summary-item"><span class="lday-lbl">지출</span><span class="lday-val red">${fmtShort(expense)}</span></div>
-      <div class="lday-summary-item"><span class="lday-lbl">수입</span><span class="lday-val green">${fmtShort(income)}</span></div>
-      <div class="lday-summary-item"><span class="lday-lbl">순액</span><span class="lday-val" style="color:${net>=0?'var(--green2)':'var(--red2)'}">${fmtSigned(net)}</span></div>
-    `;
+      <div class="bs-day-sum-chip">
+        <span class="bs-day-sum-lbl">지출</span>
+        <span class="bs-day-sum-val red">${expense > 0 ? fmtShort(expense) : '없음'}</span>
+      </div>
+      <div class="bs-day-sum-chip">
+        <span class="bs-day-sum-lbl">수입</span>
+        <span class="bs-day-sum-val green">${income > 0 ? fmtShort(income) : '없음'}</span>
+      </div>
+      <div class="bs-day-sum-chip">
+        <span class="bs-day-sum-lbl">순액</span>
+        <span class="bs-day-sum-val" style="color:${netColor}">${items.length ? fmtSigned(net) : '-'}</span>
+      </div>`;
   }
 
+  // 거래 목록
   const list = document.getElementById('ledger-day-items-list');
   if (!list) return;
 
   if (items.length === 0) {
-    list.innerHTML = '<div class="empty-state" style="padding:28px 0;font-size:13px">기록 없음. + 추가 버튼으로 입력하세요</div>';
+    list.innerHTML = `
+      <div class="bs-day-empty">
+        <div class="bs-day-empty-icon">📭</div>
+        <div class="bs-day-empty-title">기록이 없어요</div>
+        <div class="bs-day-empty-sub">아래 버튼으로 첫 항목을 추가해보세요</div>
+      </div>`;
     return;
   }
 
-  const TAG_EMOJI: Record<string, string> = { '충동': '💸', '계획': '📋', '필수': '✅', '외식': '🍽️', '선물': '🎁' };
   const cardMap: Record<string, { name: string; color: string }> = {};
   (state.cards || []).forEach(c => { cardMap[c.id] = { name: c.name, color: c.color || '#6366f1' }; });
 
-  list.innerHTML = items.map(item => {
+  list.innerHTML = items.map((item, idx) => {
     const col  = LEDGER_CAT_COLORS[item.category] || '#64748b';
     const icon = CAT_ICONS[item.category] || (item.type === 'income' ? '💰' : '📦');
     const sign = item.type === 'expense' ? '-' : '+';
     const amtCls = item.type === 'expense' ? 'red' : 'green';
     const cardInfo = item.cardId && cardMap[item.cardId];
     return `
-      <div class="lday-card" data-id="${item.id}">
-        <div class="lday-card-icon-wrap" style="background:${col}15;border-color:${col}35;color:${col}">
-          ${icon}
-        </div>
-        <div class="lday-card-body">
-          <div class="lday-card-name">${escapeHtml(item.memo || item.category)}</div>
-          <div class="lday-card-meta">
-            <span>${escapeHtml(item.category)}</span>
-            ${item.tag ? `<span class="lday-card-tag">${TAG_EMOJI[item.tag] || ''}${escapeHtml(item.tag)}</span>` : ''}
-            ${cardInfo ? `<span class="lday-card-badge" style="background:${cardInfo.color}22;color:${cardInfo.color};border-color:${cardInfo.color}44">💳 ${escapeHtml(cardInfo.name)}</span>` : ''}
+      <div class="bs-tx-card" data-id="${item.id}" style="animation-delay:${idx * 40}ms">
+        <div class="bs-tx-icon" style="background:${col}18;color:${col}">${icon}</div>
+        <div class="bs-tx-body">
+          <div class="bs-tx-name">${escapeHtml(item.memo || item.category)}</div>
+          <div class="bs-tx-meta">
+            <span class="bs-tx-cat">${escapeHtml(item.category)}</span>
+            ${cardInfo ? `<span class="bs-tx-card-chip" style="background:${cardInfo.color}1a;color:${cardInfo.color}">💳 ${escapeHtml(cardInfo.name)}</span>` : ''}
           </div>
         </div>
-        <div class="lday-card-right">
-          <span class="lday-card-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
-          <div class="lday-card-actions">
-            <button class="lday-card-action-btn lday-edit-btn" data-id="${item.id}">수정</button>
-            <button class="lday-card-action-btn del lday-del-btn" data-id="${item.id}">삭제</button>
+        <div class="bs-tx-right">
+          <span class="bs-tx-amount ${amtCls}">${sign}${fmtShort(item.amount)}</span>
+          <div class="bs-tx-actions">
+            <button class="bs-tx-btn lday-edit-btn" data-id="${item.id}">수정</button>
+            <button class="bs-tx-btn bs-tx-btn-del lday-del-btn" data-id="${item.id}">삭제</button>
           </div>
         </div>
       </div>`;
@@ -816,6 +833,12 @@ function _pushRecentCat(cat: string) {
 
 const _RECENT_GROUP = '최근';
 
+const _GROUP_EMOJI: Record<string, string> = {
+  '최근': '⏱', '식비/음료': '🍽️', '교통/이동': '🚌', '쇼핑/생활': '🛍️',
+  '건강/의료': '💊', '주거': '🏠', '금융': '💳', '여가/취미': '🎨',
+  '사람/관계': '👥', '기타': '📦',
+};
+
 function _renderCatGroupTabs() {
   const el = document.getElementById('ledger-cat-groups');
   if (!el) return;
@@ -826,10 +849,13 @@ function _renderCatGroupTabs() {
     ? [_RECENT_GROUP, ...Object.keys(LEDGER_CATEGORIES)]
     : Object.keys(LEDGER_CATEGORIES);
   el.innerHTML = groups.map(grp => {
-    const label = grp === _RECENT_GROUP ? '⏱ 최근' : grp;
-    return `<button class="bs-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">${escapeHtml(label)}</button>`;
+    const emoji = _GROUP_EMOJI[grp] || '📌';
+    const shortLabel = grp === _RECENT_GROUP ? '최근' : grp.split('/')[0];
+    return `<button class="bs-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">
+      <span class="bs-cat-group-emoji">${emoji}</span>
+      <span class="bs-cat-group-label">${escapeHtml(shortLabel)}</span>
+    </button>`;
   }).join('');
-  // scroll active tab into view
   requestAnimationFrame(() => {
     const active = el.querySelector('.bs-cat-group-tab.active') as HTMLElement | null;
     if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -850,7 +876,7 @@ function _renderCatChips() {
     cats = [...(LEDGER_CATEGORIES[_ledgerCatGroup] || [])];
   }
 
-  el.className = 'bs-cat-grid-4';
+  el.className = 'bs-cat-grid-3';
   el.innerHTML = cats.map(cat => {
     const col = LEDGER_CAT_COLORS[cat] || '#64748b';
     const icon = CAT_ICONS[cat] || '📌';
@@ -858,6 +884,7 @@ function _renderCatChips() {
     return `<button class="bs-cat-card${sel ? ' bs-cat-selected' : ''}" data-cat="${escapeHtml(cat)}" style="--cat-col:${col}">
       <span class="bs-cat-card-icon">${icon}</span>
       <span class="bs-cat-card-name">${escapeHtml(cat)}</span>
+      ${sel ? '<span class="bs-cat-check">✓</span>' : ''}
     </button>`;
   }).join('');
 }
