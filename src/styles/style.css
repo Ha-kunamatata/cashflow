@@ -113,111 +113,187 @@ body {
 
 /* ── 로그인 ── */
 /* ── 로그인 화면 ── */
+/* ════════════════════════════════════════════════════════
+   스플래시 / 로그인 화면 — 프리미엄 리디자인
+   ════════════════════════════════════════════════════════ */
+@keyframes splashBg {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes orbFloat1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,55px) scale(1.08)} }
+@keyframes orbFloat2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,-40px) scale(0.94)} }
+@keyframes orbFloat3 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(25px,-25px) scale(1.05)} 66%{transform:translate(-18px,30px) scale(0.97)} }
+@keyframes iconPop   { from{transform:scale(0.4) rotate(-8deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
+@keyframes iconGlow  { 0%,100%{box-shadow:0 0 0 1px rgba(96,165,250,.2),0 24px 64px rgba(30,64,175,.55),0 0 80px rgba(99,102,241,.25)} 50%{box-shadow:0 0 0 1px rgba(96,165,250,.35),0 28px 80px rgba(30,64,175,.7),0 0 120px rgba(99,102,241,.45)} }
+@keyframes shimmer   { from{transform:translateX(-100%) skewX(-12deg)} to{transform:translateX(200%) skewX(-12deg)} }
+
 #login-screen {
   position: fixed; inset: 0; z-index: 1000;
-  background: radial-gradient(ellipse 120% 80% at 50% 0%, #0d1f42 0%, #050b19 60%);
+  background: linear-gradient(-45deg, #020818, #0a1628, #0d1f42, #060e20, #091535);
+  background-size: 400% 400%;
+  animation: splashBg 18s ease infinite, fadeIn 0.3s ease;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px; overflow: hidden;
-  animation: fadeIn 0.4s ease;
+  padding: 32px 24px; overflow: hidden;
 }
 
-/* Ambient orbs */
+/* Ambient orbs — 더 선명하고 크게 */
 .login-orb {
-  position: absolute; border-radius: 50%; pointer-events: none; filter: blur(80px);
+  position: absolute; border-radius: 50%; pointer-events: none;
 }
 .login-orb1 {
-  width: 480px; height: 480px; top: -120px; left: -100px;
-  background: radial-gradient(circle, rgba(37,99,235,0.22) 0%, transparent 70%);
-  animation: orbFloat1 8s ease-in-out infinite;
+  width: 600px; height: 600px; top: -180px; left: -140px;
+  background: radial-gradient(circle, rgba(37,99,235,.3) 0%, rgba(30,58,138,.15) 40%, transparent 70%);
+  filter: blur(70px);
+  animation: orbFloat1 10s ease-in-out infinite;
 }
 .login-orb2 {
-  width: 360px; height: 360px; bottom: -80px; right: -60px;
-  background: radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%);
-  animation: orbFloat2 11s ease-in-out infinite;
+  width: 480px; height: 480px; bottom: -100px; right: -80px;
+  background: radial-gradient(circle, rgba(109,40,217,.28) 0%, rgba(79,70,229,.14) 40%, transparent 70%);
+  filter: blur(65px);
+  animation: orbFloat2 13s ease-in-out infinite;
 }
 .login-orb3 {
-  width: 280px; height: 280px; top: 40%; right: 10%;
-  background: radial-gradient(circle, rgba(20,184,166,0.1) 0%, transparent 70%);
-  animation: orbFloat3 14s ease-in-out infinite;
+  width: 320px; height: 320px; top: 42%; right: 8%;
+  background: radial-gradient(circle, rgba(20,184,166,.18) 0%, transparent 65%);
+  filter: blur(50px);
+  animation: orbFloat3 17s ease-in-out infinite;
 }
-@keyframes orbFloat1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,40px)} }
-@keyframes orbFloat2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-25px,-35px)} }
-@keyframes orbFloat3 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(20px,-20px)} 66%{transform:translate(-15px,25px)} }
+/* 추가 orb — 왼쪽 하단 보라 */
+.login-orb::after {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  bottom: 15%; left: -30px;
+  background: radial-gradient(circle, rgba(139,92,246,.15) 0%, transparent 65%);
+  filter: blur(55px);
+  animation: orbFloat2 20s ease-in-out infinite reverse;
+}
+
+/* Grid lines overlay — 고급 느낌 */
+#login-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(96,165,250,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96,165,250,.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+}
 
 /* Content wrapper */
 .login-content {
   position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: center;
-  width: 100%; max-width: 360px;
+  width: 100%; max-width: 340px;
 }
 
 /* Brand section */
-.login-brand { display:flex; flex-direction:column; align-items:center; margin-bottom: 44px; }
-
-.login-icon-wrap {
-  width: 88px; height: 88px; border-radius: 28px; margin-bottom: 20px;
-  background: linear-gradient(145deg, #0f2952 0%, #1a3a6b 50%, #1e40af 100%);
-  box-shadow: 0 0 0 1px rgba(96,165,250,0.18), 0 20px 50px rgba(30,64,175,0.45), 0 0 60px rgba(99,102,241,0.2);
-  display: flex; align-items: center; justify-content: center;
-  padding: 14px;
-  animation: iconPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+.login-brand {
+  display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 36px;
 }
-.login-icon-svg { width: 100%; height: 100%; }
-@keyframes iconPop { from { transform: scale(0.5); opacity:0 } to { transform: scale(1); opacity:1 } }
+
+/* 로고 아이콘 — 더 크고 임팩트 있게 */
+.login-icon-wrap {
+  width: 108px; height: 108px;
+  border-radius: 32px;
+  margin-bottom: 24px;
+  background: linear-gradient(145deg, #0c2044 0%, #153060 45%, #1d4ed8 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  animation: iconPop .7s cubic-bezier(.34,1.56,.64,1) both, iconGlow 4s ease-in-out 1s infinite;
+  position: relative; overflow: hidden;
+}
+/* 로고 shimmer 효과 */
+.login-icon-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.12) 50%, transparent 60%);
+  animation: shimmer 3.5s ease-in-out 1.2s infinite;
+}
+.login-icon-svg { width: 100%; height: 100%; position: relative; z-index: 1; }
 
 .login-title {
-  font-size: 32px; font-weight: 900; color: #f0f6ff; letter-spacing: -0.5px;
+  font-size: 36px; font-weight: 900;
+  color: #f0f6ff; letter-spacing: -1px;
   margin: 0 0 6px; text-align: center;
-  animation: slideUp 0.5s ease 0.15s both;
+  animation: slideUp .5s ease .2s both;
+  text-shadow: 0 2px 24px rgba(96,165,250,.3);
 }
 .login-title-en {
-  font-size: 16px; font-weight: 500; color: rgba(148,163,184,0.75);
-  letter-spacing: 0.5px; vertical-align: middle;
+  font-size: 14px; font-weight: 500;
+  color: rgba(148,163,184,.7);
+  letter-spacing: 2px; vertical-align: middle;
+  text-transform: uppercase;
 }
 
-/* Feature list */
+/* Feature list — 더 세련된 행 */
 .login-features {
-  display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px;
-  width: 100%; max-width: 300px;
-  animation: slideUp 0.5s ease 0.3s both;
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 32px; width: 100%;
+  animation: slideUp .5s ease .35s both;
 }
 .login-feature {
   display: flex; align-items: center; gap: 12px;
-  font-size: 13px; color: rgba(203,213,225,0.85); font-weight: 500;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px; padding: 10px 14px;
-  backdrop-filter: blur(10px);
+  font-size: 13px; color: rgba(203,213,225,.82); font-weight: 500;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px; padding: 11px 16px;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  transition: background .2s, border-color .2s;
 }
+.login-feature:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); }
 .login-feature-icon {
-  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .login-feature-icon svg { width: 16px; height: 16px; }
-.login-fi-blue  { background: rgba(59,130,246,0.18); color: #60a5fa; }
-.login-fi-purple{ background: rgba(99,102,241,0.18); color: #a5b4fc; }
-.login-fi-teal  { background: rgba(20,184,166,0.18); color: #5eead4; }
+.login-fi-blue   { background: rgba(59,130,246,.2);   color: #60a5fa; box-shadow: 0 0 12px rgba(59,130,246,.15); }
+.login-fi-purple { background: rgba(139,92,246,.2);   color: #c4b5fd; box-shadow: 0 0 12px rgba(139,92,246,.15); }
+.login-fi-teal   { background: rgba(20,184,166,.2);   color: #5eead4; box-shadow: 0 0 12px rgba(20,184,166,.15); }
 
-/* Google login button */
+/* Google 로그인 버튼 */
 .btn-google-login {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #eef3ff 100%); color: #0f172a;
-  border: none; border-radius: 16px; padding: 15px 32px;
+  background: linear-gradient(180deg, #fff 0%, #f0f4ff 100%); color: #0f172a;
+  border: none; border-radius: 18px; padding: 16px 28px;
   font-size: 15px; font-weight: 700; cursor: pointer; font-family: var(--font);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 14px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.1);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  animation: slideUp 0.5s ease 0.38s both;
-  position: relative; overflow: hidden; min-width: 260px; justify-content: center;
-  width: 100%;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.15) inset, 0 16px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+  transition: transform .18s cubic-bezier(.34,1.2,.64,1), box-shadow .18s;
+  animation: slideUp .5s ease .48s both;
+  position: relative; overflow: hidden;
+  width: 100%; justify-content: center;
 }
-.btn-google-login:hover { transform: translateY(-2px); box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 22px 40px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.12); }
-.btn-google-login:active { transform: translateY(0); }
+.btn-google-login::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.25) 50%, transparent 60%);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.btn-google-login:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 24px 56px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.1);
+}
+.btn-google-login:hover::before { opacity: 1; }
+.btn-google-login:active { transform: scale(0.97); }
 .btn-google-login svg { width: 20px; height: 20px; flex-shrink: 0; }
-.btn-google-login.is-loading { pointer-events:none; opacity:.85; }
-.btn-inline-spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(15,23,42,0.18); border-top-color:#2563eb; animation:spin .7s linear infinite; display:inline-block; }
+.btn-google-login.is-loading { pointer-events: none; opacity: .8; }
+
+.btn-inline-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(15,23,42,.18); border-top-color: #2563eb;
+  animation: spin .7s linear infinite; display: inline-block;
+}
+
 .login-note {
-  font-size: 11px; color: rgba(100,116,139,0.8); margin-top: 16px; text-align: center;
-  animation: fadeIn 0.5s ease 0.5s both;
-  line-height: 1.5;
+  font-size: 11px; color: rgba(100,116,139,.75);
+  margin-top: 18px; text-align: center;
+  animation: fadeIn .5s ease .6s both;
+  line-height: 1.6;
 }
 
 /* ── 탑바 ── */
@@ -1933,6 +2009,37 @@ body.light-theme .badge-item { background: #f8fafc; border-color: #e2e8f0; }
 .wish-card:hover .wish-drag-handle { opacity: 0.7; }
 .wish-card-top { display: flex; align-items: center; gap: 8px; }
 .wish-select-wrap { display: flex; align-items: center; flex-shrink: 0; }
+
+/* 위시리스트 커스텀 체크박스 */
+.wish-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 7px;
+  border: 2px solid rgba(255,255,255,.28);
+  background: rgba(255,255,255,.06);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .15s, border-color .15s, transform .12s cubic-bezier(.34,1.56,.64,1);
+}
+.wish-checkbox:checked {
+  background: #60a5fa;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96,165,250,.2);
+}
+.wish-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 5px;
+  width: 6px; height: 10px;
+  border: 2.5px solid #fff;
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+.wish-checkbox:active { transform: scale(0.86); }
+body.light-theme .wish-checkbox { border-color: #cbd5e1; background: #f8fafc; }
+body.light-theme .wish-checkbox:checked { background: #3b82f6; border-color: #3b82f6; }
 .wish-card.drag-over {
   border: 2px dashed var(--accent) !important;
   background: rgba(99,102,241,0.06) !important;
