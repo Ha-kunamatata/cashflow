@@ -1068,19 +1068,31 @@
 
 <!-- ── 가계부 날짜 시트 ── -->
 <div class="sheet-overlay" id="ledger-day-sheet">
-  <div class="sheet-panel sheet-panel-tall">
+  <div class="bs-day-panel">
     <div class="sheet-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="sheet-title" style="margin:0" id="ledger-day-sheet-date">-</div>
-      <button class="sheet-close-btn" id="btn-ledger-day-close" style="width:auto;margin:0;padding:8px 14px;font-size:12px">닫기</button>
+
+    <!-- 날짜 헤더 -->
+    <div class="bs-day-header">
+      <div>
+        <div class="bs-day-date" id="ledger-day-sheet-date">-</div>
+        <div class="bs-day-dayname" id="ledger-day-sheet-dayname"></div>
+      </div>
+      <button class="bs-close-btn" id="btn-ledger-day-close">✕</button>
     </div>
-    <div class="lday-summary" id="ledger-day-sheet-summary"></div>
-    <div id="ledger-day-items-list" style="margin:12px 0;flex:1;overflow-y:auto"></div>
-    <button class="btn btn-add-entry" id="btn-ledger-add-item">
-      <div class="ripple-container"></div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      항목 추가
-    </button>
+
+    <!-- 지출/수입/순액 요약 -->
+    <div class="bs-day-summary" id="ledger-day-sheet-summary"></div>
+
+    <!-- 거래 목록 -->
+    <div id="ledger-day-items-list" class="bs-day-items"></div>
+
+    <!-- 항목 추가 버튼 -->
+    <div class="bs-day-footer">
+      <button class="bs-day-add-btn" id="btn-ledger-add-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        항목 추가
+      </button>
+    </div>
   </div>
 </div>
 

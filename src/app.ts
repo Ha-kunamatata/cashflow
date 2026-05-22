@@ -893,11 +893,11 @@ document.getElementById('home-week-strip')?.addEventListener('click', (e) => {
   setTimeout(() => _toggleLedgerInlinePanel(dk), 280);
 });
 
-// 가계부 달력 이벤트 위임 — 인라인 패널 토글
+// 가계부 달력 이벤트 위임 — 항상 슬라이드업 시트로 열기
 document.getElementById('ledger-calendar-grid')?.addEventListener('click', (e) => {
-  const day = e.target.closest('.ledger-day:not(.empty)');
+  const day = (e.target as Element).closest('.ledger-day:not(.empty)') as HTMLElement | null;
   if (!day?.dataset.dk) return;
-  _toggleLedgerInlinePanel(day.dataset.dk);
+  openLedgerDaySheet(day.dataset.dk);
 });
 
 function _toggleLedgerInlinePanel(dk) {
@@ -1158,13 +1158,7 @@ document.getElementById('ledger-card-chips')?.addEventListener('click', (e) => {
   if (btn) selectLedgerCard(btn.dataset.cardId || '');
 });
 document.getElementById('btn-ledger-item-save')?.addEventListener('click', () => {
-  saveLedgerItem();
-  // 인라인 패널이 열려 있으면 갱신
-  const panel = document.getElementById('ledger-day-inline-panel');
-  const dk = panel?.dataset.activeDk;
-  if (dk && panel?.style.display !== 'none') {
-    setTimeout(() => _renderInlinePanel(dk), 80);
-  }
+  saveLedgerItem(); // _renderDaySheet() 내부에서 자동 갱신
 });
 document.getElementById('btn-ledger-item-cancel')?.addEventListener('click', closeLedgerItemForm);
 document.getElementById('ledger-item-sheet')?.addEventListener('click', (e) => {
