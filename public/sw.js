@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════
 // Vite가 매 빌드마다 hashed 파일명을 생성하므로 precache 리스트는 사용하지 않고
 // 런타임 캐싱만 합니다. HTML은 항상 네트워크 우선, 나머지는 stale-while-revalidate.
-const CACHE = 'cashflow-runtime-v5';
+const CACHE = 'cashflow-runtime-v6';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
