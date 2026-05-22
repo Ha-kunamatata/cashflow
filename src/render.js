@@ -3936,7 +3936,7 @@ export function renderWishlist() {
           </div>
           <!-- 다중선택 체크박스 -->
           ${!w.bought ? `<label class="wish-select-wrap" onclick="event.stopPropagation()">
-            <input type="checkbox" class="wish-checkbox" data-id="${escapeHtml(w.id)}"
+            <input type="checkbox" class="wish-checkbox" data-id="${escapeHtml(w.id)}" ${_wishSelectedIds.has(w.id) ? 'checked' : ''}>
           </label>` : ''}
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
