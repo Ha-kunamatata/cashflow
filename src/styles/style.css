@@ -132,10 +132,16 @@ body {
   position: fixed; inset: 0; z-index: 1000;
   background: linear-gradient(-45deg, #020818, #0a1628, #0d1f42, #060e20, #091535);
   background-size: 400% 400%;
-  animation: splashBg 18s ease infinite, fadeIn 0.3s ease;
+  animation: splashBg 18s ease infinite, splashFadeIn 0.4s ease both;
   display: flex; align-items: center; justify-content: center;
   padding: 32px 24px; overflow: hidden;
+  transition: opacity 0.5s ease;
 }
+#login-screen.splash-hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes splashFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Ambient orbs — 더 선명하고 크게 */
 .login-orb {

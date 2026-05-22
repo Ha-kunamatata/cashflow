@@ -634,11 +634,29 @@ async function _checkNotifications() {
   });
 })();
 
+// ── 스플래시 화면 최소 노출 시간 보장 ────────────────────
+const _splashStart = Date.now();
+const MIN_SPLASH_MS = 1800;
+
+function _hideSplash() {
+  const screen = document.getElementById('login-screen');
+  if (!screen || screen.classList.contains('splash-hiding')) return;
+  const elapsed = Date.now() - _splashStart;
+  const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+  setTimeout(() => {
+    screen.classList.add('splash-hiding');
+    setTimeout(() => {
+      screen.style.display = 'none';
+      screen.classList.remove('splash-hiding');
+    }, 520);
+  }, wait);
+}
+
 // ── Firebase 인증 상태 감지 ────────────────────────────
 initAuth(
   async (user) => {
     // 로그인 성공
-    document.getElementById('login-screen').style.display = 'none';
+    _hideSplash();
     document.getElementById('topbar').style.display = 'flex';
     document.getElementById('bottom-nav').style.display = 'flex';
     document.getElementById('fab-speed-dial').style.display = '';
@@ -729,7 +747,10 @@ initAuth(
   },
   () => {
     // 로그아웃
-    document.getElementById('login-screen').style.display = 'flex';
+    const _ls = document.getElementById('login-screen');
+    _ls.classList.remove('splash-hiding');
+    _ls.style.opacity = '';
+    _ls.style.display = 'flex';
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
     document.getElementById('fab-speed-dial').style.display = 'none';
