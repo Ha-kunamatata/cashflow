@@ -50,6 +50,7 @@ import {
   setWishFilter,
   renderFinance,
   refreshAllStocks,
+  setFinActiveTab,
   renderCardDefs,
   getWishSelectedIds,
   clearWishSelection,
@@ -1823,21 +1824,35 @@ document.getElementById('btn-wish-clearselect')?.addEventListener('click', () =>
 });
 
 // ══════════════════════════════════════════════════════════════
-// 재테크 (워치리스트) 이벤트
+// 투자탭 이벤트
 // ══════════════════════════════════════════════════════════════
 document.getElementById('btn-add-watchlist')?.addEventListener('click', () => openWatchlistForm(null));
 document.getElementById('watchlist-form-save')?.addEventListener('click', saveWatchlistItem);
 document.getElementById('watchlist-form-cancel')?.addEventListener('click', hideWatchlistForm);
 document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => closeSheetOutside(e, 'watchlist-form-overlay'));
 
-document.getElementById('btn-finance-refresh')?.addEventListener('click', () => {
-  refreshAllStocks(true);
+document.getElementById('btn-finance-refresh')?.addEventListener('click', () => refreshAllStocks(true));
+
+// 내부 탭 전환
+document.getElementById('fin-inner-tabs')?.addEventListener('click', (e) => {
+  const tab = (e.target as HTMLElement).closest<HTMLElement>('.fin-inner-tab');
+  if (tab?.dataset.fintab) setFinActiveTab(tab.dataset.fintab);
 });
 
-// 워치리스트 카드 클릭 위임
-document.getElementById('watchlist-container')?.addEventListener('click', (e) => {
-  const editBtn = e.target.closest('.watchlist-edit-btn');
-  const delBtn = e.target.closest('.watchlist-del-btn');
+// 종목 폼 타입 토글 (관심/보유)
+document.getElementById('watchlist-form-overlay')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.fin-form-type-btn');
+  if (!btn) return;
+  document.querySelectorAll('.fin-form-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const fields = document.getElementById('fin-form-holding-fields');
+  if (fields) fields.classList.toggle('open', btn.dataset.wltype === 'holding');
+});
+
+// 카드 클릭 위임 (fin-main-container)
+document.getElementById('fin-main-container')?.addEventListener('click', (e) => {
+  const editBtn = (e.target as HTMLElement).closest<HTMLElement>('.watchlist-edit-btn');
+  const delBtn = (e.target as HTMLElement).closest<HTMLElement>('.watchlist-del-btn');
   if (editBtn) openWatchlistForm(editBtn.dataset.symbol);
   if (delBtn) deleteWatchlistItem(delBtn.dataset.symbol);
 });

@@ -1776,6 +1776,172 @@ body.light-theme .fin-port-lbl { color: rgba(30,27,75,0.45); }
 body.light-theme .fin-port-val { color: #0f172a; }
 body.light-theme .fin-empty-tips span { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.07); }
 
+/* ── 투자탭 내부 탭 바 ── */
+.fin-inner-tabs {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px; padding: 4px;
+  margin-bottom: 16px;
+}
+.fin-inner-tab {
+  flex: 1; padding: 9px 0; border: none; background: none;
+  color: var(--text3); font-size: 13px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; font-family: var(--font);
+  transition: background .15s, color .15s;
+}
+.fin-inner-tab.active {
+  background: rgba(99,102,241,0.18); color: #a5b4fc;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.15);
+}
+
+/* ── 시장 필터 ── */
+.fin-market-filter {
+  display: flex; gap: 6px; overflow-x: auto;
+  padding-bottom: 4px; margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.fin-market-filter::-webkit-scrollbar { display: none; }
+.fin-market-pill {
+  flex-shrink: 0; padding: 6px 14px;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: var(--text3); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.fin-market-pill.active {
+  background: rgba(99,102,241,0.18); color: #a5b4fc;
+  border-color: rgba(99,102,241,0.3);
+}
+.fin-market-pill:active { transform: scale(0.95); }
+
+/* ── 포트폴리오 요약 카드 (새 디자인) ── */
+.fin-port-summary {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 40%, #1e3a8a 100%);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 24px; padding: 22px 20px 20px;
+  margin-bottom: 20px; box-shadow: 0 12px 40px rgba(2,8,23,0.35);
+}
+.fin-port-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 80% 20%, rgba(99,102,241,0.22) 0%, transparent 55%),
+              radial-gradient(circle at 15% 80%, rgba(59,130,246,0.12) 0%, transparent 50%);
+}
+.fin-port-sum-top { position: relative; margin-bottom: 18px; }
+.fin-port-sum-label {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,.4);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+}
+.fin-port-sum-total {
+  font-size: 32px; font-weight: 900; font-family: var(--mono);
+  color: #f1f5f9; letter-spacing: -1.5px;
+}
+.fin-port-sum-total span { font-size: 16px; font-weight: 600; opacity: 0.5; margin-left: 2px; }
+.fin-port-sum-row { position: relative; display: flex; }
+.fin-port-sum-item { flex: 1; min-width: 0; }
+.fin-port-sum-item-label {
+  font-size: 9.5px; color: rgba(255,255,255,.38);
+  font-weight: 600; letter-spacing: 0.3px; margin-bottom: 4px;
+}
+.fin-port-sum-item-val {
+  font-size: 13px; font-weight: 800; font-family: var(--mono);
+  color: #f1f5f9; white-space: nowrap;
+}
+.fin-port-sum-item-val.up { color: #34d399; }
+.fin-port-sum-item-val.down { color: #f87171; }
+.fin-port-sum-item-pct { font-size: 11px; font-weight: 700; margin-top: 2px; }
+.fin-port-sum-item-pct.up { color: #34d399; }
+.fin-port-sum-item-pct.down { color: #f87171; }
+.fin-port-sum-divider { width: 1px; background: rgba(255,255,255,0.1); margin: 0 12px; flex-shrink: 0; }
+
+/* ── 보유종목 카드 (fin-hc) ── */
+.fin-hc {
+  background: rgba(17,24,39,0.97); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px; padding: 16px; margin-bottom: 8px;
+  transition: border-color .15s, box-shadow .15s;
+}
+@media (hover: hover) { .fin-hc:hover { border-color: rgba(99,102,241,0.25); box-shadow: 0 4px 16px rgba(0,0,0,0.25); } }
+.fin-hc-top { display: flex; align-items: flex-start; gap: 12px; }
+.fin-hc-info { flex: 1; min-width: 0; }
+.fin-hc-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+.fin-hc-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.fin-hc-ticker { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.fin-hc-qty { font-size: 11px; color: var(--text3); }
+.fin-hc-qty::before { content: '· '; opacity: 0.5; }
+.fin-hc-avg { font-size: 11px; color: var(--text3); }
+.fin-hc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.fin-hc-price-row { display: flex; align-items: baseline; gap: 7px; }
+.fin-hc-price { font-size: 17px; font-weight: 800; font-family: var(--mono); color: var(--text); }
+.fin-hc-chg { font-size: 12px; font-weight: 700; }
+.fin-hc-chg.up { color: #34d399; } .fin-hc-chg.down { color: #f87171; } .fin-hc-chg.flat { color: var(--text3); }
+.fin-hc-pnl-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06); gap: 8px;
+}
+.fin-hc-eval { font-size: 11px; color: var(--text3); }
+.fin-hc-pnl { font-size: 12px; font-weight: 800; }
+.fin-hc-pnl.up { color: #34d399; } .fin-hc-pnl.down { color: #f87171; }
+.fin-hc-pnl-pct { font-size: 11px; font-weight: 600; opacity: 0.75; }
+.fin-weight-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.fin-weight-bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.fin-weight-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg,#6366f1,#818cf8); transition: width .5s cubic-bezier(0.4,0,0.2,1); }
+.fin-weight-label { font-size: 10px; color: var(--text3); font-weight: 600; min-width: 36px; text-align: right; }
+
+/* ── 관심종목 카드 (fin-wc) ── */
+.fin-wc {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(17,24,39,0.97); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 7px;
+  transition: border-color .15s, box-shadow .15s;
+}
+@media (hover: hover) { .fin-wc:hover { border-color: rgba(99,102,241,0.22); box-shadow: 0 3px 12px rgba(0,0,0,0.2); } }
+.fin-wc-left { flex: 1; min-width: 0; }
+.fin-wc-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.fin-wc-meta { display: flex; align-items: center; gap: 6px; }
+.fin-wc-ticker { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.fin-wc-note { font-size: 10px; color: var(--text3); opacity: 0.7; }
+.fin-wc-note::before { content: '· '; }
+.fin-wc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.fin-wc-price-wrap { text-align: right; margin-bottom: 3px; }
+.fin-wc-price { font-size: 16px; font-weight: 800; font-family: var(--mono); color: var(--text); }
+.fin-wc-chg { font-size: 12px; font-weight: 700; }
+.fin-wc-chg.up { color: #34d399; } .fin-wc-chg.down { color: #f87171; } .fin-wc-chg.flat { color: var(--text3); }
+.fin-wc-chgamt { font-size: 10px; color: var(--text3); }
+.fin-wc-chgamt.up { color: rgba(52,211,153,0.65); } .fin-wc-chgamt.down { color: rgba(248,113,113,0.65); }
+
+/* ── 종목 폼 타입 토글 ── */
+.fin-form-type-bar {
+  display: flex; gap: 4px; padding: 4px;
+  background: rgba(255,255,255,0.05); border-radius: 12px;
+  margin-bottom: 18px; flex-shrink: 0;
+}
+.fin-form-type-btn {
+  flex: 1; padding: 9px; border: none; border-radius: 9px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--font); color: var(--text3); background: none;
+  transition: background .15s, color .15s;
+}
+.fin-form-type-btn.active { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+.fin-form-row { display: flex; gap: 10px; }
+.fin-form-divider {
+  font-size: 10px; font-weight: 800; color: var(--text3);
+  letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 14px 0 0; border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 4px;
+}
+.fin-form-holding-fields {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.fin-form-holding-fields.open { max-height: 200px; }
+body.light-theme .fin-inner-tab.active { background: rgba(99,102,241,0.12); }
+body.light-theme .fin-hc { background: #fff; border-color: rgba(0,0,0,0.07); }
+body.light-theme .fin-wc { background: #fff; border-color: rgba(0,0,0,0.07); }
+body.light-theme .fin-market-pill { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+
 /* 위시/워치 폼 패널 */
 .wish-form-panel { max-height: 90vh; overflow-y: auto; }
 .sheet-title { font-size: 17px; font-weight: 900; color: var(--text); margin-bottom: 16px; }
