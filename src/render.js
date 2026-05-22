@@ -4273,6 +4273,39 @@ export async function fetchStockPrice(item) {
       } catch {}
     }
 
+    // ── 2.5 한국 주식: Naver Finance 모바일 API (KRX 우선) ─────
+    if (market === 'KRX') {
+      const code = symbol.replace(/\..+$/, '');
+      const naverBase = `https://m.stock.naver.com/api/stock/${code}/basic`;
+      const naverUrls = [
+        `https://corsproxy.io/?${encodeURIComponent(naverBase)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(naverBase)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(naverBase)}`,
+        naverBase,
+      ];
+      const naverAttempts = naverUrls.map(url =>
+        fetch(url, { signal: AbortSignal.timeout(7000) })
+          .then(async r => {
+            if (!r.ok) throw new Error('not ok');
+            const data = await r.json();
+            const p = parseFloat((data.closePrice || '').toString().replace(/,/g, ''));
+            if (!p || p <= 0) throw new Error('no price');
+            const chgAbs = parseFloat((data.compareToPreviousClosePrice || '0').toString().replace(/,/g, ''));
+            const chgPct = parseFloat((data.fluctuationsRatio || '0').toString());
+            const sign = data.fluctuationCode === '5' ? -1 : 1;
+            return { p, chg: sign * Math.abs(chgAbs), pct: sign * Math.abs(chgPct),
+                     name: data.stockName || item.name || symbol };
+          })
+      );
+      try {
+        const parsed = await Promise.any(naverAttempts);
+        if (parsed) {
+          setData(parsed.p, parsed.chg, parsed.pct, 'KRW', parsed.name);
+          return;
+        }
+      } catch {}
+    }
+
     // ── 3. 주식/ETF: Yahoo Finance v8 × 프록시 병렬 경쟁 ──────
     // 프록시 3종 + yahoo 도메인 2종을 동시에 시도하여 가장 먼저 오는 결과 사용
     const PROXIES = [
