@@ -1798,7 +1798,7 @@ export function toggleWishBought(id) {
 // ════════════════════════════════════════════════════════
 let _editWatchSymbol = null;
 
-export function openWatchlistForm(symbol) {
+export function openWatchlistForm(symbol, defaultType = 'watch') {
   _editWatchSymbol = symbol || null;
   const item = symbol ? (state.watchlist || []).find(w => w.symbol === symbol) : null;
 
@@ -1808,6 +1808,19 @@ export function openWatchlistForm(symbol) {
   document.getElementById('wl-buyprice').value = item?.buyPrice || '';
   document.getElementById('wl-qty').value = item?.quantity || '';
   document.getElementById('wl-note').value = item?.note || '';
+
+  // 타입 토글 설정
+  const type = item ? (item.buyPrice && item.quantity ? 'holding' : 'watch') : defaultType;
+  document.querySelectorAll('.fin-form-type-btn').forEach(b => {
+    const isActive = (b as HTMLElement).dataset.wltype === type;
+    b.classList.toggle('active', isActive);
+  });
+  const fields = document.getElementById('fin-form-holding-fields');
+  if (fields) fields.classList.toggle('open', type === 'holding');
+
+  const title = document.getElementById('fin-form-title');
+  if (title) title.textContent = symbol ? '종목 수정' : (type === 'holding' ? '보유종목 추가' : '관심종목 추가');
+
   openSheet('watchlist-form-overlay');
 }
 
@@ -1820,13 +1833,14 @@ export async function saveWatchlistItem() {
   const symbol = document.getElementById('wl-symbol').value.trim().toUpperCase();
   if (!symbol) { alert('종목코드를 입력해주세요'); return; }
 
+  const isHolding = document.querySelector('.fin-form-type-btn.active')?.dataset?.wltype === 'holding';
   const item = {
     id: _editWatchSymbol ? ((state.watchlist || []).find(w => w.symbol === _editWatchSymbol)?.id || uid()) : uid(),
     symbol,
     name: document.getElementById('wl-name').value.trim() || symbol,
     market: document.getElementById('wl-market').value,
-    buyPrice: Number(document.getElementById('wl-buyprice').value) || null,
-    quantity: Number(document.getElementById('wl-qty').value) || null,
+    buyPrice: isHolding ? (Number(document.getElementById('wl-buyprice').value) || null) : null,
+    quantity: isHolding ? (Number(document.getElementById('wl-qty').value) || null) : null,
     note: document.getElementById('wl-note').value.trim() || null,
   };
 
