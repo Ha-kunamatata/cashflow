@@ -132,48 +132,54 @@ body {
   position: fixed; inset: 0; z-index: 1000;
   background: linear-gradient(-45deg, #020818, #0a1628, #0d1f42, #060e20, #091535);
   background-size: 400% 400%;
-  animation: splashBg 18s ease infinite, splashFadeIn 0.4s ease both;
+  animation: splashBg 18s ease infinite;
   display: flex; align-items: center; justify-content: center;
   padding: 32px 24px; overflow: hidden;
-  transition: opacity 0.5s ease;
+  will-change: opacity;
+  transform: translateZ(0);
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 #login-screen.splash-hiding {
   opacity: 0;
   pointer-events: none;
 }
-@keyframes splashFadeIn { from { opacity: 0; } to { opacity: 1; } }
+#login-screen.splash-hiding .login-orb,
+#login-screen.splash-hiding .login-icon-wrap {
+  animation-play-state: paused;
+}
 
-/* Ambient orbs — 더 선명하고 크게 */
+/* Ambient orbs — GPU-accelerated */
 .login-orb {
   position: absolute; border-radius: 50%; pointer-events: none;
+  will-change: transform;
 }
 .login-orb1 {
   width: 600px; height: 600px; top: -180px; left: -140px;
   background: radial-gradient(circle, rgba(37,99,235,.3) 0%, rgba(30,58,138,.15) 40%, transparent 70%);
-  filter: blur(70px);
+  filter: blur(48px);
   animation: orbFloat1 10s ease-in-out infinite;
 }
 .login-orb2 {
   width: 480px; height: 480px; bottom: -100px; right: -80px;
   background: radial-gradient(circle, rgba(109,40,217,.28) 0%, rgba(79,70,229,.14) 40%, transparent 70%);
-  filter: blur(65px);
+  filter: blur(44px);
   animation: orbFloat2 13s ease-in-out infinite;
 }
 .login-orb3 {
   width: 320px; height: 320px; top: 42%; right: 8%;
   background: radial-gradient(circle, rgba(20,184,166,.18) 0%, transparent 65%);
-  filter: blur(50px);
+  filter: blur(34px);
   animation: orbFloat3 17s ease-in-out infinite;
 }
 /* 추가 orb — 왼쪽 하단 보라 */
-.login-orb::after {
+.login-orb1::after {
   content: '';
   position: absolute;
   width: 260px; height: 260px;
   border-radius: 50%;
   bottom: 15%; left: -30px;
   background: radial-gradient(circle, rgba(139,92,246,.15) 0%, transparent 65%);
-  filter: blur(55px);
+  filter: blur(38px);
   animation: orbFloat2 20s ease-in-out infinite reverse;
 }
 
@@ -244,11 +250,9 @@ body {
 .login-feature {
   display: flex; align-items: center; gap: 12px;
   font-size: 13px; color: rgba(203,213,225,.82); font-weight: 500;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(15,25,50,.55);
+  border: 1px solid rgba(255,255,255,.09);
   border-radius: 14px; padding: 11px 16px;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
   transition: background .2s, border-color .2s;
 }
 .login-feature:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); }
