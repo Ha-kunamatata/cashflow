@@ -4184,7 +4184,8 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   transition: transform .3s cubic-bezier(.2,.85,.25,1);
   display: flex;
   flex-direction: column;
-  max-height: 92dvh;
+  min-height: 56dvh;
+  max-height: 80dvh;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -4214,12 +4215,48 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
 }
 .bs-sub-close:active { background: rgba(255,255,255,.14); }
 
+/* ── 그룹 탭 (수평 스크롤 pill) ──────────────────────── */
+.bs-cat-group-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.bs-cat-group-tabs::-webkit-scrollbar { display: none; }
+.bs-cat-group-tab {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, transform .15s cubic-bezier(.34,1.4,.64,1);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.bs-cat-group-tab:active { transform: scale(0.93); }
+.bs-cat-group-tab.active {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #fff;
+}
+body.light-theme .bs-cat-group-tab { background: #f1f5f9; border-color: #cbd5e1; color: #64748b; }
+body.light-theme .bs-cat-group-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
 /* 4열 카테고리 카드 그리드 */
 .bs-cat-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  padding: 8px 12px 4px;
+  padding: 0 12px 4px;
   overflow-y: auto;
   flex: 1;
 }
@@ -4229,7 +4266,7 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   align-items: center;
   justify-content: flex-start;
   gap: 0;
-  padding: 14px 4px 12px;
+  padding: 12px 6px 10px;
   border-radius: 16px;
   border: 1.5px solid rgba(255,255,255,.05);
   background: var(--bg3);
@@ -4238,6 +4275,7 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
   -webkit-tap-highlight-color: transparent;
   position: relative;
   overflow: hidden;
+  min-height: 82px;
 }
 .bs-cat-card::before {
   content: '';
@@ -4255,27 +4293,30 @@ body.light-theme .cat-insight-banner { background: rgba(251,191,36,.05); }
 
 /* 아이콘: 컬러 원형 배경 */
 .bs-cat-card-icon {
-  width: 48px; height: 48px;
+  width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 14px;
+  border-radius: 13px;
   background: color-mix(in srgb, var(--cat-col, #6366f1) 14%, var(--bg2));
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 22px;
+  margin-bottom: 7px;
   transition: background .18s, transform .15s;
   flex-shrink: 0;
 }
-.bs-cat-card:active .bs-cat-card-icon { transform: scale(0.9); }
+.bs-cat-card:active .bs-cat-card-icon { transform: scale(0.88); }
 .bs-cat-card.bs-cat-selected .bs-cat-card-icon {
   background: color-mix(in srgb, var(--cat-col, #6366f1) 22%, var(--bg2));
 }
 
 .bs-cat-card-name {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text3);
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.3;
   word-break: keep-all;
+  overflow-wrap: break-word;
+  width: 100%;
+  padding: 0 2px;
   transition: color .18s;
 }
 .bs-cat-card.bs-cat-selected .bs-cat-card-name {
@@ -4568,13 +4609,13 @@ body.light-theme .ledger-cal-sum-item:active { background: rgba(0,0,0,.06); }
 .pay-option { transition: background .12s, transform .14s; }
 .pay-option:active { transform: scale(0.98); }
 
-/* ── 모달 오버레이 배경 강화 ──────────────────────────── */
+/* ── 모달 오버레이: opacity + backdrop-filter 동시 전환 ── */
 .sheet-overlay {
-  transition: background .25s, backdrop-filter .25s;
+  transition: opacity .24s ease, backdrop-filter .3s;
 }
 .sheet-overlay.show {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 /* ── 뱅크샐러드 스타일 숫자 애니메이션 (금액 업데이트 시) ── */

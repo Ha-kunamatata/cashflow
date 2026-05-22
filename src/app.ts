@@ -1142,8 +1142,8 @@ document.getElementById('ledger-day-items-list')?.addEventListener('click', (e) 
 document.getElementById('ledger-type-expense')?.addEventListener('click', () => setLedgerItemType('expense'));
 document.getElementById('ledger-type-income')?.addEventListener('click',  () => setLedgerItemType('income'));
 document.getElementById('ledger-cat-groups')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.calc-cat-group-tab');
-  if (btn) selectLedgerCatGroup(btn.dataset.group);
+  const btn = (e.target as HTMLElement).closest('.bs-cat-group-tab, .calc-cat-group-tab') as HTMLElement | null;
+  if (btn?.dataset.group) selectLedgerCatGroup(btn.dataset.group);
 });
 document.getElementById('ledger-cat-chips')?.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.bs-cat-card') as HTMLElement | null;

@@ -696,6 +696,7 @@ function _updatePaymentRow() {
 export function openCatSheet() {
   const titleEl = document.getElementById('bs-cat-sheet-title');
   if (titleEl) titleEl.textContent = _ledgerItemType === 'income' ? '수입 카테고리 선택' : '지출 카테고리 선택';
+  _renderCatGroupTabs();
   _renderCatChips();
   openSheet('ledger-cat-sheet');
 }
@@ -818,24 +819,36 @@ const _RECENT_GROUP = '최근';
 function _renderCatGroupTabs() {
   const el = document.getElementById('ledger-cat-groups');
   if (!el) return;
-  if (_ledgerItemType === 'income') { el.innerHTML = ''; return; }
+  if (_ledgerItemType === 'income') { el.style.display = 'none'; return; }
+  el.style.display = '';
   const recentCats = _getRecentCats();
   const groups = recentCats.length
     ? [_RECENT_GROUP, ...Object.keys(LEDGER_CATEGORIES)]
     : Object.keys(LEDGER_CATEGORIES);
-  el.innerHTML = groups.map(grp => `
-    <button class="calc-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">${grp}</button>
-  `).join('');
+  el.innerHTML = groups.map(grp => {
+    const label = grp === _RECENT_GROUP ? '⏱ 최근' : grp;
+    return `<button class="bs-cat-group-tab${grp === _ledgerCatGroup ? ' active' : ''}" data-group="${escapeHtml(grp)}">${escapeHtml(label)}</button>`;
+  }).join('');
+  // scroll active tab into view
+  requestAnimationFrame(() => {
+    const active = el.querySelector('.bs-cat-group-tab.active') as HTMLElement | null;
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
 }
 
 function _renderCatChips() {
   const el = document.getElementById('ledger-cat-chips');
   if (!el) return;
 
-  // 전체 카테고리 플랫 리스트 (그룹 없음)
-  const cats: string[] = _ledgerItemType === 'income'
-    ? [...LEDGER_INCOME_CATEGORIES]
-    : (Object.values(LEDGER_CATEGORIES) as string[][]).flat();
+  let cats: string[];
+  if (_ledgerItemType === 'income') {
+    cats = [...LEDGER_INCOME_CATEGORIES];
+  } else if (_ledgerCatGroup === _RECENT_GROUP) {
+    cats = _getRecentCats();
+    if (!cats.length) cats = (Object.values(LEDGER_CATEGORIES) as string[][]).flat().slice(0, 8);
+  } else {
+    cats = [...(LEDGER_CATEGORIES[_ledgerCatGroup] || [])];
+  }
 
   el.className = 'bs-cat-grid-4';
   el.innerHTML = cats.map(cat => {
