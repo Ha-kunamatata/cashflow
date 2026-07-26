@@ -1,10 +1,18 @@
 // ════════════════════════════════════════════════════════
 // firebase.ts — Firebase 인증 & Firestore (순환참조 없음)
 // ════════════════════════════════════════════════════════
-// @ts-nocheck — Firebase CDN URL imports are resolved at runtime, not by TS
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, type DocumentReference } from 'firebase/firestore';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth';
 import { FIREBASE_CONFIG } from './config';
 
 const app = initializeApp(FIREBASE_CONFIG);
@@ -18,7 +26,7 @@ function isInAppBrowser(): boolean {
   return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|wv/i.test(navigator.userAgent);
 }
 
-function getRef() {
+function getRef(): DocumentReference | null {
   const user = auth.currentUser;
   if (!user) return null;
   const hCode = localStorage.getItem('cashflow_household');
@@ -76,13 +84,15 @@ export async function signOutUser(): Promise<void> {
   await signOut(auth);
 }
 
-export async function saveToFirebase(data: unknown): Promise<void> {
+export async function saveToFirebase(data: unknown): Promise<boolean> {
   const ref = getRef();
-  if (!ref) return;
+  if (!ref) return true;
   try {
     await setDoc(ref, data as Record<string, unknown>);
+    return true;
   } catch (e) {
     console.warn('저장 실패:', e);
+    return false;
   }
 }
 
@@ -215,7 +225,7 @@ export async function getHouseholdMeta(): Promise<unknown> {
 }
 
 export async function initAuth(
-  onLogin: (user: unknown) => void,
+  onLogin: (user: User) => void,
   onLogout: () => void,
 ): Promise<void> {
   try {

@@ -1177,7 +1177,8 @@ export function saveGeminiKey() {
   if (val === '••••••••••••••••••••') { showBadge('ℹ️ 변경사항 없음'); return; }
 
   setGeminiKey(val);
-  // 크로스 디바이스 동기화: state에도 저장
+  // state에도 저장(배지 판정 등에 사용) — 단, save()가 Firebase로 보낼 때는
+  // geminiKey/alphaVantageKey를 제외하므로 이 값은 기기 로컬에만 남는다.
   state.geminiKey = val;
   save();
   const hasKey = hasGeminiKey();
@@ -1344,7 +1345,7 @@ export async function runLedgerAIAnalysis() {
 }
 
 // ── 미니 채팅 ─────────────────────────────────────────
-let _chatMessages = [];
+const _chatMessages = [];
 
 export function openAIChat() {
   openSheet('ai-chat-sheet');

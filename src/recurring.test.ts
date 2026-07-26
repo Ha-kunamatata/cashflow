@@ -17,7 +17,7 @@ describe('detectRecurringPatterns', () => {
       '2026-02-05': [makeItem('넷플릭스', 17000, '구독')],
       '2026-03-05': [makeItem('넷플릭스', 17000, '구독')],
     };
-    const patterns = detectRecurringPatterns(ledger, []);
+    const patterns = detectRecurringPatterns(ledger, [], new Date(2026, 3, 15));
     expect(patterns.length).toBeGreaterThan(0);
     expect(patterns[0].memo).toBe('넷플릭스');
     expect(patterns[0].avgAmount).toBe(17000);
@@ -33,7 +33,7 @@ describe('detectRecurringPatterns', () => {
     const existing: Entry[] = [{
       id: '1', type: 'expense', name: '월세', category: '주거', amount: 500000, repeat: '매월', day: 10,
     }];
-    const patterns = detectRecurringPatterns(ledger, existing);
+    const patterns = detectRecurringPatterns(ledger, existing, new Date(2026, 3, 15));
     expect(patterns.find(p => p.memo === '월세')).toBeUndefined();
   });
 
@@ -41,7 +41,7 @@ describe('detectRecurringPatterns', () => {
     const ledger: LedgerData = {
       '2026-03-15': [makeItem('컨퍼런스비', 80000, '교육')],
     };
-    expect(detectRecurringPatterns(ledger, [])).toHaveLength(0);
+    expect(detectRecurringPatterns(ledger, [], new Date(2026, 3, 15))).toHaveLength(0);
   });
 
   it('returns at most 5 patterns', () => {
@@ -53,7 +53,7 @@ describe('detectRecurringPatterns', () => {
         ledger[key] = [makeItem(`${n}구독`, 10000 * (i + 1))];
       }
     });
-    const patterns = detectRecurringPatterns(ledger, []);
+    const patterns = detectRecurringPatterns(ledger, [], new Date(2026, 3, 15));
     expect(patterns.length).toBeLessThanOrEqual(5);
   });
 });

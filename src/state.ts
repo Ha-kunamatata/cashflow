@@ -2,13 +2,13 @@
 // state.ts — 앱 상태 관리 / 저장 / 로드
 // ════════════════════════════════════════════════════════
 import { STORAGE_KEY } from './config';
-import { uid, isPastOrToday } from './utils';
+import { uid, isPastOrToday, showBadge } from './utils';
 import type { Entry, Card, LedgerData, LedgerItem, Goal, Asset, BudgetMap, WishItem, WatchlistItem, LedgerTemplate } from './types';
 
 declare global {
   interface Window {
     firebaseReady?: boolean;
-    saveToFirebase?: (data: unknown) => void;
+    saveToFirebase?: (data: unknown) => Promise<boolean> | void;
     currentUser?: unknown;
   }
 }
@@ -36,6 +36,7 @@ export interface StateShape {
   netWorthHistory: { ym: number; total: number }[];
   lastSeenMonth: number;
   budgetCarryover: Record<string, number>;
+  dismissedRecurringMemos: string[];
 }
 
 export const DEFAULT_CARDS: Card[] = [];
@@ -63,6 +64,7 @@ export const state: StateShape = {
   netWorthHistory: [],
   lastSeenMonth: 0,
   budgetCarryover: {},
+  dismissedRecurringMemos: [],
 };
 
 // ── 상태 완전 초기화 (계정 전환 시 메모리 상태 리셋) ──
@@ -89,6 +91,7 @@ export function resetState(): void {
   state.netWorthHistory   = [];
   state.lastSeenMonth     = 0;
   state.budgetCarryover   = {};
+  state.dismissedRecurringMemos = [];
 }
 
 // ── 저장 ──────────────────────────────────────────────
@@ -98,12 +101,23 @@ export function save(): void {
   } catch (_) {}
 
   if (window.firebaseReady && window.saveToFirebase) {
-    window.saveToFirebase(JSON.parse(JSON.stringify(state)));
+    // API 키는 기기 로컬 전용 — 클라우드로 동기화하지 않음 (household/공유 코드
+    // 노출 시 함께 새는 것을 방지)
+    const cloudPayload = JSON.parse(JSON.stringify(state)) as Record<string, unknown>;
+    delete cloudPayload.geminiKey;
+    delete cloudPayload.alphaVantageKey;
+
+    const result = window.saveToFirebase(cloudPayload);
+    if (result && typeof (result as Promise<boolean>).then === 'function') {
+      (result as Promise<boolean>).then((ok) => {
+        if (ok === false) showBadge('⚠️ 동기화 실패 · 오프라인');
+      });
+    }
   }
 }
 
 // ── 상태 유효성 검사 ──────────────────────────────────
-function validateState(d: unknown): d is Partial<StateShape> {
+export function validateState(d: unknown): d is Partial<StateShape> {
   if (typeof d !== 'object' || d === null || Array.isArray(d)) return false;
   const o = d as Record<string, unknown>;
   if ('balance'          in o && typeof o.balance !== 'number') return false;
@@ -135,6 +149,7 @@ export function load(): void {
   if (!state.netWorthHistory) state.netWorthHistory = [];
   if (!state.budgetCarryover) state.budgetCarryover = {};
   if (!state.lastSeenMonth)   state.lastSeenMonth   = 0;
+  if (!state.dismissedRecurringMemos) state.dismissedRecurringMemos = [];
 }
 
 // ── checkData → ledgerData 마이그레이션 ───────────────
@@ -202,6 +217,7 @@ export function ensureStateFields(): void {
   if (!state.cards)           state.cards           = null;
   if (!state.netWorthHistory) state.netWorthHistory = [];
   if (!state.budgetCarryover) state.budgetCarryover = {};
+  if (!state.dismissedRecurringMemos) state.dismissedRecurringMemos = [];
 }
 
 export function initDefaultData(): void {

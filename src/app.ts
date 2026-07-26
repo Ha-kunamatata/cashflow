@@ -21,6 +21,7 @@ import {
   initDefaultData,
   ensureStateFields,
   resetState,
+  validateState,
 } from './state';
 
 import {
@@ -522,13 +523,48 @@ function _markNotifSent(key: string) {
   } catch {}
 }
 
-async function _checkNotifications() {
-  if (!('Notification' in window) || Notification.permission === 'denied') return;
-  if (Notification.permission === 'default') {
-    const perm = await Notification.requestPermission().catch(() => 'denied');
-    if (perm !== 'granted') return;
+// 설정 탭 알림 카드 상태 갱신 (버튼 라벨 + 상태 문구)
+function _updateNotificationSettingsUI() {
+  const btn = document.getElementById('btn-enable-notifications');
+  const sub = document.getElementById('notif-status-sub');
+  if (!btn || !sub) return;
+
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    sub.textContent = '이 브라우저는 알림을 지원하지 않아요';
+    return;
   }
-  if (Notification.permission !== 'granted') return;
+
+  if (Notification.permission === 'granted') {
+    btn.style.display = 'none';
+    sub.textContent = '✅ 알림이 켜져 있어요 — 위험선·예산·월급·할부 알림을 보내드려요';
+  } else if (Notification.permission === 'denied') {
+    btn.style.display = 'none';
+    sub.textContent = '🚫 브라우저에서 알림이 차단됐어요. 브라우저 설정에서 이 사이트의 알림 권한을 허용해주세요';
+  } else {
+    btn.style.display = '';
+    btn.textContent = '🔔 알림 켜기';
+    sub.textContent = '잔고가 위험선에 가까워지거나, 예산을 초과하거나, 월급날 D-1일 때 브라우저 알림을 보내드려요';
+  }
+}
+
+// 사용자가 설정 탭에서 명시적으로 눌렀을 때만 권한을 요청한다
+// (로그인할 때마다 맥락 없이 자동으로 팝업을 띄우면 대부분 거부/무시되고,
+//  한 번 거부되면 브라우저에서 다시 물어보지 않는 경우가 많아 기회를 잃는다)
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  const perm = await Notification.requestPermission().catch(() => 'denied');
+  _updateNotificationSettingsUI();
+  if (perm === 'granted') {
+    showBadge('🔔 알림이 켜졌어요');
+    _checkNotifications();
+  }
+}
+
+document.getElementById('btn-enable-notifications')?.addEventListener('click', requestNotificationPermission);
+
+async function _checkNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   const [{ fmtShort, yyyymm, p2 }, { buildForecast }] = await Promise.all([
     import('./utils'),
@@ -654,8 +690,16 @@ function _hideSplash() {
 }
 
 // ── Firebase 인증 상태 감지 ────────────────────────────
+// 계정 전환 레이스 컨디션 방지용 세대 카운터: 로그인/로그아웃이 빠르게 반복되면
+// 이전 계정의 loadFromFirebase()/startSync() 콜백이 새 계정 세션에 늦게 반영될 수 있어,
+// 매 onLogin/onLogout 진입 시 세대를 증가시키고 비동기 콜백마다 세대가 여전히
+// 유효한지 확인한다.
+let authGeneration = 0;
+
 initAuth(
   async (user) => {
+    const myGeneration = ++authGeneration;
+
     // 로그인 성공
     _hideSplash();
     document.getElementById('topbar').style.display = 'flex';
@@ -700,12 +744,19 @@ initAuth(
     load();
     const cloud = await loadFromFirebase();
 
+    // 이 await 도중 다른 계정으로 로그인/로그아웃이 다시 일어났다면 이 결과는
+    // 폐기한다 (다른 계정 세션에 잘못 섞여 들어가는 것을 방지).
+    if (myGeneration !== authGeneration) return;
+
     if (cloud) {
-      Object.assign(state, cloud);
-      localStorage.setItem('cashflow_v21', JSON.stringify(state));
-      // Gemini API 키: 클라우드 → 로컬 복원 (크로스 디바이스 동기화)
-      if (state.geminiKey) localStorage.setItem('gemini_api_key', state.geminiKey);
-      showBadge('☁️ 동기화됨');
+      if (validateState(cloud)) {
+        Object.assign(state, cloud);
+        localStorage.setItem('cashflow_v21', JSON.stringify(state));
+        showBadge('☁️ 동기화됨');
+      } else {
+        console.warn('클라우드 데이터 검증 실패 — 병합을 건너뜁니다.', cloud);
+        showBadge('⚠️ 동기화 데이터 이상 · 건너뜀');
+      }
     }
 
     initDefaultData();
@@ -728,7 +779,8 @@ initAuth(
     checkSalaryEvent();
     runBadgeCheck();
 
-    // 로컬 알림 체크 (비동기)
+    // 알림 설정 UI 상태 반영 + 이미 허용된 경우에만 로컬 알림 체크 (비동기)
+    _updateNotificationSettingsUI();
     _checkNotifications();
 
     // 예산 모듈 참조 등록 (render.js에서 year/month 접근용)
@@ -736,17 +788,23 @@ initAuth(
 
     // 실시간 동기화
     startSync((cloudData) => {
+      // 이전 계정에 붙어있던 리스너가 뒤늦게 한 번 더 발화하는 경우를 방지
+      if (myGeneration !== authGeneration) return;
+      if (!validateState(cloudData)) {
+        console.warn('실시간 동기화 데이터 검증 실패 — 무시합니다.', cloudData);
+        return;
+      }
       const localTheme = state.theme; // 테마는 기기별 설정 유지
       Object.assign(state, cloudData);
       state.theme = localTheme;
       localStorage.setItem('cashflow_v21', JSON.stringify(state));
-      if (state.geminiKey) localStorage.setItem('gemini_api_key', state.geminiKey);
       applyTheme();
       renderAll();
       showBadge('🔄 다른 기기에서 업데이트됨');
     });
   },
   () => {
+    authGeneration++; // 진행 중이던 로그인 콜백이 있다면 이후 결과를 폐기시킴
     // 로그아웃
     const _ls = document.getElementById('login-screen');
     _ls.classList.remove('splash-hiding');
@@ -776,6 +834,16 @@ document.getElementById('btn-open-settings-page')?.addEventListener('click', () 
 document.getElementById('btn-topbar-home')?.addEventListener('click', () => {
   const homeBtn = document.querySelector('.nav-btn[data-page="home"]');
   navigate('home', homeBtn);
+});
+
+// role="button"인 비-<button> 요소(예: 탑바 로고/프로필 영역)를 Enter/Space로도
+// 활성화할 수 있게 함 — 네이티브 <button>과 달리 div는 키보드 활성화가 되지 않음
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest?.('[role="button"]');
+  if (!el) return;
+  e.preventDefault();
+  el.click();
 });
 
 // 홈 예측 위젯은 renderHomeForecastWidget()에서 클릭 이벤트 등록
@@ -1351,6 +1419,33 @@ document.querySelector('#page-home .summary-grid')?.addEventListener('click', (e
     navigate('forecast');
   } else if (action === 'ledger') {
     navigate('ledger');
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 구독·정기지출 감지 카드 — 등록/무시 액션
+// ══════════════════════════════════════════════════════════════
+document.getElementById('page-home')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-recur-action]');
+  if (!btn) return;
+  e.stopPropagation();
+
+  const memo = btn.dataset.recurMemo;
+  if (btn.dataset.recurAction === 'register') {
+    showForm({
+      type: 'expense',
+      name: memo,
+      amount: Number(btn.dataset.recurAmount) || 0,
+      category: '기타지출',
+      repeat: '매월',
+      day: Number(btn.dataset.recurDay) || 1,
+    });
+  } else if (btn.dataset.recurAction === 'dismiss') {
+    if (!state.dismissedRecurringMemos.includes(memo)) {
+      state.dismissedRecurringMemos.push(memo);
+      save();
+    }
+    renderAll();
   }
 });
 

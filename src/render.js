@@ -1,10 +1,11 @@
 // ════════════════════════════════════════════════════════
 // render.js — 화면 렌더링
 // ════════════════════════════════════════════════════════
-import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES } from './config';
+import { DAYS_KR, CAT_COLORS, LEDGER_CAT_COLORS, LEDGER_CATEGORIES, LEDGER_INCOME_CATEGORIES, CAT_ICONS } from './config';
 import { ASSET_TYPES, ASSET_PURPOSES, PURPOSE_COLORS, getTotalAssets, getUsableMoney, getAssetsByPurpose, getHouseLevel, HOUSE_LEVELS } from './assets';
 import { getMonthBudget, getMonthActual } from './budget';
 import { computeStreak, BADGE_DEFS, RARITY_CONFIG } from './streak';
+import { detectRecurringPatterns } from './recurring';
 import {
   today,
   dateKey,
@@ -462,6 +463,195 @@ function _renderHomeCatBreakdown() {
 }
 
 // ════════════════════════════════════════════════════════
+// 월 진행률 바
+// ════════════════════════════════════════════════════════
+function renderMonthProgress() {
+  const el = document.getElementById('month-progress-wrap');
+  if (!el) return;
+  const now = today();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const elapsed = now.getDate();
+  const elapsedPct = Math.round((elapsed / lastDay) * 100);
+
+  const budget = getMonthBudget(state.budgets || {}, now.getFullYear(), now.getMonth());
+  const actual = getMonthActual(state.ledgerData, now.getFullYear(), now.getMonth());
+  const budgetTotal = Object.values(budget).reduce((s, v) => s + v, 0);
+  const actualTotal = Object.values(actual).reduce((s, v) => s + v, 0);
+  const budgetPct = budgetTotal > 0 ? Math.min(150, Math.round((actualTotal / budgetTotal) * 100)) : null;
+
+  const barColor = budgetPct !== null
+    ? (budgetPct > elapsedPct + 15 ? 'var(--red2)' : budgetPct > elapsedPct ? 'var(--orange)' : 'var(--green2)')
+    : 'var(--accent2)';
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <span style="font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.5px">${now.getMonth() + 1}월 진행률</span>
+      <span style="font-size:9px;color:rgba(255,255,255,0.5)">${elapsed}일 / ${lastDay}일</span>
+    </div>
+    <div style="position:relative;height:5px;background:rgba(255,255,255,0.08);border-radius:6px;overflow:visible">
+      <div style="height:100%;width:${elapsedPct}%;background:rgba(255,255,255,0.25);border-radius:6px;transition:width 0.6s ease"></div>
+      ${budgetPct !== null ? `<div style="position:absolute;top:0;left:0;height:100%;width:${Math.min(100, budgetPct)}%;background:${barColor};border-radius:6px;opacity:0.85;transition:width 0.6s ease"></div>` : ''}
+    </div>
+    ${budgetPct !== null ? `
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span style="font-size:9px;color:rgba(255,255,255,0.35)">시간 ${elapsedPct}%</span>
+      <span style="font-size:9px;color:${barColor};font-weight:700">예산 ${budgetPct}% 소진</span>
+    </div>` : `<div style="margin-top:4px;font-size:9px;color:rgba(255,255,255,0.3)">이번 달 ${lastDay - elapsed}일 남음</div>`}`;
+}
+
+// ════════════════════════════════════════════════════════
+// 이번 주 가로 날짜 스트립 (뱅크샐러드 시그니처)
+// ════════════════════════════════════════════════════════
+function renderWeekStrip() {
+  const el = document.getElementById('home-week-strip');
+  if (!el) return;
+  const now = today();
+  const dow = now.getDay();
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + diffToMon + i);
+    const dk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const items = state.ledgerData?.[dk] || [];
+    const exp = items.filter(i => i.type === 'expense').reduce((s, i) => s + i.amount, 0);
+    const inc = items.filter(i => i.type === 'income').reduce((s, i) => s + i.amount, 0);
+    const isToday = dk === dateKey(now);
+    const isFuture = d > now;
+    days.push({ d, dk, exp, inc, isToday, isFuture, dayName: dayNames[d.getDay()], dowIdx: d.getDay() });
+  }
+
+  el.innerHTML = `<div class="week-strip">
+    ${days.map(day => {
+      const isWeekend = day.dowIdx === 0 || day.dowIdx === 6;
+      const hasTx = day.exp > 0 || day.inc > 0;
+      return `<div class="week-strip-day ${day.isToday ? 'today' : ''} ${day.isFuture ? 'future' : ''}" data-dk="${day.dk}">
+        <div class="week-strip-name" style="color:${isWeekend ? 'var(--accent2)' : ''}">${day.dayName}</div>
+        <div class="week-strip-date ${day.isToday ? 'today' : ''}">${day.d.getDate()}</div>
+        ${hasTx ? `<div class="week-strip-dots">
+          ${day.exp > 0 ? '<span class="week-strip-dot exp"></span>' : ''}
+          ${day.inc > 0 ? '<span class="week-strip-dot inc"></span>' : ''}
+        </div>` : '<div class="week-strip-dots"></div>'}
+        ${day.exp > 0 && !day.isFuture ? `<div class="week-strip-amt">${fmtShort(day.exp)}</div>` : '<div class="week-strip-amt"></div>'}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// 반복 패턴 감지 힌트
+// ════════════════════════════════════════════════════════
+function _renderRecurringHint() {
+  // house-level-card 앞에 동적으로 삽입
+  const anchor = document.getElementById('house-level-card');
+  if (!anchor) return;
+  const existing = document.getElementById('recurring-hint-card');
+
+  const dismissed = new Set(state.dismissedRecurringMemos || []);
+  const patterns = detectRecurringPatterns(state.ledgerData || {}, state.entries || [])
+    .filter(p => !dismissed.has(p.memo));
+  if (!patterns.length) {
+    existing?.remove();
+    return;
+  }
+
+  const monthlyTotal = patterns.reduce((s, p) => s + p.avgAmount, 0);
+
+  const html = `
+    <div id="recurring-hint-card" style="margin-bottom:12px;padding:12px 14px;border-radius:14px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:14px">🔁</span>
+        <div style="font-size:12px;font-weight:800;color:var(--text)">구독·정기지출 감지</div>
+        <span style="margin-left:auto;font-size:11px;font-family:var(--mono);font-weight:700;color:var(--orange)">월 ${fmtShort(monthlyTotal)}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${patterns.slice(0, 5).map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:11px;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.memo)} <span style="font-size:10px;color:var(--text3)">· 매월 ~${p.suggestedDay}일</span></span>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <span style="font-size:11px;font-family:var(--mono);font-weight:700;color:var(--orange)">${fmtShort(p.avgAmount)}</span>
+              <button type="button" class="btn btn-ghost" data-recur-action="register" data-recur-memo="${escapeHtml(p.memo)}" data-recur-category="${escapeHtml(p.category)}" data-recur-amount="${p.avgAmount}" data-recur-day="${p.suggestedDay}" style="padding:3px 8px;font-size:10px;border-radius:8px"><div class="ripple-container"></div>등록</button>
+              <button type="button" class="btn btn-ghost" data-recur-action="dismiss" data-recur-memo="${escapeHtml(p.memo)}" style="padding:3px 6px;font-size:10px;border-radius:8px;color:var(--text3)"><div class="ripple-container"></div>✕</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  if (existing) {
+    existing.outerHTML = html;
+  } else {
+    anchor.insertAdjacentHTML('beforebegin', html);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// 스마트 카테고리 인사이트 배너
+// ════════════════════════════════════════════════════════
+function _renderCatInsightBanner() {
+  const anchor = document.getElementById('home-cat-ring');
+  if (!anchor) return;
+  const now = today();
+  const dom = now.getDate();
+  const { catTotals: thisCat } = getLedgerMonth(now.getFullYear(), now.getMonth());
+  const thisCatMap = thisCat || {};
+
+  // 과거 3개월도 "이번달과 같은 경과일수"까지만 집계해 비교한다.
+  // (그렇지 않으면 월초에 "평소보다 훨씬 많이 썼다"는 오탐이 뜬다 — 아직
+  //  한 달 전체가 아니라 며칠치만 지났을 뿐인데 한 달 전체 평균과 비교되기 때문)
+  const pastAvg = {};
+  for (let m = 1; m <= 3; m++) {
+    const pd = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const catMap = {};
+    for (let day = 1; day <= dom; day++) {
+      const dk = `${pd.getFullYear()}-${p2(pd.getMonth() + 1)}-${p2(day)}`;
+      for (const item of state.ledgerData?.[dk] || []) {
+        if (item.type !== 'expense') continue;
+        catMap[item.category] = (catMap[item.category] || 0) + item.amount;
+      }
+    }
+    Object.entries(catMap).forEach(([cat, amt]) => {
+      pastAvg[cat] = (pastAvg[cat] || 0) + amt / 3;
+    });
+  }
+
+  // 월 초반(경과일수가 적을 때)은 하루 지출 변동폭만으로도 %가 크게 튀므로
+  // 절대금액 기준선을 함께 요구해 노이즈를 줄인다.
+  const spikes = Object.entries(thisCatMap)
+    .filter(([cat, amt]) => {
+      const avg = pastAvg[cat] || 0;
+      return avg > 5000 && amt > avg * 1.25 && amt > 15000 && (amt - avg) > 10000;
+    })
+    .map(([cat, amt]) => ({ cat, amt, avg: pastAvg[cat], ratio: amt / pastAvg[cat] }))
+    .sort((a, b) => b.ratio - a.ratio).slice(0, 2);
+
+  const existing = document.getElementById('home-cat-insight');
+  if (!spikes.length) { existing?.remove(); return; }
+
+  const rows = spikes.map(s => {
+    const col = LEDGER_CAT_COLORS[s.cat] || '#f59e0b';
+    const icon = CAT_ICONS[s.cat] || '📌';
+    const pct = Math.round(((s.amt - s.avg) / s.avg) * 100);
+    return `<div class="cat-insight-row">
+      <span class="cat-insight-icon">${icon}</span>
+      <div class="cat-insight-body">
+        <div class="cat-insight-msg" style="color:${col}">${escapeHtml(s.cat)} 지출이 평소보다 <strong>+${pct}%</strong> 많아요</div>
+        <div class="cat-insight-sub">이번달 ${dom}일까지 ${fmtShort(s.amt)} · 같은 기간 3개월 평균 ${fmtShort(Math.round(s.avg))}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const bannerHtml = `<div id="home-cat-insight" class="cat-insight-banner">
+    <div class="cat-insight-title">💡 지출 패턴 알림</div>
+    ${rows}
+  </div>`;
+
+  if (existing) { existing.outerHTML = bannerHtml; }
+  else { anchor.insertAdjacentHTML('afterend', bannerHtml); }
+}
+
+// ════════════════════════════════════════════════════════
 // 홈
 // ════════════════════════════════════════════════════════
 export function renderHome() {
@@ -653,9 +843,12 @@ export function renderHome() {
     fillEl.style.background = pct >= 100 ? 'var(--red2)' : pct >= 80 ? 'var(--orange)' : 'var(--green2)';
   }
 
+  renderWeekStrip();
+  renderMonthProgress();
   _renderSparkline();
   _renderTodayTimeline();
   _renderHomeCatBreakdown();
+  _renderCatInsightBanner();
   renderHomeBudgetBars();
   renderHomeForecastWidget();
   renderWeeklyCard();
@@ -703,6 +896,9 @@ export function renderHome() {
     const numEl = document.getElementById('health-score-num');
     if (numEl) animateNumber(numEl, hs.score, v => Math.round(v).toString());
   }
+
+  // ── 반복 패턴 감지 힌트 ──────────────────────────────
+  _renderRecurringHint();
 
   // ── 하우스 레벨 & 스트릭 ───────────────────────────────
   renderHouseLevel();
@@ -3825,7 +4021,7 @@ export function renderBudget() {
 const WISH_PRIORITY_LABELS = { must: '꼭 살 것', want: '사고 싶음', maybe: '고민 중' };
 const WISH_PRIORITY_COLORS = { must: 'var(--red2)', want: 'var(--accent2)', maybe: 'var(--text3)' };
 let _wishFilter = '전체';
-let _wishSelectedIds = new Set();  // 다중선택 ID 집합
+const _wishSelectedIds = new Set();  // 다중선택 ID 집합
 
 export function setWishFilter(filter) {
   _wishFilter = filter;
@@ -3977,8 +4173,8 @@ export function renderWishlist() {
 // ════════════════════════════════════════════════════════
 // 재테크 탭
 // ════════════════════════════════════════════════════════
-let _financeData = {}; // { symbol: { price, change, changePct, name, currency, lastUpdated } }
-let _financeLoading = {};
+const _financeData = {}; // { symbol: { price, change, changePct, name, currency, lastUpdated } }
+const _financeLoading = {};
 let _finActiveTab = 'portfolio';
 let _finMarketFilter = 'all';
 

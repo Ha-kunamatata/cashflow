@@ -101,18 +101,18 @@
 <!-- ── 탑바 ── -->
 
 <div class="topbar" id="topbar" style="display:none">
-  <div class="topbar-left" id="btn-topbar-home" style="cursor:pointer">
+  <div class="topbar-left" id="btn-topbar-home" style="cursor:pointer" role="button" tabindex="0" aria-label="홈으로 이동">
     <div class="topbar-title">캐플</div>
     <div class="topbar-sub">: cashflow</div>
   </div>
   <div class="topbar-right">
-    <button class="topbar-search-btn" id="btn-open-search" title="검색">
+    <button class="topbar-search-btn" id="btn-open-search" title="검색" aria-label="검색">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
-    <button class="topbar-gear-btn" id="btn-open-settings-page" title="설정">
+    <button class="topbar-gear-btn" id="btn-open-settings-page" title="설정" aria-label="설정">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
-    <div class="user-avatar" id="btn-open-profile">
+    <div class="user-avatar" id="btn-open-profile" role="button" tabindex="0" aria-label="프로필 열기">
       <div class="user-avatar-placeholder" id="user-avatar-text">?</div>
       <img id="user-avatar-img" src="" style="display:none" referrerpolicy="no-referrer">
     </div>
@@ -792,6 +792,13 @@
         </div>
       </div>
       <div class="card">
+        <div class="card-title">🔔 알림</div>
+        <div class="setting-row">
+          <div><div class="setting-label">위험선·예산·월급 알림</div><div class="setting-sub" id="notif-status-sub">잔고가 위험선에 가까워지거나, 예산을 초과하거나, 월급날 D-1일 때 브라우저 알림을 보내드려요</div></div>
+          <button class="btn btn-ghost" id="btn-enable-notifications"><div class="ripple-container"></div>알림 켜기</button>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title">☁️ 동기화</div>
         <div class="setting-row">
           <div><div class="setting-label">Firebase 실시간 동기화</div><div class="setting-sub">로그인한 계정 기준으로 저장 및 동기화됩니다</div></div>
@@ -1225,13 +1232,13 @@
 <div id="fab-speed-dial" style="display:none">
   <div class="fab-sub" id="fab-sub-chat">
     <span class="fab-sub-label">AI 도우미</span>
-    <button class="fab-sub-btn" id="btn-fab-chat" title="AI 재무 도우미">🤖</button>
+    <button class="fab-sub-btn" id="btn-fab-chat" title="AI 재무 도우미" aria-label="AI 재무 도우미 열기">🤖</button>
   </div>
   <div class="fab-sub" id="fab-sub-ledger">
     <span class="fab-sub-label">가계부 추가</span>
-    <button class="fab-sub-btn" id="btn-fab-ledger" title="가계부 빠른 입력">📒</button>
+    <button class="fab-sub-btn" id="btn-fab-ledger" title="가계부 빠른 입력" aria-label="가계부 빠른 입력">📒</button>
   </div>
-  <button class="fab-main-btn" id="btn-fab-main" title="빠른 메뉴">
+  <button class="fab-main-btn" id="btn-fab-main" title="빠른 메뉴" aria-label="빠른 메뉴 열기">
     <div class="ripple-container"></div>
     <span class="fab-main-icon">+</span>
   </button>

@@ -11,8 +11,8 @@ export interface Entry {
   category: string;
   name: string;
   amount: number;
-  date?: string; // 'YYYY-MM-DD' (1회성 항목)
-  repeat?: '매월' | '1회';
+  date?: string; // 'YYYY-MM-DD' (1회성/격주 항목의 기준일)
+  repeat?: '매월' | '1회성' | '격주';
   day?: number; // 매월 며칠 (repeat='매월')
   endMonth?: string; // 'YYYYMM' — 할부 종료월
   cardId?: string; // 카드 결제 항목인 경우

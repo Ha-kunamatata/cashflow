@@ -22,15 +22,15 @@ export default [
       // 명백한 버그성만 에러로, 스타일은 경고로 (점진적 정리)
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-undef': 'off', // TS가 처리
-      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
       'no-prototype-builtins': 'off',
       'no-control-regex': 'off',
       'no-useless-escape': 'warn',
       'no-useless-assignment': 'off', // 너무 공격적
       'preserve-caught-error': 'off', // 노이즈
       'no-constant-condition': ['warn', { checkLoops: false }],
-      'prefer-const': 'warn',
-      'eqeqeq': ['warn', 'smart'],
+      'prefer-const': 'error',
+      'eqeqeq': ['error', 'smart'],
       'no-var': 'warn',
     },
   },
@@ -42,6 +42,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'v3/**', 'v2/**', '.vite/**'],
+    ignores: ['dist/**', 'node_modules/**', '.vite/**'],
   },
 ];

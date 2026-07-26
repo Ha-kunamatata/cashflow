@@ -53,12 +53,12 @@ export function buildForecast(days = 365, extraExpenses: ExtraExpense[] = []): F
           if (e.type === 'income') income += v;
           else expense += v;
         });
-      } else if ((e.repeat as string) === '1회성' && e.date && dateKey(new Date(e.date)) === dk) {
+      } else if (e.repeat === '1회성' && e.date && dateKey(new Date(e.date)) === dk) {
         pushEvent(e, amt, events, (v) => {
           if (e.type === 'income') income += v;
           else expense += v;
         });
-      } else if ((e.repeat as string) === '격주' && e.date) {
+      } else if (e.repeat === '격주' && e.date) {
         const diff = Math.round((d.getTime() - new Date(e.date).getTime()) / 86400000);
         if (diff >= 0 && diff % 14 === 0) {
           pushEvent(e, amt, events, (v) => {

@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isHouseholdMember(householdCode) {
+      return exists(/databases/$(database)/documents/households/$(householdCode)) &&
+        request.auth.uid in get(/databases/$(database)/documents/households/$(householdCode)).data.members;
+    }
+
+    // 개인 가계부 데이터: 본인만 읽기/쓰기
+    match /users/{uid}/data/{doc} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // 가계 공유 메타 문서: 로그인 사용자는 코드로 조회 가능(참여 전 존재 확인 용도),
+    // 쓰기는 이미 멤버이거나(멤버 목록 갱신) 신규 생성(문서가 아직 없을 때)만 허용
+    match /households/{code} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.members;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.members;
+      allow delete: if false;
+    }
+
+    // 가계 공유 데이터: 해당 household의 멤버만 읽기/쓰기
+    match /households/{code}/data/{doc} {
+      allow read, write: if isSignedIn() && isHouseholdMember(code);
+    }
+
+    // 공유 목표: 코드를 아는 로그인 사용자는 조회 가능(공유 코드 설계상 의도된 동작),
+    // 쓰기는 최초 게시자만
+    match /sharedGoals/{code} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.publisherUid;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.publisherUid;
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

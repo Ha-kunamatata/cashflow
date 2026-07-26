@@ -27,9 +27,9 @@ function amountSimilar(a: number, b: number): boolean {
 export function detectRecurringPatterns(
   ledgerData: LedgerData,
   existingEntries: Entry[],
+  now: Date = new Date(),
 ): RecurringPattern[] {
   // 최근 6개월 날짜키 수집
-  const now = new Date();
   const months: string[] = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

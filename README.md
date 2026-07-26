@@ -31,7 +31,7 @@ npm test          # Vitest 유닛 테스트
 | Frontend | TypeScript + 일부 레거시 JS(`render.js`), HTML5, CSS3 |
 | 스타일링 | CSS Custom Properties, CSS Grid/Flexbox, Glass Morphism, Canvas API |
 | 인증 | Firebase Authentication (Google OAuth) |
-| 데이터베이스 | Firebase Firestore (실시간 동기화) |
+| 데이터베이스 | Firebase Firestore (실시간 동기화, npm `firebase` 패키지 · `firestore.rules` 버전관리) |
 | AI | Google Gemini 2.5 Flash API (Text + Vision Multimodal) |
 | 차트 | 자체 SVG 차트 엔진 + Chart.js |
 | 폰트 | Noto Sans KR, DM Mono (Google Fonts) |
@@ -46,11 +46,12 @@ npm test          # Vitest 유닛 테스트
 cashflow/
 ├── index.html              # Vite entry (SPA HTML 포함)
 ├── package.json
-├── vite.config.ts          # Vite 빌드 설정
+├── vite.config.ts          # Vite 빌드 설정 (firebase 별도 청크 분리)
 ├── tsconfig.json           # TypeScript 설정 (allowJs — render.js 공존)
-├── vitest.config.ts        # Vitest 설정
 ├── eslint.config.js        # ESLint 9 flat config
 ├── .prettierrc.json
+├── firestore.rules         # Firestore 보안 규칙 (Firebase 콘솔에 직접 적용 필요)
+├── .github/workflows/ci.yml # CI — push/PR마다 typecheck·lint·test·build
 ├── public/                 # 정적 자산 (그대로 dist/로 복사)
 │   ├── manifest.json       # PWA 매니페스트
 │   ├── sw.js               # Service Worker
@@ -61,40 +62,20 @@ cashflow/
     ├── utils.ts            # 날짜·금액 포맷, 시트, 배지
     ├── budget.ts           # 월별 예산 헬퍼
     ├── forecast.ts         # 365일 잔고 예측 엔진
-    ├── recurring.ts        # 정기(반복) 거래 처리
+    ├── recurring.ts        # 정기(반복) 거래 자동 감지 — 구독 관리에도 사용
     ├── streak.ts           # 스트릭 + 배지 정의
     ├── assets.ts           # 자산 분류 + 집 레벨 시스템
-    ├── state.ts            # 전역 상태 관리
+    ├── state.ts            # 전역 상태 관리 (클라우드 병합 시 유효성 검증)
     ├── app.ts              # 진입점 — Firebase 초기화, 이벤트 바인딩
     ├── ui.ts               # 폼/시트/모달 인터랙션
     ├── ai.ts               # Gemini API 연동 (텍스트 + Vision OCR)
-    ├── firebase.ts         # Firestore CRUD + Auth
+    ├── firebase.ts         # Firestore CRUD + Auth (npm firebase 패키지)
     ├── game.ts             # 게이미피케이션 보조
     ├── styles/style.css    # 전체 스타일
-    │
-    ├── render.js           # ⭐ 활성 렌더러 — 전체 DOM 렌더링 (~4,900줄)
-    │                       #    app.ts / ui.ts 의 `./render` import 가
-    │                       #    Vite 해석 규칙(.js > .ts)에 따라 이 파일로 연결됨
-    │
-    │   ── ⚠️ 렌더러 분할(리팩터링) 진행중 — 아래는 아직 미배선(데드코드) ──
-    ├── render.ts           # barrel: render-*.ts 재export (현재 번들에 미포함)
-    ├── render-state.ts     # (분할본) 렌더 상태
-    ├── render-home.ts      # (분할본) 홈 탭
-    ├── render-ledger.ts    # (분할본) 가계부 탭
-    ├── render-report.ts    # (분할본) 리포트/예측 탭
-    ├── render-assets.ts    # (분할본) 자산·위시·투자 탭
-    ├── render-goals.ts     # (분할본) 목표·집레벨·스트릭
-    ├── render-entries.ts   # (분할본) 엔트리 렌더
-    │
+    ├── render.js           # 렌더러 — 전체 DOM 렌더링
     └── *.test.ts           # Vitest 유닛 테스트
-                            #  (assets · budget · recurring · streak · utils)
+                            #  (assets · budget · forecast · recurring · state · streak · utils)
 ```
-
-> **⚠️ 리팩터링 주의:** 화면에 실제 반영되는 렌더링 코드는 전부 **`render.js`** 안에 있습니다.
-> `render-*.ts` 분할 파일들은 향후 이관을 위해 만들어졌지만 아직 앱에 연결되지 않았습니다
-> (`import './render'` → Vite 기본 해석 `.js` 우선 → `render.js`). 렌더링을 수정할 때는
-> `render.js`를 편집하세요. 분할본을 정식 활성화하려면 `render.js`를 삭제하거나
-> `vite.config.ts`의 `resolve.extensions`에서 `.ts`를 `.js`보다 앞에 두어야 합니다.
 
 ---
 
@@ -139,6 +120,15 @@ cashflow/
 - **📷 영수증 OCR** — 사진 한 장으로 금액/카테고리/메모 자동 입력 (Gemini Vision)
 - **주간 코칭 카드** — 한 주 소비를 AI가 코칭
 - 마크다운 렌더링 (헤더, 굵기, 불릿, 번호 목록)
+
+### 🔁 구독·정기지출 관리
+- 가계부 기록에서 반복되는 지출 패턴 자동 감지 (금액·주기 일관성 검증)
+- 홈 탭에서 감지된 구독의 월 합계를 한눈에 확인
+- 한 번의 탭으로 **고정 항목 등록** 또는 **무시** 처리
+
+### 🔔 알림
+- 설정 탭에서 명시적으로 켜는 알림 (자동 팝업 없음)
+- 위험선 임박(3일 이내) · 예산 80%/초과 · 월급 D-1 · 큰 지출 D-1 · 할부 종료 임박
 
 ### 🎯 저축 목표 & 가계 공유
 - 목표 금액 / 저축 현황 트래킹
@@ -267,14 +257,22 @@ export const EXPENSE_CATS = ['식비', '교통', '통신', '의료', '쇼핑', .
 - 🏠 가계 공유 · 연간 히트맵 · 소비 성향 분석
 - 🏆 재정 건강 점수 · 배지 시스템 · 컨페티
 
+### v14 — 보안·안정성·품질 정비
+- 🔒 **Firestore 보안 규칙** 버전관리 (`firestore.rules`) — 가계공유/개인 데이터 소유권 검증
+- 🔑 **API 키 클라우드 동기화 중단** — Gemini/Alpha Vantage 키는 기기 로컬에만 저장 (공유 코드 유출 시 함께 새는 것 방지)
+- 🐛 계정 전환 레이스 컨디션 수정, 클라우드 동기화 데이터 유효성 검증 추가
+- ✅ **CI 도입** (typecheck·lint·test·build 자동 검증) · `forecast`/`state` 핵심 로직 테스트 추가
+- 🔔 **알림 켜기 설정 UI** — 위험선·예산·월급·할부 알림을 설정 탭에서 명시적으로 켤 수 있음
+- 🔁 **구독·정기지출 관리** — 감지된 정기결제를 홈에서 바로 등록/무시
+- 📅 홈 탭 주간 스트립 · 월 진행률 바 활성화, 카테고리 인사이트 배너 월초 오탐 방지 개선
+- ♿ 아이콘 전용 버튼 접근성(aria-label, 키보드 활성화) 보완
+
 ---
 
 ## 🗺 앞으로 개발할 기능 (Roadmap)
 
 | 우선순위 | 기능 | 설명 |
 |----------|------|------|
-| 🔴 높음 | 알림 / 푸시 | 위험선 근접 시 브라우저 푸시 알림 |
-| 🟡 중간 | 정기 지출 자동 인식 | 가계부 패턴 분석으로 고정비 자동 추천 |
 | 🟡 중간 | 다중 통화 지원 | USD, JPY 등 환율 변환 포함 자산 관리 |
 | 🟢 낮음 | 월별 리포트 PDF | 한 달 소비 요약을 PDF로 다운로드 |
 | 🟢 낮음 | 오프라인 완전 지원 | Service Worker + IndexedDB 캐싱 강화 |

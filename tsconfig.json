@@ -22,5 +22,5 @@
     }
   },
   "include": ["src/**/*", "vite.config.ts"],
-  "exclude": ["node_modules", "dist", "v3", "v2"]
+  "exclude": ["node_modules", "dist"]
 }

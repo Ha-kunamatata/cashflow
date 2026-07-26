@@ -23,7 +23,7 @@ export function computeStreak(ledgerData: LedgerData): StreakResult {
   const today = new Date();
   const pad = n => String(n).padStart(2, '0');
   let count = 0;
-  let d = new Date(today);
+  const d = new Date(today);
 
   const todayKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const hasToday = (ledgerData?.[todayKey] || []).length > 0;
