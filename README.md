@@ -10,9 +10,11 @@ PC · 태블릿 · 모바일 어디서나 동일한 경험으로 사용할 수 �
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173
+npm run dev       # http://localhost:5173 (Vite 개발 서버, HMR)
 npm run build     # 프로덕션 빌드 → dist/
 npm run typecheck # TypeScript 타입 검사
+npm run lint      # ESLint
+npm test          # Vitest 유닛 테스트
 ```
 
 배포 가이드는 [`DEPLOY.md`](DEPLOY.md) 참고.
@@ -25,7 +27,8 @@ npm run typecheck # TypeScript 타입 검사
 
 | 분류 | 기술 |
 |------|------|
-| Frontend | Vanilla JavaScript (ES Modules), HTML5, CSS3 |
+| 빌드 | Vite 5 · TypeScript 5 (ES Modules) |
+| Frontend | TypeScript + 일부 레거시 JS(`render.js`), HTML5, CSS3 |
 | 스타일링 | CSS Custom Properties, CSS Grid/Flexbox, Glass Morphism, Canvas API |
 | 인증 | Firebase Authentication (Google OAuth) |
 | 데이터베이스 | Firebase Firestore (실시간 동기화) |
@@ -33,6 +36,7 @@ npm run typecheck # TypeScript 타입 검사
 | 차트 | 자체 SVG 차트 엔진 + Chart.js |
 | 폰트 | Noto Sans KR, DM Mono (Google Fonts) |
 | PWA | Web App Manifest, Service Worker (캐시 전략 분리) |
+| 테스트 / 품질 | Vitest · ESLint 9 (flat config) · Prettier |
 
 ---
 
@@ -43,7 +47,8 @@ cashflow/
 ├── index.html              # Vite entry (SPA HTML 포함)
 ├── package.json
 ├── vite.config.ts          # Vite 빌드 설정
-├── tsconfig.json           # TypeScript 설정 (점진 도입 — allowJs)
+├── tsconfig.json           # TypeScript 설정 (allowJs — render.js 공존)
+├── vitest.config.ts        # Vitest 설정
 ├── eslint.config.js        # ESLint 9 flat config
 ├── .prettierrc.json
 ├── public/                 # 정적 자산 (그대로 dist/로 복사)
@@ -56,17 +61,40 @@ cashflow/
     ├── utils.ts            # 날짜·금액 포맷, 시트, 배지
     ├── budget.ts           # 월별 예산 헬퍼
     ├── forecast.ts         # 365일 잔고 예측 엔진
+    ├── recurring.ts        # 정기(반복) 거래 처리
     ├── streak.ts           # 스트릭 + 배지 정의
     ├── assets.ts           # 자산 분류 + 집 레벨 시스템
+    ├── state.ts            # 전역 상태 관리
+    ├── app.ts              # 진입점 — Firebase 초기화, 이벤트 바인딩
+    ├── ui.ts               # 폼/시트/모달 인터랙션
+    ├── ai.ts               # Gemini API 연동 (텍스트 + Vision OCR)
+    ├── firebase.ts         # Firestore CRUD + Auth
+    ├── game.ts             # 게이미피케이션 보조
     ├── styles/style.css    # 전체 스타일
-    ├── app.js              # 진입점 — Firebase 초기화, 이벤트 바인딩 (점진 .ts 전환 예정)
-    ├── state.js            # 전역 상태 관리
-    ├── ui.js               # 폼/시트/모달 인터랙션
-    ├── render.js           # DOM 렌더링 (점진 분할 예정)
-    ├── ai.js               # Gemini API 연동
-    ├── firebase.js         # Firestore CRUD + Auth
-    └── game.js             # 게이미피케이션 보조
+    │
+    ├── render.js           # ⭐ 활성 렌더러 — 전체 DOM 렌더링 (~4,900줄)
+    │                       #    app.ts / ui.ts 의 `./render` import 가
+    │                       #    Vite 해석 규칙(.js > .ts)에 따라 이 파일로 연결됨
+    │
+    │   ── ⚠️ 렌더러 분할(리팩터링) 진행중 — 아래는 아직 미배선(데드코드) ──
+    ├── render.ts           # barrel: render-*.ts 재export (현재 번들에 미포함)
+    ├── render-state.ts     # (분할본) 렌더 상태
+    ├── render-home.ts      # (분할본) 홈 탭
+    ├── render-ledger.ts    # (분할본) 가계부 탭
+    ├── render-report.ts    # (분할본) 리포트/예측 탭
+    ├── render-assets.ts    # (분할본) 자산·위시·투자 탭
+    ├── render-goals.ts     # (분할본) 목표·집레벨·스트릭
+    ├── render-entries.ts   # (분할본) 엔트리 렌더
+    │
+    └── *.test.ts           # Vitest 유닛 테스트
+                            #  (assets · budget · recurring · streak · utils)
 ```
+
+> **⚠️ 리팩터링 주의:** 화면에 실제 반영되는 렌더링 코드는 전부 **`render.js`** 안에 있습니다.
+> `render-*.ts` 분할 파일들은 향후 이관을 위해 만들어졌지만 아직 앱에 연결되지 않았습니다
+> (`import './render'` → Vite 기본 해석 `.js` 우선 → `render.js`). 렌더링을 수정할 때는
+> `render.js`를 편집하세요. 분할본을 정식 활성화하려면 `render.js`를 삭제하거나
+> `vite.config.ts`의 `resolve.extensions`에서 `.ts`를 `.js`보다 앞에 두어야 합니다.
 
 ---
 
@@ -160,10 +188,11 @@ cashflow/
 4. **프로젝트 설정 → 웹 앱 추가** → Firebase SDK 설정값 복사
 
 ### 2. Firebase 설정 적용
-`v3/js/firebase.js` 상단의 `firebaseConfig` 객체를 본인 프로젝트 설정으로 교체:
+`src/config.ts`의 `firebaseConfig` 객체를 본인 프로젝트 설정으로 교체:
 
-```javascript
-const firebaseConfig = {
+```typescript
+// src/config.ts
+export const FIREBASE_CONFIG = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT.firebaseapp.com",
   projectId: "YOUR_PROJECT_ID",
@@ -173,21 +202,16 @@ const firebaseConfig = {
 };
 ```
 
-### 3. 로컬 서버 실행
-ES Modules는 `file://` 프로토콜에서 동작하지 않으므로 로컬 HTTP 서버가 필요합니다.
+### 3. 로컬 개발 서버 실행
+Vite 개발 서버를 사용합니다 (HMR 지원).
 
 ```bash
-# Python 3
-python3 -m http.server 8080 --directory v3
-
-# Node.js (npx)
-npx serve v3
-
-# VS Code
-# Live Server 확장 설치 후 index.html 우클릭 → "Open with Live Server"
+npm install
+npm run dev       # http://localhost:5173
 ```
 
-브라우저에서 `http://localhost:8080` 접속
+브라우저에서 `http://localhost:5173` 접속.
+VS Code라면 통합 터미널에서 위 명령을 실행하면 됩니다.
 
 ### 4. Gemini API 키 설정
 1. [Google AI Studio](https://aistudio.google.com/app/apikey)에서 무료 API 키 발급
@@ -208,14 +232,14 @@ npx serve v3
 - 잔고가 위험선 이하로 떨어지면 예측 차트에 경고 표시
 
 ### 카테고리 수정
-`v3/js/config.js`에서 `EXPENSE_CATS`, `INCOME_CATS`, `LEDGER_CATEGORIES` 배열 수정
+`src/config.ts`에서 `EXPENSE_CATS`, `INCOME_CATS`, `LEDGER_CATEGORIES` 배열 수정
 
-```javascript
+```typescript
 export const EXPENSE_CATS = ['식비', '교통', '통신', '의료', '쇼핑', ...];
 ```
 
 ### 예측 기간 조정
-`v3/js/forecast.js`의 `FORECAST_DAYS` 상수 변경 (기본값: 365일)
+`src/forecast.ts`의 `buildForecast(days = 365)` 기본 인자 변경 (기본값: 365일)
 
 ---
 

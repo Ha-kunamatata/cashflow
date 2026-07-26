@@ -1,0 +1,11 @@
+{
+  // 이 프로젝트 권장 확장 — VS Code가 처음 열 때 설치를 제안합니다.
+  "recommendations": [
+    "dbaeumer.vscode-eslint",        // ESLint 9 (flat config) 통합
+    "esbenp.prettier-vscode",        // Prettier 포매터
+    "antfu.vite",                    // Vite 개발 서버 연동
+    "vitest.explorer",               // Vitest 테스트 러너 UI
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens"           // 인라인 에러/경고 표시
+  ]
+}
