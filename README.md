@@ -72,29 +72,18 @@ cashflow/
     ├── game.ts             # 게이미피케이션 보조
     ├── styles/style.css    # 전체 스타일
     │
-    ├── render.js           # ⭐ 활성 렌더러 — 전체 DOM 렌더링 (~4,900줄)
-    │                       #    app.ts / ui.ts 의 `./render` import 가
-    │                       #    Vite 해석 규칙(.js > .ts)에 따라 이 파일로 연결됨
-    │
-    │   ── ⚠️ 렌더러 분할(리팩터링) 진행중 — 아래는 아직 미배선(데드코드) ──
-    ├── render.ts           # barrel: render-*.ts 재export (현재 번들에 미포함)
-    ├── render-state.ts     # (분할본) 렌더 상태
-    ├── render-home.ts      # (분할본) 홈 탭
-    ├── render-ledger.ts    # (분할본) 가계부 탭
-    ├── render-report.ts    # (분할본) 리포트/예측 탭
-    ├── render-assets.ts    # (분할본) 자산·위시·투자 탭
-    ├── render-goals.ts     # (분할본) 목표·집레벨·스트릭
-    ├── render-entries.ts   # (분할본) 엔트리 렌더
+    ├── render.js           # ⭐ 렌더러 — 전체 DOM 렌더링 (~4,900줄, 단일 정본)
+    │                       #    app.ts / ui.ts 가 `./render` 로 import
     │
     └── *.test.ts           # Vitest 유닛 테스트
                             #  (assets · budget · recurring · streak · utils)
 ```
 
-> **⚠️ 리팩터링 주의:** 화면에 실제 반영되는 렌더링 코드는 전부 **`render.js`** 안에 있습니다.
-> `render-*.ts` 분할 파일들은 향후 이관을 위해 만들어졌지만 아직 앱에 연결되지 않았습니다
-> (`import './render'` → Vite 기본 해석 `.js` 우선 → `render.js`). 렌더링을 수정할 때는
-> `render.js`를 편집하세요. 분할본을 정식 활성화하려면 `render.js`를 삭제하거나
-> `vite.config.ts`의 `resolve.extensions`에서 `.ts`를 `.js`보다 앞에 두어야 합니다.
+> **렌더링 코드는 전부 `render.js` 한 파일에 있습니다.** 화면 관련 수정은 이 파일에서 하세요.
+> (과거 `render-*.ts` 로 분할하려던 시도가 있었으나, 본체와 동기화되지 않은 데드코드여서
+> 제거했습니다. 향후 다시 모듈 분할을 원하면 `render.js` 를 기준으로 새로 쪼개면 됩니다 —
+> 이때 `import './render'` 가 `.ts` 를 향하도록 `render.js` 를 없애거나
+> `vite.config.ts` 의 `resolve.extensions` 순서를 조정해야 실제로 배선됩니다.)
 
 ---
 

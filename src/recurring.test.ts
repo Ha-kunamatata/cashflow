@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { detectRecurringPatterns } from './recurring';
 import type { LedgerData, Entry } from './types';
 
@@ -7,6 +7,17 @@ function makeItem(memo: string, amount: number, category = '식비') {
 }
 
 describe('detectRecurringPatterns', () => {
+  // detectRecurringPatterns 는 new Date() 기준 최근 6개월만 스캔한다.
+  // 테스트 데이터가 2026-01~03월이므로, 실행 시점을 2026-03-31로 고정해
+  // 실제 달력과 무관하게 항상 3개월이 창 안에 들어오도록 한다.
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-31T12:00:00'));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('returns empty for empty ledger', () => {
     expect(detectRecurringPatterns({}, [])).toHaveLength(0);
   });
