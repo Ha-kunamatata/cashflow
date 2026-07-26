@@ -1,0 +1,41 @@
+{
+  // ── 저장 시 자동 포맷 + ESLint 자동 수정 ──────────────────
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // ── 언어별 포매터 고정 ──────────────────────────────────
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+  // ── ESLint: flat config 사용 ───────────────────────────
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["javascript", "typescript"],
+
+  // ── TypeScript: 워크스페이스 SDK 사용(버전 불일치 방지) ──
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // ── 검색/탐색 노이즈 제거 ──────────────────────────────
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.vite": true
+  },
+  "files.exclude": {
+    "**/.DS_Store": true
+  },
+
+  // ── render.js 가 활성 렌더러임을 에디터에 각인 ──────────
+  // (분할본 render-*.ts 는 아직 미배선 — README 참고)
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "render.js": "render.ts, render-*.ts"
+  }
+}

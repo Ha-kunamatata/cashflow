@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Vite 개발 서버(5173)를 자동 실행한 뒤 Chrome으로 디버깅.
+      // 브레이크포인트를 .ts 소스에 직접 걸 수 있음 (Vite 소스맵).
+      "type": "chrome",
+      "request": "launch",
+      "name": "Vite: Chrome 디버그",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "dev",
+      "sourceMaps": true
+    },
+    {
+      // 이미 dev 서버가 떠 있을 때 (preLaunchTask 없이) 붙이기.
+      "type": "chrome",
+      "request": "launch",
+      "name": "Vite: Chrome (서버 이미 실행 중)",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true
+    }
+  ]
+}
