@@ -18,6 +18,8 @@ import {
   escapeHtml,
 } from './utils';
 import { state, DEFAULT_CARDS } from './state';
+import { renderPortfolio } from './portfolioView';
+export { renderPortfolio };
 import { buildForecast, getCards, simulateWishPurchase } from './forecast';
 import { hasGeminiKey, renderMarkdown, getWeeklyCoachingInsight } from './ai';
 
@@ -137,6 +139,7 @@ export function renderAll() {
   if (activePage?.id === 'page-assets') renderAssets();
   if (activePage?.id === 'page-wishlist') renderWishlist();
   if (activePage?.id === 'page-finance') renderFinance();
+  if (activePage?.id === 'page-portfolio') renderPortfolio();
 }
 
 export function renderSettingsStats() {

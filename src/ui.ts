@@ -75,11 +75,12 @@ const PAGE_MAP = {
   goals: 'page-goals',
   wishlist: 'page-wishlist',
   finance: 'page-finance',
+  portfolio: 'page-portfolio',
   view: 'page-view',
   settings: 'page-settings',
 };
 // 바텀 탭 순서 (슬라이드 방향 결정용)
-const NAV_ORDER = ['home','assets','ledger','entries','goals','wishlist','finance','report'];
+const NAV_ORDER = ['home','assets','ledger','entries','goals','wishlist','finance','portfolio','report'];
 let _curNavPage = 'home';
 
 export function navigate(page, btn) {
@@ -113,6 +114,7 @@ export function navigate(page, btn) {
   if (page === 'goals') renderModule.renderGoals();
   if (page === 'assets') renderModule.renderAssets();
   if (page === 'wishlist') renderModule.renderWishlist();
+  if (page === 'portfolio') renderModule.renderPortfolio();
   if (page === 'finance') {
     renderModule.renderFinance();
     // 탭 진입 시 자동 새로고침

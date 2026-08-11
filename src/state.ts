@@ -4,6 +4,7 @@
 import { STORAGE_KEY } from './config';
 import { uid, isPastOrToday, showBadge } from './utils';
 import type { Entry, Card, LedgerData, LedgerItem, Goal, Asset, BudgetMap, WishItem, WatchlistItem, LedgerTemplate } from './types';
+import { emptyPortfolio, normalizePortfolio, type PortfolioData } from './portfolio';
 
 declare global {
   interface Window {
@@ -37,6 +38,7 @@ export interface StateShape {
   lastSeenMonth: number;
   budgetCarryover: Record<string, number>;
   dismissedRecurringMemos: string[];
+  portfolio: PortfolioData;
 }
 
 export const DEFAULT_CARDS: Card[] = [];
@@ -65,6 +67,7 @@ export const state: StateShape = {
   lastSeenMonth: 0,
   budgetCarryover: {},
   dismissedRecurringMemos: [],
+  portfolio: emptyPortfolio(),
 };
 
 // ── 상태 완전 초기화 (계정 전환 시 메모리 상태 리셋) ──
@@ -92,6 +95,7 @@ export function resetState(): void {
   state.lastSeenMonth     = 0;
   state.budgetCarryover   = {};
   state.dismissedRecurringMemos = [];
+  state.portfolio         = emptyPortfolio();
 }
 
 // ── 저장 ──────────────────────────────────────────────
@@ -131,6 +135,7 @@ export function validateState(d: unknown): d is Partial<StateShape> {
   if ('badges'   in o && !Array.isArray(o.badges))   return false;
   if ('budgets'  in o && (typeof o.budgets  !== 'object' || Array.isArray(o.budgets)))  return false;
   if ('streak'   in o && (typeof o.streak   !== 'object' || Array.isArray(o.streak)))   return false;
+  if ('portfolio' in o && (typeof o.portfolio !== 'object' || Array.isArray(o.portfolio))) return false;
   return true;
 }
 
@@ -218,6 +223,7 @@ export function ensureStateFields(): void {
   if (!state.netWorthHistory) state.netWorthHistory = [];
   if (!state.budgetCarryover) state.budgetCarryover = {};
   if (!state.dismissedRecurringMemos) state.dismissedRecurringMemos = [];
+  state.portfolio = normalizePortfolio(state.portfolio);
 }
 
 export function initDefaultData(): void {
