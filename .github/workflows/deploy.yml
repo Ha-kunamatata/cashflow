@@ -1,0 +1,50 @@
+name: Deploy
+
+# main 에 push 될 때마다 빌드 후 Cloudflare Pages 로 배포한다.
+# 필요 시 Actions 탭에서 수동 실행(workflow_dispatch)도 가능.
+#
+# ── 사전 준비: 저장소 Secret 2개 등록 ─────────────────────────────
+# GitHub 저장소 → Settings → Secrets and variables → Actions → New repository secret
+#   1) CLOUDFLARE_API_TOKEN
+#        Cloudflare 대시보드 → My Profile → API Tokens → Create Token
+#        → 권한: Account > Cloudflare Pages > Edit (또는 "Edit Cloudflare Workers" 템플릿)
+#   2) CLOUDFLARE_ACCOUNT_ID
+#        Cloudflare 대시보드 → Workers & Pages → 우측 사이드바 "Account ID"
+#
+# Secret 을 넣기 전까지는 아래 Deploy 단계가 자동으로 건너뛰어지므로(초록 유지),
+# 두 Secret 을 등록한 뒤 이 워크플로우를 재실행하거나 다음 push 시 배포된다.
+#
+# 프로젝트 이름이 cashflow-6mn 이 아니라면 아래 --project-name 값을 실제 이름으로 수정.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        # Secret 미등록 시 자동 skip (워크플로우가 실패로 뜨지 않게 함)
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=cashflow-6mn --branch=main
